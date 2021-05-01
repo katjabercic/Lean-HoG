@@ -16,7 +16,16 @@ for g in arr:
     print(g.graph6_string())
 for g in arr:
     g.show()
+for g in arr:
+    print(g.average_degree())
 ```
+
+## `graphs.csv` structure
+
+* graph in the `graph6` format
+* is the graph connected? True/False
+* number of vertices in the graph
+* average degree
 
 ## HoG supported invariants
 
