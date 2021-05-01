@@ -1,6 +1,6 @@
 # HoG-Lean
 
-Sage code to get `graph6` for some small graphs.
+Sage code to get [`graph6`](https://users.cecs.anu.edu.au/~bdm/data/formats.txt) for some small graphs.
 
 ```
 # https://doc.sagemath.org/html/en/reference/graphs/index.html
