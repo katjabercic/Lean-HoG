@@ -1,4 +1,8 @@
-# HoG-Lean
+# Lean-HoG
+
+Integration of [Lean](https://leanprover.github.io) and [House of Graphs](http://hog.grinvin.org/).
+
+## House of Graphs
 
 Sage code to get [`graph6`](https://users.cecs.anu.edu.au/~bdm/data/formats.txt) for some small graphs.
 
@@ -71,11 +75,10 @@ for g in arr:
 | Second Largest Eigenvalue    | The second largest eigenvalue of a graph is the second largest eigenvalue of its adjacency matrix. |
 | Smallest Eigenvalue          | The smallest eigenvalue of a graph is the smallest eigenvalue of its adjacency matrix. |
 
+## Lean
 
+Assuming you have [installed Lean and Mathlib](https://leanprover-community.github.io/index.html), after cloning this repository, you should run
 
-
-
-
-
+    leanproject build
 
 
