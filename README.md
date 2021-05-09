@@ -4,7 +4,7 @@ Integration of [Lean](https://leanprover.github.io) and [House of Graphs](http:/
 
 # How to use this project.
 
-Assuming you have [installed Lean and Mathlib](https://leanprover-community.github.io/index.html), after cloning this repository, you should run
+Assuming you have [installed Lean 3 and Mathlib](https://leanprover-community.github.io/index.html), after cloning this repository, you should run
 
     leanproject build
 
