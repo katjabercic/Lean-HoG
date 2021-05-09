@@ -2,9 +2,18 @@
 
 Integration of [Lean](https://leanprover.github.io) and [House of Graphs](http://hog.grinvin.org/).
 
-## House of Graphs
+# How to use this project.
 
-Sage code to get [`graph6`](https://users.cecs.anu.edu.au/~bdm/data/formats.txt) for some small graphs.
+Assuming you have [installed Lean and Mathlib](https://leanprover-community.github.io/index.html), after cloning this repository, you should run
+
+    leanproject build
+
+This will generate the environment necessary to run the Lean code.
+
+
+### How to import `graphh6` format with Sage
+
+The [`graph6`](https://users.cecs.anu.edu.au/~bdm/data/formats.txt)  format for encoding graphs is used by House of Graphs. The following code shows how to use Sage to generate a small CSV file using the `graph6` format.
 
 ```
 # https://doc.sagemath.org/html/en/reference/graphs/index.html
@@ -24,14 +33,14 @@ for g in arr:
     print(g.average_degree())
 ```
 
-## `graphs.csv` structure
+The above code produces a CSV file that contains the following columns:
 
 * graph in the `graph6` format
 * is the graph connected? True/False
 * number of vertices in the graph
 * average degree
 
-## HoG supported invariants
+The House of Graphs supports the following graph invariants that could be potentially imported into Lean:
 
 | Invariant                    | Description  |
 |------------------------------|--------------|
@@ -74,11 +83,3 @@ for g in arr:
 | Laplacian Largest Eigenvalue | https://hog.grinvin.org/ShowInvariant.action?id=22 |
 | Second Largest Eigenvalue    | The second largest eigenvalue of a graph is the second largest eigenvalue of its adjacency matrix. |
 | Smallest Eigenvalue          | The smallest eigenvalue of a graph is the smallest eigenvalue of its adjacency matrix. |
-
-## Lean
-
-Assuming you have [installed Lean and Mathlib](https://leanprover-community.github.io/index.html), after cloning this repository, you should run
-
-    leanproject build
-
-
