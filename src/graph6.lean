@@ -3,24 +3,22 @@
 
 -- decode a string to a list of numbers, all in the range 0 to 63
 def decode (s : string) :=
-  let lst :=
-    list.reverse $
-    string.fold []
-      (λ lst c, (min 63 (char.to_nat c - 63)) :: lst)
-      s
-  in
-  lst
+  list.reverse $
+  string.fold []
+    (λ lst c, (min 63 (char.to_nat c - 63)) :: lst)
+    s
 
 -- split a list of integers into the graph size and the list encoding
 -- the adjancency matrix
-def split (lst : list ℕ) :=
-  match lst with
-  | [] := (0, [])
-  | 63 :: a :: b :: c :: d :: lst :=
-      let n := ((a * 64 + b) * 64 + c) * 64 + d in
-      (n, lst)
-  | n :: lst := (n, lst)
-  end
+def split : list ℕ → ℕ × list ℕ
+| [] := (0, [])
+| (63 :: 63 :: a :: b :: c :: d :: e :: f :: lst) :=
+    let n := ((((a * 64 + b) * 64 + c) * 64 + d) * 64 + e) * 64 + f in
+    (n, lst)
+| (63 :: a :: b :: c :: lst) :=
+    let n := (a * 64 + b) * 64 + c in
+    (n, lst)
+| (n :: lst) := (n, lst)
 
 def pad6 : list bool → list bool
 | [] := [ff, ff, ff, ff, ff, ff]
@@ -33,16 +31,34 @@ def pad6 : list bool → list bool
 
 def bits6 (lst : list ℕ) :=
   list.join $
-  list.map (λ n , pad6 (nat.bits n)) lst
+  list.map (λ n , pad6 $ list.reverse $ nat.bits n) lst
+
+def get_bit : list bool → ℕ → bool
+| [] k := ff
+| (b :: _) 0 := b
+| (_ :: lst) (k + 1) := get_bit lst k
 
 -- not finished, it just computes the size and the bit list
 -- representing the adjancy matrix (upper triangle)
-def decode_graph6 (s : string) :=
+def decode_graph6 (s : string) : ℕ × (ℕ → ℕ → bool) :=
   let (n, lst) := split (decode s) in
   let adj := bits6 lst in
-    (n, adj)
+  let lookup i j :=
+    if i = j then
+      ff
+    else
+      let (i, j) := (min i j, max i j) in
+      match j with
+      | 0 := ff
+      | (j' + 1) :=
+        let k := nat.div2 (j * j') + i in
+        get_bit adj k
+      end
+  in
+  (n, lookup)
 
 -- examples
 #eval decode_graph6 "?"
+
 #eval decode_graph6 "DgC"
 #eval decode_graph6 "IheA@GUAo"
