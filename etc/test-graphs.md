@@ -20,3 +20,24 @@ This gives us the bit vector a graph of size 5 with the upper triangle `101000 0
 ```
 
 This is the graph `0-1-2 3-4`.
+
+## `IheA@GUAo` (Petersen)
+
+73 (`I`) gives the size of the graph, 10. Adjacency matrix: `104, 101, 65, 64, 71, 85, 65, 111`, with subtracted 63:
+`41, 38, 2, 1, 8, 22, 2, 48`
+
+`101001 100110 000010 000001 001000 010110 000010 110000`
+
+```
+  0 1 2 3 4 5 6 7 8 9
+0 . 1 0 0 1 1 0 0 0 0
+1   . 1 0 0 0 1 0 0 0
+2     . 1 0 0 0 1 0 0
+3       . 1 0 0 0 1 0
+4         . 0 0 0 0 1
+5           . 0 1 1 0
+6             . 0 1 1
+7               . 0 1
+8                 . 0
+9                   .
+```
