@@ -1,4 +1,4 @@
-import graph6
+import .decode
 
 -- We define a pre-adjancency map as a ℕ → ℕ → bool. There is no information about the size of the graph, so
 -- effectively we are encoding countably infinite graphs.
@@ -73,4 +73,4 @@ def from_preadjacency (G : preadjacency) (n : ℕ) : adjacency_list :=
 -- Petersen graph as adjancency list
 #reduce from_preadjacency petersen 10
 
-#eval ((let (n, f) := decode_graph6 "IheA@GUAo" in from_preadjacency f n) : list (ℕ × ℕ))
+#eval ((let (n, f) := hog.decode_graph6 "IheA@GUAo" in from_preadjacency f n) : list (ℕ × ℕ))
