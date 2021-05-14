@@ -40,6 +40,17 @@ The above code produces a CSV file that contains the following columns:
 * number of vertices in the graph
 * average degree
 
+## The House of Graphs data structure
+
+### Special values
+
+* infinity
+* undefined
+
+Note: undefined could mean that the value was not yet computed, or that it is not well defined for the graph in question.
+
+### Invariants
+
 The House of Graphs supports the following graph invariants that could be potentially imported into Lean:
 
 | Invariant                    | Description  |
