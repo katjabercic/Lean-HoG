@@ -1,8 +1,10 @@
 -- Implementation of the graph6 format
 -- https://users.cecs.anu.edu.au/~bdm/data/formats.txt
 
+namespace hog
+
 -- decode a string to a list of numbers, all in the range 0 to 63
-def decode (s : string) :=
+private def decode (s : string) :=
   list.reverse $
   string.fold []
     (λ lst c, (min 63 (char.to_nat c - 63)) :: lst)
@@ -10,7 +12,7 @@ def decode (s : string) :=
 
 -- split a list of integers into the graph size and the list encoding
 -- the adjancency matrix
-def split : list ℕ → ℕ × list ℕ
+private def split : list ℕ → ℕ × list ℕ
 | [] := (0, [])
 | (63 :: 63 :: a :: b :: c :: d :: e :: f :: lst) :=
     let n := ((((a * 64 + b) * 64 + c) * 64 + d) * 64 + e) * 64 + f in
@@ -20,7 +22,7 @@ def split : list ℕ → ℕ × list ℕ
     (n, lst)
 | (n :: lst) := (n, lst)
 
-def pad6 : list bool → list bool
+private def pad6 : list bool → list bool
 | [] := [ff, ff, ff, ff, ff, ff]
 | [b0] := [ff, ff, ff, ff, ff, b0]
 | [b1, b0] := [ff, ff, ff, ff, b1, b0]
@@ -29,11 +31,11 @@ def pad6 : list bool → list bool
 | [b4, b3, b2, b1, b0] := [ff, b4, b3, b2, b1, b0]
 | (b5 :: b4 :: b3 :: b2 :: b1 :: b0 :: _) := [b5, b4, b3, b2, b1, b0]
 
-def bits6 (lst : list ℕ) :=
+private def bits6 (lst : list ℕ) :=
   list.join $
   list.map (λ n , pad6 $ list.reverse $ nat.bits n) lst
 
-def get_bit : list bool → ℕ → bool
+private def get_bit : list bool → ℕ → bool
 | [] k := ff
 | (b :: _) 0 := b
 | (_ :: lst) (k + 1) := get_bit lst k
@@ -48,17 +50,8 @@ def decode_graph6 (s : string) : ℕ × (ℕ → ℕ → bool) :=
       ff
     else
       let (i, j) := (min i j, max i j) in
-      match j with
-      | 0 := ff
-      | (j' + 1) :=
-        let k := nat.div2 (j * j') + i in
-        get_bit adj k
-      end
+      get_bit adj (nat.div2 (j * nat.pred j) + i)
   in
   (n, lookup)
 
--- examples
-#eval decode_graph6 "?"
-
-#eval decode_graph6 "DgC"
-#eval decode_graph6 "IheA@GUAo"
+end hog
