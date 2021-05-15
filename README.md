@@ -44,8 +44,9 @@ The above code produces a CSV file that contains the following columns:
 
 ### Special values
 
-* infinity
-* undefined
+* `infinity`
+* `undefined`
+* `Computation time out`
 
 Note: undefined could mean that the value was not yet computed, or that it is not well defined for the graph in question.
 
