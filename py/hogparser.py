@@ -94,7 +94,7 @@ class HoGParser:
             raise ValueError
         size, preadjacency = self._get_preadjacency(match.group('adjacency'))
         invariants = self._get_invariants(match.group('invariants'))
-        lean_str = '  { hog .\n    graph6 := "' + g6.strip() + '",\n'
+        lean_str = '  { hog .\n    graph6 := "' + g6.strip().replace('\\', '\\\\') + '",\n'
         if num != 1:
             lean_str = ',\n' + lean_str
         lean_str += self._get_lean_inv(invariants, write_floats)
@@ -130,6 +130,7 @@ class HoGParser:
             fh_out.write('\n]\n\nend hog')
             fh_out.close()
         fh_in.close()
+        print(count-1)
 
     def write_lean_structure(self, write_floats = False):
         out = 'structure hog : Type :=\n (graph6 : string)\n'
