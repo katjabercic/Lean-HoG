@@ -65,15 +65,17 @@ class HoGParser:
             inv_type = self._structure[inv]
             val = match.group('value')
             value = self._check_invariant(inv_type, val)
-            return inv, value
+            return inv, inv_type, value
 
         inv_list = []
         for m in self._invariant_pattern.finditer(invariants):
             inv_list.append(get_invariant(m))
         return inv_list
 
-    def _get_lean_inv(self, invariants):
-        def convert(name, value):
+    def _get_lean_inv(self, invariants, write_floats):
+        def convert(name, inv_type, value):
+            if not write_floats and inv_type == 'float':
+                return None
             n = self._convert_name(name)
             v = f'some ({value})'
             if value is True:
@@ -83,9 +85,10 @@ class HoGParser:
             elif value is None or value == 'infinity':
                 v = 'none'
             return f'    {n} := {v}'
-        return ',\n'.join(map(lambda m: convert(*m), invariants))
 
-    def _graph_to_lean(self, num, g6, buffer):
+        return ',\n'.join(filter(lambda s: s != None, map(lambda m: convert(*m), invariants)))
+
+    def _graph_to_lean(self, num, g6, buffer, write_floats):
         match = self._graph_pattern.search(buffer)
         if not match:
             raise ValueError
@@ -94,13 +97,12 @@ class HoGParser:
         lean_str = '  { hog .\n    graph6 := "' + g6.strip() + '",\n'
         if num != 1:
             lean_str = ',\n' + lean_str
-        lean_str += self._get_lean_inv(invariants)
+        lean_str += self._get_lean_inv(invariants, write_floats)
         lean_str += '\n  }'
         # lean_str = f'def HoG{str(num).zfill(4)} : preadjacency := from_adjacency_list {str(preadjacency)}'
         return lean_str
 
-    
-    def parse(self, input_path, g6_path, output_path = None):
+    def parse(self, input_path, g6_path, output_path = None, write_floats = False):
         fh_in = open(input_path, 'r')
         fh_g6 = open(g6_path, 'r')
         if output_path != None:
@@ -117,11 +119,10 @@ class HoGParser:
             # clear buffer
             if not graph_complete:
                 continue
-            lean_code = self._graph_to_lean(count, fh_g6.readline(), buffer)
+            #TODO check if this is the correct g6
+            lean_code = self._graph_to_lean(count, fh_g6.readline(), buffer, write_floats)
             if output_path != None:
                 fh_out.write(lean_code)
-            # else:
-            #     print(lean_code)
             buffer = ''
             count += 1
         
@@ -130,7 +131,7 @@ class HoGParser:
             fh_out.close()
         fh_in.close()
 
-    def write_lean_structure(self):
+    def write_lean_structure(self, write_floats = False):
         out = 'structure hog : Type :=\n (graph6 : string)\n'
         for i, t in self._structure.items():
             n = self._convert_name(i)
@@ -139,7 +140,10 @@ class HoGParser:
             elif t == 'int':
                 out += f' ({n} : option nat)\n'
             elif t == 'float':
-                out += f' ({n} : option real)\n'
+                if write_floats:
+                    out += f' ({n} : option real)\n'
+                else: 
+                    continue
             else:
                 raise ValueError
         print(out)
