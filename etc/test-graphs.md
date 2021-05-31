@@ -1,3 +1,9 @@
+# HoG DB exports
+
+## Number of vertices less than or equal to 8
+
+* 983 graphs
+
 # Work out adjacency matrices by hand
 
 ## `DgC` (P_2 U P_3)
