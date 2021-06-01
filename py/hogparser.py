@@ -1,25 +1,20 @@
-import re
 import json
-
-# Load the structure description in JSON
+import lean_hog_template as lht
 
 class HoGParser:
     
     _structure = {}
     _is_last_line = None
 
-    _graph_pattern = re.compile('(?P<adjacency>(?:[0-9]+:[0-9 ]*\n)*)(?P<invariants>(?:[a-zA-Z- ]+:.+\n)+)')
-    _adjacency_pattern = re.compile('(?P<vertex>[0-9])+:(?P<neighbors>[0-9 ]*)\n')
-    _invariant_pattern = re.compile('(?:(?P<invariant>[a-zA-Z- ]+): (?P<value>.+))')
-
-    def __init__(self, hog_struct_path):
-        with open(hog_struct_path) as j:
+    def __init__(self, settings):
+        with open(settings['structure_path']) as j:
             self._structure = json.load(j)
         last_line_start = list(self._structure)[-1]
         self._is_last_line = lambda line: line.startswith(last_line_start)
-
-    def _convert_name(self, name):
-        return (name.lower()).replace(' ', '_').replace('-', '_')
+        self._write_floats = settings['write_floats']
+        self._output_path = settings['output_path']
+        self._inputs = settings['inputs']
+        self._limit = settings['limit']
 
     def _get_preadjacency(self, neighborhoods):
         # HoG vertices start at 1
@@ -34,7 +29,7 @@ class HoGParser:
         
         preadjacency = []
         count = 0
-        for m in self._adjacency_pattern.finditer(neighborhoods):
+        for m in lht.adjacency_pattern.finditer(neighborhoods):
             count += 1
             preadjacency += parse_vertex(m)
         return count, preadjacency
@@ -68,48 +63,33 @@ class HoGParser:
             return inv, inv_type, value
 
         inv_list = []
-        for m in self._invariant_pattern.finditer(invariants):
+        for m in lht.invariant_pattern.finditer(invariants):
             inv_list.append(get_invariant(m))
         return inv_list
 
-    def _get_lean_inv(self, invariants, write_floats):
+    def _get_lean_inv(self, invariants):
         def convert(name, inv_type, value):
-            if not write_floats and inv_type == 'float':
+            if not self._write_floats and inv_type == 'float':
                 return None
-            n = self._convert_name(name)
-            v = f'some ({value})'
-            if value is True:
-                v = 'some ff'
-            elif value is False:
-                v = 'some ff'
-            elif value is None or value == 'infinity':
-                v = 'none'
-            return f'    {n} := {v}'
+            else:
+                return lht.lean_property(name, value)
 
         return ',\n'.join(filter(lambda s: s != None, map(lambda m: convert(*m), invariants)))
 
-    def _graph_to_lean(self, num, g6, buffer, write_floats):
-        match = self._graph_pattern.search(buffer)
+    def _graph_to_lean(self, position, g6, buffer):
+        match = lht.graph_pattern.search(buffer)
         if not match:
             raise ValueError
-        size, preadjacency = self._get_preadjacency(match.group('adjacency'))
+        # size, preadjacency = self._get_preadjacency(match.group('adjacency'))
         invariants = self._get_invariants(match.group('invariants'))
-        lean_str = '  { hog .\n    graph6 := "' + g6.strip().replace('\\', '\\\\') + '",\n'
-        if num != 1:
-            lean_str = ',\n' + lean_str
-        lean_str += self._get_lean_inv(invariants, write_floats)
-        lean_str += '\n  }'
-        # lean_str = f'def HoG{str(num).zfill(4)} : preadjacency := from_adjacency_list {str(preadjacency)}'
+        lean_str, end_graph_str = lht.get_graph_boilerplate(position, g6)
+        lean_str += self._get_lean_inv(invariants) + end_graph_str
         return lean_str
 
-    def parse(self, input_path, g6_path, output_path = None, write_floats = False):
-        fh_in = open(input_path, 'r')
+    def _parse_file(self, inv_path, g6_path, fh_out, external_counter):
+        fh_in = open(inv_path, 'r')
         fh_g6 = open(g6_path, 'r')
-        if output_path != None:
-            fh_out = open(output_path, 'w')
-            fh_out.write('import .hog\n\nnamespace hog\n\ndef database := [\n')
-        
-        count = 1
+        count = external_counter
         buffer = ''
         for line in fh_in:
             if line == '\n':
@@ -120,28 +100,41 @@ class HoGParser:
             if not graph_complete:
                 continue
             #TODO check if this is the correct g6
-            lean_code = self._graph_to_lean(count, fh_g6.readline(), buffer, write_floats)
-            if output_path != None:
+            lean_code = self._graph_to_lean(count, fh_g6.readline(), buffer)
+            if self._output_path != None:
                 fh_out.write(lean_code)
+            else:
+                print(lean_code)
             buffer = ''
             count += 1
-        
-        if output_path != None:
-            fh_out.write('\n]\n\nend hog')
-            fh_out.close()
+            if self._limit > 0 and count > self._limit:
+                break
+        fh_g6.close()
         fh_in.close()
+        return count
+
+    def parse(self):
+        if self._output_path != None:
+            fh_out = open(self._output_path, 'w')
+            fh_out.write(lht.get_db_preamble())
+        count = 1
+        for inv_path, g6_path in self._inputs:
+                count = self._parse_file(inv_path, g6_path, fh_out, count)
+        if self._output_path != None:
+            fh_out.write(lht.get_db_epilog(count, 10))
+            fh_out.close()
         print(count-1)
 
-    def write_lean_structure(self, write_floats = False):
+    def write_lean_structure(self):
         out = 'structure hog : Type :=\n (graph6 : string)\n'
         for i, t in self._structure.items():
-            n = self._convert_name(i)
+            n = lht.convert_invariant_name(i)
             if t == 'bool':
                 out += f' ({n} : option bool)\n'
             elif t == 'int':
                 out += f' ({n} : option nat)\n'
             elif t == 'float':
-                if write_floats:
+                if self._write_floats:
                     out += f' ({n} : option real)\n'
                 else: 
                     continue
