@@ -113,7 +113,7 @@ class HoGParser:
         fh_in.close()
         return count
 
-    def parse(self):
+    def parse(self, per_line):
         if self._output_path != None:
             fh_out = open(self._output_path, 'w')
             fh_out.write(lht.get_db_preamble())
@@ -121,7 +121,7 @@ class HoGParser:
         for inv_path, g6_path in self._inputs:
                 count = self._parse_file(inv_path, g6_path, fh_out, count)
         if self._output_path != None:
-            fh_out.write(lht.get_db_epilog(count, 10))
+            fh_out.write(lht.get_db_epilog(count, per_line))
             fh_out.close()
         print(count-1)
 
