@@ -11,11 +11,11 @@ def _graph_name(num):
 def _names_list(n, per_line):
     if n < 1:
         return ''
-    r = _graph_name(1)
+    r = '[' + _graph_name(1)
     for i in range(2, n):
-        br = '\n' if ((i-1) % per_line) == 0 else ' '
-        r += ',' + br + _graph_name(i)
-    return r
+        br = '],\n[' if ((i-1) % per_line) == 0 else ', '
+        r += br + _graph_name(i)
+    return r + ']'
 
 def _graph_from_preadjacency(num, preadjacency):
     return f'def {_graph_name(num)} : preadjacency := from_adjacency_list {str(preadjacency)}'
