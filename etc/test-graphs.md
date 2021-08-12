@@ -1,5 +1,12 @@
 # HoG DB exports
 
+## Files
+
+There are many graphs on 30 vertices, they are split into multiple files:
+* regular,
+* non-regular, with index < 5.87,
+* non-regular, with index >= 5.87,
+
 ## Number of vertices less than or equal to 8
 
 * 983 graphs
