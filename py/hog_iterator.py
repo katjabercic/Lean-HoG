@@ -13,7 +13,7 @@ class HoGIterator:
         return self
         
     def __next__(self):
-        if self._counter > self._limit:
+        if self._limit > 0 and self._counter > self._limit:
             raise StopIteration
         x = self._counter
         inv, g6 = self._read_next_graph()
@@ -41,4 +41,7 @@ class HoGIterator:
             graph += line
             if self._is_last_line(line):
                 break
+        if graph == '':
+            self._next_input()
+            return self._read_next_graph()
         return graph, self._fh_g6.readline()
