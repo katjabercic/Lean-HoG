@@ -96,7 +96,7 @@ class HoGParser:
                 exhausted_all_graphs = True
                 break
         if self._s['output_path'] != None and had_graphs:
-            fh_out.write(self._lht.get_db_epilog(start, self._part))
+            fh_out.write(self._lht.get_db_epilog(start, count, self._part))
             fh_out.close()
         print(count, exhausted_all_graphs)
         return count, exhausted_all_graphs
@@ -111,7 +111,7 @@ class HoGParser:
             self._part += 1
             start = count + 1
         with open(self._output_file_path('main'), 'w') as fh_out:
-            fh_out.write(self._lht.get_main_db())
+            fh_out.write(self._lht.get_main_db(self._part))
         print(count)
 
     def write_lean_structure(self):

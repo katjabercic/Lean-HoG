@@ -9,19 +9,21 @@ class Lean_HoG_Template:
 
     def __init__(self, settings):
         self._s = settings
-        self._graph_name_length = len(str(self._s['limit']))
-        self._num_parts = math.ceil(self._s['limit'] / self._s['graphs_per_file'])
-        self._part_name_length = len(str(self._num_parts))
+        max_estimate = self._s['total_graphs']
+        if self._s['limit'] > 0:
+            max_estimate = self._s['limit']
+        self._graph_name_length = len(str(max_estimate))
+        self._part_name_length = len(str(math.ceil(max_estimate / self._s['graphs_per_file'])))
 
     def _graph_name(self, num):
         return 'hog' + str(num).zfill(self._graph_name_length)
 
     # Prints a list of graph names from 1 to n-1
-    def _names_list(self, start):
+    def _names_list(self, start, end):
         if self._s['graphs_per_file'] < 1:
             return ''
         r = '[' + self._graph_name(start)
-        for i in range(1, self._s['graphs_per_file']):
+        for i in range(1, end - start + 1):
             br = '],\n[' if ((i) % self._s['graphs_per_line']) == 0 else ', '
             r += br + self._graph_name(start + i)
         return r + ']'
@@ -61,15 +63,15 @@ class Lean_HoG_Template:
     def get_db_preamble(self):
         return 'import ..hog\n\nnamespace hog\n\n'
 
-    def get_db_epilog(self, start, part):
-        identifier = 'db_p' + str(part) if isinstance(part, int) else part
-        return '\n\ndef ' + identifier + ' := [\n' + self._names_list(start) + '\n]\n\nend hog'
+    def get_db_epilog(self, start, end, part):
+        identifier = 'db_' + self.part_filename(part) if isinstance(part, int) else part
+        return '\n\ndef ' + identifier + ' := [\n' + self._names_list(start, end) + '\n]\n\nend hog'
     
-    def get_main_db(self):
+    def get_main_db(self, num_parts):
         contents = 'import ..hog\n\n'
-        for p in range(1, self._num_parts + 1):
+        for p in range(1, num_parts):
             contents += 'import .db_test_' + self.part_filename(p) + '\n'
         contents += '\n\nnamespace hog\n\ndef database := ['
-        contents += ', '.join(['db_' + self.part_filename(p) for p in range(1, self._num_parts + 1)])
+        contents += ', '.join(['db_' + self.part_filename(p) for p in range(1, num_parts)])
         contents += ']\n\nend hog\n'
         return contents

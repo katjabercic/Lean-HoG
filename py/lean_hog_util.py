@@ -1,6 +1,6 @@
 def check_invariant(inv_type, val_str):
     value = None
-    if val_str == 'undefined' or val_str == 'Computation time out':
+    if val_str == 'undefined' or val_str == 'Computation time out' or val_str == 'Computing':
         value = None
     else:        
         if inv_type == 'bool':
