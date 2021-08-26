@@ -2,6 +2,7 @@ import re
 import math
 
 class Lean_HoG_Template:
+    """Helper functions for outputing Lean code."""
 
     graph_pattern = re.compile('(?P<adjacency>(?:[0-9]+:[0-9 ]*\n)*)(?P<invariants>(?:[a-zA-Z- ]+:.+\n)+)')
     adjacency_pattern = re.compile('(?P<vertex>[0-9])+:(?P<neighbors>[0-9 ]*)\n')
@@ -66,7 +67,7 @@ class Lean_HoG_Template:
     def get_db_epilog(self, start, end, part):
         identifier = 'db_' + self.part_filename(part) if isinstance(part, int) else part
         return '\n\ndef ' + identifier + ' := [\n' + self._names_list(start, end) + '\n]\n\nend hog'
-    
+
     def get_main_db(self, num_parts):
         contents = 'import ..hog\n\n'
         for p in range(1, num_parts):

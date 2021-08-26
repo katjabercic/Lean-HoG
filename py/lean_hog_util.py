@@ -1,8 +1,9 @@
 def check_invariant(inv_type, val_str):
+    """Validate and convert a string to given value type."""
     value = None
     if val_str == 'undefined' or val_str == 'Computation time out' or val_str == 'Computing':
         value = None
-    else:        
+    else:
         if inv_type == 'bool':
             if val_str in ['Yes', 'No']: # valid bool values
                 value = val_str == 'Yes'
