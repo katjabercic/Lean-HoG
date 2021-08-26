@@ -1,4 +1,5 @@
 class HoGIterator:
+    """Iterate through the HoG graphs loaded from given input graphs."""
 
     def __init__(self, inputs, limit, last_line_start):
         if len(inputs) == 0:
@@ -11,7 +12,7 @@ class HoGIterator:
         self._next_input()
         self._counter = 1
         return self
-        
+
     def __next__(self):
         if self._limit > 0 and self._counter > self._limit:
             raise StopIteration
@@ -19,7 +20,7 @@ class HoGIterator:
         inv, g6 = self._read_next_graph()
         self._counter += 1
         return x, g6, inv
-    
+
     def _next_input(self):
         try:
             self._fh_in.close()
@@ -32,7 +33,7 @@ class HoGIterator:
             self._fh_g6 = open(file_g6, 'r')
         except: # stop iterating if out of inputs or can't open file
             raise StopIteration
-    
+
     def _read_next_graph(self):
         graph = ''
         for line in self._fh_in:
