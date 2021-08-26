@@ -1,3 +1,13 @@
+# Iterates over the given list of files with HoG exports, graph by graph
+# Returns the consecutive number of the current graph, the graph6 and the 
+# chunk containing graph theoretic invariants
+
+# Needs a string that appears at the beginning of the last line of the 
+# invariant chunk to recognise that it has read data on the current graph.
+
+# If the limit is given as n > 0, the iterator stops after n graphs.
+# To process all files, limit should be 0.
+
 class HoGIterator:
 
     def __init__(self, inputs, limit, last_line_start):
