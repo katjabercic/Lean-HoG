@@ -35,7 +35,8 @@ def hog_graph := { hog .
 }
 
 class verify_number_of_vertices (g : hog) :=
-  (correct_size : hog.number_of_vertices g = some (hog.decode_graph6 (hog.graph6 g)).fst)
+  (correct_size : hog.number_of_vertices g = some (hog.decode_graph6 $ hog.graph6 g).fst)
+-- f $ g t is an alternative way of writing f (g t)
 
 instance foo : verify_number_of_vertices hog_graph := {
   correct_size := refl _
