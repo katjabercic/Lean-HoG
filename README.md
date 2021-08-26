@@ -54,13 +54,15 @@ The following special values are used in the database:
 
 ### Project structure
 
+* [`etc`](./etc) - various irrelevant files
+* [`data`](./data) - original HoG data files
+* [`convert`](./convert) - Python scripts for converting HoG data to Lean code
+* [`src`](./src) - Lean code
 
+### How to compile the code
 
-### How to compile the project
+Assuming you have [installed Lean 3 and Mathlib](https://leanprover-community.github.io/index.html), after cloning this repository, you may run
 
-Assuming you have [installed Lean 3 and Mathlib](https://leanprover-community.github.io/index.html), after cloning this repository, you should run
-
-    leanproject build
-
-This will generate the environment necessary to run the Lean code.
-
+* `make convert` - convert HoG data to Lean files
+* `make build` or `leanpkg build` - compile all the Lean files
+* `make clean` - delete the generated Lean files
