@@ -11,5 +11,8 @@ convert:
 
 src/hog/data: convert
 
-build: src/hog/data
+build:
 	$(LEANPKG) build
+
+clean:
+	/bin/rm -rf $(OUTDIR)
