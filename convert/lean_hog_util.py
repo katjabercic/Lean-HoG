@@ -1,7 +1,7 @@
-def check_invariant(inv_type, val_str):
+def checked_invariant_value(inv_type, val_str):
     """Validate and convert a string to given value type."""
     value = None
-    if val_str == 'undefined' or val_str == 'Computation time out' or val_str == 'Computing':
+    if val_str in ['undefined', 'Computation time out', 'Computing']:
         value = None
     else:
         if inv_type == 'bool':
