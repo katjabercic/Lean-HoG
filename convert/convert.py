@@ -3,18 +3,17 @@ from os.path import isfile, join
 
 import hog_parser
 
-# after generating the db files, run "lean --make db_test_main.lean "
-
-# the invariants should have the same order as in the input file
-# in particular, the last invariant is used in parsing as a terminating condition
-
-ids = ['0-8', '9-11', '12-19', '20-21', '22', '23', '24', '25-26', '27', '28', '29',
-       '30-regular', '30-nonregular-1', '30-nonregular-2',
-       '31-33', '34', '35-41', '42-43', '44-49', '50-99',
-       '100-149', '150-189', '190-209', '210-']
+# Input directory, relative to the project root
+srcdir = 'data'
 
 # Input files
-input_files = list(map(lambda x: (f'etc/hog-order-{x}-inv.txt', f'etc/hog-order-{x}-g6.txt'), ids))
+input_files = [
+    (f'{srcdir}/hog-order-{x}-inv.txt', f'{srcdir}/hog-order-{x}-g6.txt')
+    for x in ['0-8', '9-11', '12-19', '20-21', '22', '23', '24', '25-26', '27', '28', '29',
+              '30-regular', '30-nonregular-1', '30-nonregular-2',
+              '31-33', '34', '35-41', '42-43', '44-49', '50-99',
+              '100-149', '150-189', '190-209', '210-']
+  ]
 
 settings = {
     'inputs': input_files,
