@@ -4,9 +4,7 @@ import math
 class Lean_HoG_Template:
     """Helper functions for outputing Lean code."""
 
-    graph_pattern = re.compile('(?P<adjacency>(?:[0-9]+:[0-9 ]*\n)*)(?P<invariants>(?:[a-zA-Z- ]+:.+\n)+)')
     adjacency_pattern = re.compile('(?P<vertex>[0-9])+:(?P<neighbors>[0-9 ]*)\n')
-    invariant_pattern = re.compile('(?:(?P<invariant>[a-zA-Z- ]+): (?P<value>.+))')
 
     def __init__(self, settings):
         self._s = settings
@@ -16,21 +14,21 @@ class Lean_HoG_Template:
         self._graph_name_length = len(str(max_estimate))
         self._part_name_length = len(str(math.ceil(max_estimate / self._s['graphs_per_file'])))
 
-    def _graph_name(self, num):
+    def graph_name(self, num):
         return 'hog' + str(num).zfill(self._graph_name_length)
 
     # Prints a list of graph names from 1 to n-1
     def _names_list(self, start, end):
         if self._s['graphs_per_file'] < 1:
             return ''
-        r = '[' + self._graph_name(start)
+        r = '[' + self.graph_name(start)
         for i in range(1, end - start + 1):
             br = '],\n[' if ((i) % self._s['graphs_per_line']) == 0 else ', '
-            r += br + self._graph_name(start + i)
+            r += br + self.graph_name(start + i)
         return r + ']'
 
     def _graph_from_preadjacency(self, num, preadjacency):
-        return f'def {self._graph_name(num)} : preadjacency := from_adjacency_list {str(preadjacency)}'
+        return f'def {self.graph_name(num)} : preadjacency := from_adjacency_list {str(preadjacency)}'
 
     def _part_number(self, n):
         """Data part number as a string with leading zeroes."""
@@ -39,32 +37,6 @@ class Lean_HoG_Template:
     def lean_module_part(self, n):
         """The name of the n-th Lean data module."""
         return "{0}{1}".format(self._s['db_name'], self._part_number(n))
-
-    def convert_invariant_name(self, name):
-        return (name.lower()).replace(' ', '_').replace('-', '_')
-
-    # just prints out default for floats
-    def lean_property(self, name, value):
-        n = self.convert_invariant_name(name)
-        v = f'some ({value})'
-        if value is True:
-            v = 'some tt'
-        elif value is False:
-            v = 'some ff'
-        elif value is None or value == 'infinity':
-            v = 'none'
-        return f'  {n} := {v}'
-
-    def get_graph_boilerplate(self, position, g6):
-        g6_lean = g6.strip().replace('\\', '\\\\')
-        begin = (
-            f'\ndef {self._graph_name(position)} := {{ hog .\n'
-            f'  graph6 := "{g6_lean}",\n'
-        )
-        if position != 1:
-            begin = '\n' + begin
-        end = '\n}'
-        return begin, end
 
     def get_db_preamble(self):
         return 'import ..hog\n\nnamespace hog\n\n'
