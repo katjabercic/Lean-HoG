@@ -1,13 +1,15 @@
 OUTDIR=src/hog/data
 CONVERT=convert/convert.py
-LEAN=lean
+LEANPKG=leanpkg
 
-.PHONY: convert compile
+.PHONY: convert build
 
-default: convert compile
+all: convert build
 
 convert:
 	python3 $(CONVERT)
 
-compile: convert
-	$(LEAN) --make db_test_main.lean
+src/hog/data: convert
+
+build: src/hog/data
+	$(LEANPKG) build
