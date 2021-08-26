@@ -32,8 +32,13 @@ class Lean_HoG_Template:
     def _graph_from_preadjacency(self, num, preadjacency):
         return f'def {self._graph_name(num)} : preadjacency := from_adjacency_list {str(preadjacency)}'
 
-    def part_filename(self, n):
-        return 'p' + str(n).zfill(self._part_name_length)
+    def _part_number(self, n):
+        """Data part number as a string with leading zeroes."""
+        return str(n).zfill(self._part_name_length)
+
+    def lean_module_part(self, n):
+        """The name of the n-th Lean data module."""
+        return "{0}{1}".format(self._s['db_name'], self._part_number(n))
 
     def convert_invariant_name(self, name):
         return (name.lower()).replace(' ', '_').replace('-', '_')
@@ -53,7 +58,7 @@ class Lean_HoG_Template:
     def get_graph_boilerplate(self, position, g6):
         g6_lean = g6.strip().replace('\\', '\\\\')
         begin = (
-            f'def {self._graph_name(position)} := {{ hog .\n'
+            f'\ndef {self._graph_name(position)} := {{ hog .\n'
             f'  graph6 := "{g6_lean}",\n'
         )
         if position != 1:
@@ -65,14 +70,14 @@ class Lean_HoG_Template:
         return 'import ..hog\n\nnamespace hog\n\n'
 
     def get_db_epilog(self, start, end, part):
-        identifier = 'db_' + self.part_filename(part) if isinstance(part, int) else part
+        identifier = 'db_' + self._part_number(part)
         return '\n\ndef ' + identifier + ' := [\n' + self._names_list(start, end) + '\n]\n\nend hog'
 
     def get_main_db(self, num_parts):
         contents = 'import ..hog\n\n'
         for p in range(1, num_parts):
-            contents += 'import .db_test_' + self.part_filename(p) + '\n'
-        contents += '\n\nnamespace hog\n\ndef database := ['
-        contents += ', '.join(['db_' + self.part_filename(p) for p in range(1, num_parts)])
+            contents += 'import .{0}\n'.format(self.lean_module_part(p))
+        contents += '\n\nnamespace hog\n\ndef data := ['
+        contents += ', '.join(['db_' + self._part_number(p) for p in range(1, num_parts)])
         contents += ']\n\nend hog\n'
         return contents
