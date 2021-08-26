@@ -1,58 +1,14 @@
 import os
 import lean_hog_template as lht
-import lean_hog_util
 import hog_iterator
+import hog_graph
 
 class HoGParser:
     """Converter from original HoG data to Lean code."""
 
-    # Invariant names in the HoG data, with their declared types
-    # NB: The invariants should have the same order as in the input file
-    #     in particular, the last invariant is used in parsing as a terminating condition
-    _structure = {
-        "Acyclic": "bool",
-        "Algebraic Connectivity": "float",
-        "Average Degree": "float",
-        "Bipartite": "bool",
-        "Chromatic Index": "int",
-        "Chromatic Number": "int",
-        "Circumference": "int",
-        "Claw-Free": "bool",
-        "Clique Number": "int",
-        "Connected": "bool",
-        "Density": "float",
-        "Diameter": "int",
-        "Edge Connectivity": "int",
-        "Eulerian": "bool",
-        "Genus": "int",
-        "Girth": "int",
-        "Hamiltonian": "bool",
-        "Independence Number": "int",
-        "Index": "float",
-        "Laplacian Largest Eigenvalue": "float",
-        "Longest Induced Cycle": "int",
-        "Longest Induced Path": "int",
-        "Matching Number": "int",
-        "Maximum Degree": "int",
-        "Minimum Degree": "int",
-        "Minimum Dominating Set": "int",
-        "Number of Components": "int",
-        "Number of Edges": "int",
-        "Number of Triangles": "int",
-        "Number of Vertices": "int",
-        "Planar": "bool",
-        "Radius": "int",
-        "Regular": "bool",
-        "Second Largest Eigenvalue": "float",
-        "Smallest Eigenvalue": "float",
-        "Vertex Connectivity": "int"
-    }
-
-    _is_last_line = None
-
     def __init__(self, settings):
         self._s = settings
-        self._hog_iterator = iter(hog_iterator.HoGIterator(settings['inputs'], settings['limit'], list(self._structure)[-1]))
+        self._hog_iterator = iter(hog_iterator.HoGIterator(settings['inputs'], settings['limit'], hog_graph.HoGGraph.last_line_start))
         self._lht = lht.Lean_HoG_Template(self._s)
         self._part = 0
 
@@ -89,38 +45,6 @@ class HoGParser:
     #         preadjacency += parse_vertex(m)
     #     return count, preadjacency
 
-    def _get_invariants(self, invariants):
-        def get_invariant(match):
-            inv = match.group('invariant')
-            inv_type = self._structure[inv]
-            val = match.group('value')
-            value = lean_hog_util.checked_invariant_value(inv_type, val)
-            return inv, inv_type, value
-
-        inv_list = []
-        for m in self._lht.invariant_pattern.finditer(invariants):
-            inv_list.append(get_invariant(m))
-        return inv_list
-
-    def _get_lean_inv(self, invariants):
-        def convert(name, inv_type, value):
-            if not self._s['write_floats'] and inv_type == 'float':
-                return None
-            else:
-                return self._lht.lean_property(name, value)
-
-        return ',\n'.join(filter(lambda s: s != None, map(lambda m: convert(*m), invariants)))
-
-    def _graph_to_lean(self, position, g6, buffer):
-        match = self._lht.graph_pattern.search(buffer)
-        if not match:
-            raise ValueError
-        # size, preadjacency = self._get_preadjacency(match.group('adjacency'))
-        invariants = self._get_invariants(match.group('invariants'))
-        lean_str, end_graph_str = self._lht.get_graph_boilerplate(position, g6)
-        lean_str += self._get_lean_inv(invariants) + end_graph_str
-        return lean_str
-
     def _write_graph_file(self, start):
         exhausted_all_graphs = False
         had_graphs = False
@@ -132,7 +56,8 @@ class HoGParser:
                     had_graphs = True
                     fh_out = open(self._output_file_part(self._part), 'w')
                     fh_out.write(self._lht.get_db_preamble())
-                lean_code = self._graph_to_lean(count, g6, inv)
+                graph = hog_graph.HoGGraph(self._lht.graph_name(count), g6, inv, self._s['write_floats'])
+                lean_code = graph.graph_to_lean()
                 if self._s['output_path'] != None:
                     fh_out.write(lean_code)
                 else:
@@ -167,22 +92,3 @@ class HoGParser:
         with open(self._output_file_main(), 'w') as fh_out:
             fh_out.write(self._lht.get_main_db(self._part))
         print("Total number of graphs: {0}".format(count))
-
-    def write_lean_structure(self):
-        """Output a single graph as a Lean structure."""
-
-        out = 'structure hog : Type :=\n (graph6 : string)\n'
-        for i, t in self._structure.items():
-            n = self._lht.convert_invariant_name(i)
-            if t == 'bool':
-                out += f' ({n} : option bool)\n'
-            elif t == 'int':
-                out += f' ({n} : option nat)\n'
-            elif t == 'float':
-                if self._s['write_floats']:
-                    out += f' ({n} : option real)\n'
-                else:
-                    continue
-            else:
-                raise ValueError
-        print(out)
