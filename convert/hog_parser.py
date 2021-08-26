@@ -94,7 +94,7 @@ class HoGParser:
             inv = match.group('invariant')
             inv_type = self._structure[inv]
             val = match.group('value')
-            value = lean_hog_util.check_invariant(inv_type, val)
+            value = lean_hog_util.checked_invariant_value(inv_type, val)
             return inv, inv_type, value
 
         inv_list = []
