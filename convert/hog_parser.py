@@ -63,33 +63,31 @@ class HoGParser:
             print ("Creating {0}".format(d))
             os.mkdir(d)
 
-    def _output_file_path(self, id):
-        """The name of the output file."""
+    def _output_file_main(self):
+        """The name of main Lean data file."""
+        return os.path.join(self._s['output_path'], "{0}.lean".format(self._s['db_main']))
 
-        s = self._s['output_path'] + '/' + self._s['db_name']
-        if isinstance(id, int):
-            s += '_' + self._lht.part_filename(id)
-        else:
-            s += '_' + id
-        return s + '.lean'
+    def _output_file_part(self, n):
+        """The name of the n-th Lean data file."""
+        return os.path.join(self._s['output_path'], "{0}.lean".format(self._lht.lean_module_part(n)))
 
-    def _get_preadjacency(self, neighborhoods):
-        # HoG vertices start at 1
-        def to_int_minus1(x):
-            return int(x) - 1
+    # def _get_preadjacency(self, neighborhoods):
+    #     # HoG vertices start at 1
+    #     def to_int_minus1(x):
+    #         return int(x) - 1
 
-        def parse_vertex(match):
-            vertex = to_int_minus1(match.group('vertex'))
-            # sort and filter the neighbors of vertex
-            neighbors = sorted(filter(lambda x: vertex < x, map(to_int_minus1, match.group('neighbors').split())))
-            return list(map(lambda x: (vertex, x), neighbors))
+    #     def parse_vertex(match):
+    #         vertex = to_int_minus1(match.group('vertex'))
+    #         # sort and filter the neighbors of vertex
+    #         neighbors = sorted(filter(lambda x: vertex < x, map(to_int_minus1, match.group('neighbors').split())))
+    #         return list(map(lambda x: (vertex, x), neighbors))
 
-        preadjacency = []
-        count = 0
-        for m in self._lht.adjacency_pattern.finditer(neighborhoods):
-            count += 1
-            preadjacency += parse_vertex(m)
-        return count, preadjacency
+    #     preadjacency = []
+    #     count = 0
+    #     for m in self._lht.adjacency_pattern.finditer(neighborhoods):
+    #         count += 1
+    #         preadjacency += parse_vertex(m)
+    #     return count, preadjacency
 
     def _get_invariants(self, invariants):
         def get_invariant(match):
@@ -132,7 +130,7 @@ class HoGParser:
                 count, g6, inv = next(self._hog_iterator)
                 if i == 0 and self._s['output_path'] != None: # write beginning of file
                     had_graphs = True
-                    fh_out = open(self._output_file_path(self._part), 'w')
+                    fh_out = open(self._output_file_part(self._part), 'w')
                     fh_out.write(self._lht.get_db_preamble())
                 lean_code = self._graph_to_lean(count, g6, inv)
                 if self._s['output_path'] != None:
@@ -153,7 +151,10 @@ class HoGParser:
     def write_lean_files(self):
         """Write the output data to Lean files."""
 
+        # Make sure the output directory exists
         self._ensure_output_directory()
+
+        # Write out data files
         self._part = 1
         start = 1
         exhausted_all_graphs = False
@@ -161,7 +162,9 @@ class HoGParser:
             count, exhausted_all_graphs = self._write_graph_file(start)
             self._part += 1
             start = count + 1
-        with open(self._output_file_path('main'), 'w') as fh_out:
+
+        # Write out the main data file
+        with open(self._output_file_main(), 'w') as fh_out:
             fh_out.write(self._lht.get_main_db(self._part))
         print("Total number of graphs: {0}".format(count))
 

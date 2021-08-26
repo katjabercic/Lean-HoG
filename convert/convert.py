@@ -18,7 +18,8 @@ input_files = [
 settings = {
     'inputs': input_files,
     'output_path': 'src/hog/data', # output directory, relative to project root
-    'db_name': 'db_test', # prefix for output file names
+    'db_name': 'hog_data_', # prefix for output file names
+    'db_main': 'hog_data', # name of the main data Lean module
     'write_floats': False, # ignore fields that contain floating point values
     'total_graphs': 99999, # use for estimating the number of files needed
     'graphs_per_file': 1000,
