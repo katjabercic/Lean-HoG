@@ -17,9 +17,8 @@ ids = ['0-8', '9-11', '12-19', '20-21', '22', '23', '24', '25-26', '27', '28', '
 input_files = list(map(lambda x: (f'etc/hog-order-{x}-inv.txt', f'etc/hog-order-{x}-g6.txt'), ids))
 
 settings = {
-    'structure_path': 'py/hog_invariants.json',
     'inputs': input_files,
-    'output_path': 'src/hog/out', # output directory, relative to project root
+    'output_path': 'src/hog/data', # output directory, relative to project root
     'db_name': 'db_test', # prefix for output file names
     'write_floats': False, # ignore fields that contain floating point values
     'total_graphs': 99999, # use for estimating the number of files needed
