@@ -10,7 +10,6 @@ settings = {
     'graphs_per_file': 1000,
     'graphs_per_line': 10,
     'limit': 0 # if non-zero, output this many graphs
-    # before 2D list, limit: 2690
 }
 
 hog = hog_parser.HoGParser(settings)
