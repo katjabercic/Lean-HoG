@@ -217,14 +217,17 @@ class HoGParser:
     adjacency_pattern = re.compile('(?P<vertex>[0-9])+:(?P<neighbors>[0-9 ]*)\n')
 
     def __init__(self, settings):
+        def number_of_digits(n):
+            return int(math.log10(math.ceil(n))) + 1
+
         self._s = settings
         self._hog_iterator = iter(HoGIterator(settings['srcdir'], settings['limit'], HoGGraph.last_line_start))
         self._part = 0
-        max_estimate = self._s['total_graphs']
+        max_estimate = self._s['graph_id_length']
         if self._s['limit'] > 0:
-            max_estimate = self._s['limit']
-        self._graph_name_length = len(str(max_estimate))
-        self._part_name_length = len(str(math.ceil(max_estimate / self._s['graphs_per_file'])))
+            max_estimate = number_of_digits(self._s['limit'])
+        self._graph_name_length = max_estimate
+        self._part_name_length = number_of_digits(pow(10, max_estimate) / self._s['graphs_per_file'])
 
     def _ensure_output_directory(self):
         """Create the output directory if it does not exist yet."""
