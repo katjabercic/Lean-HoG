@@ -230,53 +230,51 @@ class HoGParser:
         """Create the output directory if it does not exist yet."""
         d = self._s['output_path']
         if not os.path.exists(d):
-            print ("Creating {0}".format(d))
+            print (f'Creating {d}')
             os.mkdir(d)
+
+    # Naming conventions
 
     def _part_number(self, n):
         """Data part number as a string with leading zeroes."""
         return str(n).zfill(self._part_name_length)
 
+    def _graph_name(self, num):
+        """The name of the n-th graph in Lean data modules."""
+        return 'hog' + str(num).zfill(self._graph_name_length)
+
+    def _lean_module_part(self, n):
+        """The name of the n-th Lean data module."""
+        return f"{self._s['db_name']}{self._part_number(n)}"
+
     def _output_file_main(self):
         """The name of main Lean data file."""
-        return os.path.join(self._s['output_path'], "{0}.lean".format(self._s['db_main']))
+        return os.path.join(self._s['output_path'], f"{self._s['db_main']}.lean")
 
     def _output_file_part(self, n):
         """The name of the n-th Lean data file."""
-        return os.path.join(self._s['output_path'], "{0}.lean".format(self.lean_module_part(n)))
+        return os.path.join(self._s['output_path'], f"{self._lean_module_part(n)}.lean")
+    
+    # Templates
 
-    # def _get_preadjacency(self, neighborhoods):
-    #     # HoG vertices start at 1
-    #     def to_int_minus1(x):
-    #         return int(x) - 1
-
-    #     def parse_vertex(match):
-    #         vertex = to_int_minus1(match.group('vertex'))
-    #         # sort and filter the neighbors of vertex
-    #         neighbors = sorted(filter(lambda x: vertex < x, map(to_int_minus1, match.group('neighbors').split())))
-    #         return list(map(lambda x: (vertex, x), neighbors))
-
-    #     preadjacency = []
-    #     count = 0
-    #     for m in self.adjacency_pattern.finditer(neighborhoods):
-    #         count += 1
-    #         preadjacency += parse_vertex(m)
-    #     return count, preadjacency
-
-
-    # Prints a list of graph names from start to end (including end)
     def _names_list(self, start, end):
+        """Prints a list of graph names from start to end (including end)"""
         if self._s['graphs_per_file'] < 1:
             return ''
-        r = '[' + self.graph_name(start)
+        r = '[' + self._graph_name(start)
         for i in range(1, end - start + 1):
             br = '],\n[' if ((i) % self._s['graphs_per_line']) == 0 else ', '
-            r += br + self.graph_name(start + i)
+            r += br + self._graph_name(start + i)
         return r + ']'
+    
+    def _get_db_preamble(self):
+        return 'import ..hog\n\nnamespace hog\n\n'
 
-    def _graph_from_preadjacency(self, num, preadjacency):
-        return f'def {self.graph_name(num)} : preadjacency := from_adjacency_list {str(preadjacency)}'
-
+    def _get_db_epilog(self, start, end, part):
+        identifier = 'db_' + self._part_number(part)
+        return '\n\ndef ' + identifier + ' := [\n' + self._names_list(start, end) + '\n]\n\nend hog'
+    
+    # Write a single file
 
     def _write_graph_file(self, start):
         exhausted_all_graphs = False
@@ -288,8 +286,8 @@ class HoGParser:
                 if i == 0 and self._s['output_path'] != None: # write beginning of file
                     had_graphs = True
                     fh_out = open(self._output_file_part(self._part), 'w')
-                    fh_out.write(self.get_db_preamble())
-                graph = HoGGraph(self.graph_name(count), g6, inv, self._s['write_floats'])
+                    fh_out.write(self._get_db_preamble())
+                graph = HoGGraph(self._graph_name(count), g6, inv, self._s['write_floats'])
                 lean_code = graph.to_lean()
                 if self._s['output_path'] != None:
                     fh_out.write(lean_code)
@@ -301,33 +299,29 @@ class HoGParser:
                 exhausted_all_graphs = True
                 break
         if self._s['output_path'] != None and had_graphs:
-            fh_out.write(self.get_db_epilog(start, count, self._part))
+            fh_out.write(self._get_db_epilog(start, count, self._part))
             fh_out.close()
-        print("Converting graphs: {0}  ".format(count), end='\r')
+        print(f'Converting graphs: {count}  ', end='\r')
         return count, exhausted_all_graphs
 
-    def graph_name(self, num):
-        return 'hog' + str(num).zfill(self._graph_name_length)
+    def _get_main_db(self, num_parts):
+        module_imports = '\n'.join([
+            f'import .{self._lean_module_part(p)}'
+            for p in range(1, num_parts)
+            ])
+        module_part_names = ', '.join([
+            f'db_{self._part_number(p)}'
+            for p in range(1, num_parts)
+            ])
+        return (
+            f'import ..hog\n\n'
+            f'{module_imports}\n'
+            f'\n\nnamespace hog\n\ndef data := ['
+            f'{module_part_names}\n'
+            f']\n\nend hog\n'
+        )
 
-    def lean_module_part(self, n):
-        """The name of the n-th Lean data module."""
-        return "{0}{1}".format(self._s['db_name'], self._part_number(n))
-
-    def get_db_preamble(self):
-        return 'import ..hog\n\nnamespace hog\n\n'
-
-    def get_db_epilog(self, start, end, part):
-        identifier = 'db_' + self._part_number(part)
-        return '\n\ndef ' + identifier + ' := [\n' + self._names_list(start, end) + '\n]\n\nend hog'
-
-    def get_main_db(self, num_parts):
-        contents = 'import ..hog\n\n'
-        for p in range(1, num_parts):
-            contents += 'import .{0}\n'.format(self.lean_module_part(p))
-        contents += '\n\nnamespace hog\n\ndef data := ['
-        contents += ', '.join(['db_' + self._part_number(p) for p in range(1, num_parts)])
-        contents += ']\n\nend hog\n'
-        return contents
+    # Write all Lean module files
 
     def write_lean_files(self):
         """Write the output data to Lean files."""
@@ -346,5 +340,29 @@ class HoGParser:
 
         # Write out the main data file
         with open(self._output_file_main(), 'w') as fh_out:
-            fh_out.write(self.get_main_db(self._part))
-        print("Total number of graphs: {0}".format(count))
+            fh_out.write(self._get_main_db(self._part))
+        print(f'Total number of graphs: {count}')
+
+
+    # Old preadjacency code
+
+    # def _graph_from_preadjacency(self, num, preadjacency):
+    #     return f'def {self._graph_name(num)} : preadjacency := from_adjacency_list {str(preadjacency)}'
+
+    # def _get_preadjacency(self, neighborhoods):
+    #     # HoG vertices start at 1
+    #     def to_int_minus1(x):
+    #         return int(x) - 1
+
+    #     def parse_vertex(match):
+    #         vertex = to_int_minus1(match.group('vertex'))
+    #         # sort and filter the neighbors of vertex
+    #         neighbors = sorted(filter(lambda x: vertex < x, map(to_int_minus1, match.group('neighbors').split())))
+    #         return list(map(lambda x: (vertex, x), neighbors))
+
+    #     preadjacency = []
+    #     count = 0
+    #     for m in self.adjacency_pattern.finditer(neighborhoods):
+    #         count += 1
+    #         preadjacency += parse_vertex(m)
+    #     return count, preadjacency
