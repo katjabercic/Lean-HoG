@@ -8,7 +8,7 @@ def main():
         'db_name': 'hog_data_', # prefix for output file names
         'db_main': 'hog_data', # name of the main data Lean module
         'write_floats': False, # ignore fields that contain floating point values
-        'total_graphs': 99999, # use for estimating the number of files needed
+        'graph_id_length': 5, # number of digits needed to represent all graphs
         'graphs_per_file': 1000,
         'graphs_per_line': 10,
         'limit': 0 # if non-zero, output this many graphs
