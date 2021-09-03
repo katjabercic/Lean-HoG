@@ -1,4 +1,7 @@
 import .decode
+import .graph_invariant
+import .hog
+import .data.hog_data_001
 
 -- We define a pre-adjancency map as a ℕ → ℕ → bool. There is no information about the size of the graph, so
 -- effectively we are encoding countably infinite graphs.
@@ -8,7 +11,7 @@ def preadjacency := ℕ → ℕ → bool
 -- Examples of preadjancency maps
 
 -- Complete graph (on however many vertices)
-def complete_graph : preadjacency
+def complete_preadjacency : preadjacency
 | i j := true
 
 -- cycle on 3 points
@@ -77,3 +80,10 @@ def from_preadjacency (G : preadjacency) (n : ℕ) : adjacency_list :=
 #eval ((let (n, f) := hog.decode_graph6 "IheA@GUAo" in from_preadjacency f n) : list (ℕ × ℕ))
 
 -- #eval ((let (n, f) := hog.decode_graph6 "IheA@GUAo" in from_preadjacency f n) : list (ℕ × ℕ))
+
+-- Test the max_degree invariant
+#check hog.to_simple_graph hog.hog00001
+
+def g := hog.to_simple_graph hog.hog00001
+
+#check graph_invariant.max_degree g

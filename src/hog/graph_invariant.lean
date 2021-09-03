@@ -1,5 +1,7 @@
 import combinatorics.simple_graph.basic
 
+namespace graph_invariant
+
 section fintype_helpers
 
   def argmax {α : Type} [fintype α] (f : α → ℕ)
@@ -24,3 +26,5 @@ def degree (x : V) : ℕ := fintype.card (nbh g x)
 def max_degree : ℕ := degree g (argmax (degree g))
 
 end degree
+
+end graph_invariant
