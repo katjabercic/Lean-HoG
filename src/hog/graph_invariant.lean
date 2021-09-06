@@ -1,30 +1,20 @@
+import data.finset.lattice
 import combinatorics.simple_graph.basic
 
 namespace graph_invariant
 
-section fintype_helpers
+section
 
-  def argmax {α : Type} [fintype α] (f : α → ℕ)
-    : { x : α | ∀ y , f y ≤ f x } :=
-    sorry
+  variables {V : Type} [fintype V] (g : simple_graph V) [decidable_rel g.adj]
 
-end fintype_helpers
+  def nbh (x : V) := {y : V // g.adj x y}
 
-section degree
+  instance nbh_fintype (x : V) : fintype (nbh g x) := subtype.fintype (g.adj x)
 
-variables {V : Type} [fintype V] (g : simple_graph V) [decidable_rel g.adj]
+  def degree (x : V) : ℕ := fintype.card (nbh g x)
 
-def nbh (x : V) := {y : V | g.adj x y}
+  def max_degree : ℕ := finset.sup (fintype.elems _) (degree g)
 
-instance nbh_fintype (x : V) : fintype (nbh g x) :=
-  begin
-    sorry
-  end
-
-def degree (x : V) : ℕ := fintype.card (nbh g x)
-
-def max_degree : ℕ := degree g (argmax (degree g))
-
-end degree
+end
 
 end graph_invariant
