@@ -7,7 +7,7 @@ LEANPKG=leanpkg
 all: convert build
 
 convert:
-	python3 $(CONVERT)
+	python3 $(CONVERT) -o $(OUTDIR)
 
 src/hog/data: convert
 
