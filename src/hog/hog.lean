@@ -1,6 +1,8 @@
 import combinatorics.simple_graph.basic
 import .decode
 
+namespace hog
+
 -- The definition of data imported from HoG
 structure hog : Type :=
  (graph6 : string)
@@ -34,17 +36,21 @@ structure hog : Type :=
  (regular : option bool)
  (vertex_connectivity : option nat)
 
-namespace hog
-
--- the size of the graph as encoded by graph6
-def graph6_size (h : hog) : ℕ :=
-  (decode_graph6 (graph6 h)).fst
+def size (h : hog) : ℕ := graph6_size h.graph6
 
 -- raw lookup into adjacency matrix
-def graph6_lookup (h : hog) : (fin (graph6_size h)) → (fin (graph6_size h)) → Prop :=
-  λ i j, (decode_graph6 (graph6 h)).snd i.val j.val
+def graph6_rel (h : hog) : fin (size h) → fin (size h) → Prop :=
+  λ i j, graph6_lookup h.graph6 i.val j.val
 
-def to_simple_graph (h : hog) : simple_graph (fin (graph6_size h)) :=
-    simple_graph.from_rel (graph6_lookup h)
+def to_simple_graph (h : hog) : simple_graph (fin (graph6_size h.graph6)) :=
+ { adj := graph6_rel h,
+   sym := sorry,
+   loopless := sorry
+  }
+
+instance hog_decidable_adj (h : hog) : decidable_rel (to_simple_graph h).adj :=
+  begin
+    intros i j, sorry
+  end
 
 end hog

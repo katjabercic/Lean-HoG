@@ -42,6 +42,7 @@ private def get_bit : list bool → ℕ → bool
 
 -- not finished, it just computes the size and the bit list
 -- representing the adjancy matrix (upper triangle)
+
 def decode_graph6 (s : string) : ℕ × (ℕ → ℕ → bool) :=
   let (n, lst) := split (decode s) in
   let adj := bits6 lst in
@@ -53,5 +54,34 @@ def decode_graph6 (s : string) : ℕ × (ℕ → ℕ → bool) :=
       get_bit adj (nat.div2 (j * nat.pred j) + i)
   in
   (n, lookup)
+
+def graph6_size (s : string) : ℕ := (split (decode s)).fst
+
+@[simp]
+def graph6_lookup (s : string) (i j : ℕ) : bool :=
+  if i = j then
+    ff
+  else
+    let (i, j) := (min i j, max i j) in
+    let (n, lst) := split (decode s) in
+    let adj := bits6 lst in
+    get_bit adj (nat.div2 (j * nat.pred j) + i)
+
+lemma lookup_irreflexive' (s : string) : 
+  ∀ k < graph6_size s, ¬ graph6_lookup s k k :=
+  by simp
+
+lemma lookup_irreflexive (s : string) :
+  irreflexive (λ i j , graph6_lookup s i j) :=
+  begin
+    intro, simp 
+  end
+
+lemma lookup_symmetric (s : string) : 
+  symmetric (λ i j , graph6_lookup s i j)
+  :=
+  begin
+    sorry
+  end
 
 end hog
