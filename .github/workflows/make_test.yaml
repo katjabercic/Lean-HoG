@@ -13,6 +13,8 @@ jobs:
     timeout-minutes: 50
     steps:
     - uses: actions/checkout@v2
+    - name: Install lean
+      run: eval "$LEAN_INSTALL"
     - name: Convert graphs
       run: make convert
     - name: Run build
