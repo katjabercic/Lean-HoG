@@ -1,0 +1,19 @@
+name: make_test
+on:
+  push:
+  pull_request:
+
+env:
+  LEAN_INSTALL: wget -q https://raw.githubusercontent.com/leanprover-community/mathlib-tools/master/scripts/install_debian.sh && bash install_debian.sh ; rm -f install_debian.sh && source ~/.profile
+
+jobs:
+  build_HoG:
+    name: Build HoG
+    runs-on: ubuntu-20.04
+    timeout-minutes: 50
+    steps:
+    - uses: actions/checkout@v2
+    - name: Convert graphs
+      run: make convert
+    - name: Run build
+      run: make build
