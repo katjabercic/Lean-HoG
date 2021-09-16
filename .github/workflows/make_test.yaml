@@ -4,7 +4,7 @@ on:
   pull_request:
 
 env:
-  LEAN_INSTALL: wget -q https://raw.githubusercontent.com/leanprover-community/mathlib-tools/master/scripts/install_debian.sh && bash install_debian.sh ; rm -f install_debian.sh && source ~/.profile && eval $BASH
+  LEAN_INSTALL: wget -q https://raw.githubusercontent.com/leanprover-community/mathlib-tools/master/scripts/install_debian.sh && bash install_debian.sh ; rm -f install_debian.sh && source ~/.profile
 
 jobs:
   build_HoG:
@@ -13,9 +13,9 @@ jobs:
     timeout-minutes: 50
     steps:
     - uses: actions/checkout@v2
-    - name: Install lean
-      run: eval "$LEAN_INSTALL"
     - name: Convert graphs
       run: make convert
-    - name: Run build
+    - name: build project
+      uses: leanprover-contrib/lean-build-action@master
+    - name: make build
       run: make build
