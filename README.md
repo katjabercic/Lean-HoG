@@ -2,6 +2,23 @@
 
 Incorporation of the [House of Graphs](http://hog.grinvin.org/) into [Lean](https://leanprover.github.io).
 
+## Contributing
+
+### Project structure
+
+* [`etc`](./etc) - various irrelevant files
+* [`data`](./data) - original HoG data files
+* [`convert`](./convert) - Python scripts for converting HoG data to Lean code
+* [`src`](./src) - Lean code
+
+### How to compile the code
+
+Assuming you have [installed Lean 3 and Mathlib](https://leanprover-community.github.io/index.html), after cloning this repository, you may run
+
+* `make convert` - convert HoG data to Lean files
+* `make build` or `leanpkg build` - compile all the Lean files
+* `make clean` - delete the generated Lean files
+
 ## House of Graphs
 
 The [House of Graphs](http://hog.grinvin.org/) is a database of simple graphs, encoded in the
@@ -51,18 +68,3 @@ The following special values are used in the database:
 * `infinity`
 * `undefined` - the value is not well-defined, or the data are missing in the database
 * `Computation time out`
-
-### Project structure
-
-* [`etc`](./etc) - various irrelevant files
-* [`data`](./data) - original HoG data files
-* [`convert`](./convert) - Python scripts for converting HoG data to Lean code
-* [`src`](./src) - Lean code
-
-### How to compile the code
-
-Assuming you have [installed Lean 3 and Mathlib](https://leanprover-community.github.io/index.html), after cloning this repository, you may run
-
-* `make convert` - convert HoG data to Lean files
-* `make build` or `leanpkg build` - compile all the Lean files
-* `make clean` - delete the generated Lean files
