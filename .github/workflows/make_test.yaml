@@ -1,0 +1,16 @@
+name: make_test
+on:
+  push:
+  pull_request:
+
+jobs:
+  build_HoG:
+    name: Build HoG
+    runs-on: ubuntu-20.04
+    timeout-minutes: 50
+    steps:
+    - uses: actions/checkout@v2
+    - name: Convert graphs
+      run: make convert
+    - name: Build project
+      uses: leanprover-contrib/lean-build-action@master
