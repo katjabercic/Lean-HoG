@@ -50,7 +50,11 @@ def to_simple_graph (h : hog) : simple_graph (fin (graph6_size h.graph6)) :=
 
 instance hog_decidable_adj (h : hog) : decidable_rel (to_simple_graph h).adj :=
   begin
-    intros i j, sorry
+    intros i j, 
+    unfold to_simple_graph,
+    simp,
+    unfold graph6_rel,
+    apply_instance,
   end
 
 end hog
