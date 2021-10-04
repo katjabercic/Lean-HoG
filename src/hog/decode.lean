@@ -1,6 +1,7 @@
 -- Implementation of the graph6 format
 -- https://users.cecs.anu.edu.au/~bdm/data/formats.txt
 
+import tactic
 namespace hog
 
 -- decode a string to a list of numbers, all in the range 0 to 63
@@ -81,7 +82,28 @@ lemma lookup_symmetric (s : string) :
   symmetric (λ i j , graph6_lookup s i j)
   :=
   begin
-    sorry
+    unfold symmetric,
+    intros x y p,
+    unfold graph6_lookup at p ⊢,
+    have q: x=y ∨ x≠y, exact em (x = y),
+    cases q,
+    {
+      rw if_pos at p,
+      simp at p,
+      exfalso,
+      exact p,
+      exact q,
+    },
+    {
+      rw if_neg at p,
+      rw if_neg,
+      rw min_comm,
+      rw max_comm,
+      exact p,
+      simp * at *,
+      cc,
+      cc,
+    },
   end
 
 end hog
