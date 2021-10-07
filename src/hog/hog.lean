@@ -3,8 +3,8 @@ import .raw_hog
 namespace hog
 
 structure hog : Type :=
- (raw_hog : raw_hog)
- (number_of_triangles_eq_size : raw_hog.number_of_vertices = size raw_hog)
+ (raw : raw_hog)
+ (number_of_vertices_eq_size : raw.number_of_vertices = some (size raw))
 --  (graph6 : string)
 --  (acyclic : option bool)
 --  (bipartite : option bool)
@@ -35,5 +35,11 @@ structure hog : Type :=
 --  (radius : option nat)
 --  (regular : option bool)
 --  (vertex_connectivity : option nat)
+
+-- This does not work
+-- instance number_of_vertices_eq_size (h : hog) : h.raw.number_of_vertices = some (size h.raw) :=
+-- begin
+--   obviously
+-- end
 
 end hog
