@@ -87,4 +87,9 @@ def from_preadjacency (G : preadjacency) (n : ℕ) : adjacency_list :=
 
 def g := hog.to_simple_graph hog.raw_hog00001
 
+def h1 := { hog.hog .
+  raw := hog.raw_hog00001,
+  number_of_vertices_eq_size := by obviously
+}
+
 -- #check graph_invariant.max_degree g
