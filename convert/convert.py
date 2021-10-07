@@ -7,6 +7,8 @@ def main():
         'output_path': 'src/hog/data', # default output directory, relative to project root
         'db_name': 'hog_data_', # prefix for output file names
         'db_main': 'hog_data', # name of the main data Lean module
+        'raw_hog_type': 'raw_hog', # lean type for the raw graph data
+        'raw_hog_namespace': 'hog',# lean namespace for hog data
         'write_floats': False, # ignore fields that contain floating point values
         'graph_id_length': 5, # number of digits needed to represent all graphs
         'graphs_per_file': 1000,
