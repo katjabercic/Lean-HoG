@@ -50,11 +50,12 @@ class HoGGraph:
     # The last line is used to check the terminating condition
     last_line_start = "Vertex Connectivity"
 
-    def __init__(self, name, g6, txt, write_floats):
+    def __init__(self, name, g6, txt, lean_type, write_floats):
         self.name = name
         self.escaped_g6 = g6.strip().replace('\\', '\\\\')
         self._raw = txt
         self._write_floats = write_floats
+        self._raw_hog_type = lean_type
     
     def _get_invariants(self, invariants):
         """Convert an iterator of invariant strings into a list of tuples (name, type, value)"""
@@ -117,7 +118,7 @@ class HoGGraph:
         
         return (
             f'\n\n'
-            f'def {self.name} := {{ hog .\n'
+            f'def {self.name} := {{ {self._raw_hog_type} .\n'
             f'  graph6 := "{self.escaped_g6}",\n'
             f'{invariants}'
             f'\n}}'
@@ -126,7 +127,7 @@ class HoGGraph:
     def structure_to_lean(self):
         """Output the Lean structure definition."""
 
-        out = 'structure hog : Type :=\n (graph6 : string)\n'
+        out = f'structure {self._raw_hog_type} : Type :=\n (graph6 : string)\n'
         for i, t in self._structure.items():
             n = self.convert_invariant_name(i)
             if t == 'bool':
@@ -228,6 +229,8 @@ class HoGParser:
             max_estimate = number_of_digits(self._s['limit'])
         self._graph_name_length = max_estimate
         self._part_name_length = number_of_digits(pow(10, max_estimate) / self._s['graphs_per_file'])
+        self._raw_hog_type = self._s['raw_hog_type']
+        self._raw_hog_namespace = self._s['raw_hog_namespace']
 
     def _ensure_output_directory(self):
         """Create the output directory if it does not exist yet."""
@@ -244,7 +247,7 @@ class HoGParser:
 
     def _graph_name(self, num):
         """The name of the n-th graph in Lean data modules."""
-        return 'hog' + str(num).zfill(self._graph_name_length)
+        return self._raw_hog_type + str(num).zfill(self._graph_name_length)
 
     def _lean_module_part(self, n):
         """The name of the n-th Lean data module."""
@@ -271,7 +274,7 @@ class HoGParser:
         return r + ']'
     
     def _get_db_preamble(self):
-        return 'import ..hog\n\nnamespace hog\n\n'
+        return f'import ..{self._raw_hog_type}\n\nnamespace hog\n\n'
 
     def _get_db_epilog(self, start, end, part):
         identifier = 'db_' + self._part_number(part)
@@ -290,7 +293,7 @@ class HoGParser:
                     had_graphs = True
                     fh_out = open(self._output_file_part(self._part), 'w')
                     fh_out.write(self._get_db_preamble())
-                graph = HoGGraph(self._graph_name(count), g6, inv, self._s['write_floats'])
+                graph = HoGGraph(self._graph_name(count), g6, inv, self._raw_hog_type, self._s['write_floats'])
                 lean_code = graph.to_lean()
                 if self._s['output_path'] != None:
                     fh_out.write(lean_code)
@@ -317,7 +320,7 @@ class HoGParser:
             for p in range(1, num_parts)
             ])
         return (
-            f'import ..hog\n\n'
+            f'import ..{self._raw_hog_type}\n\n'
             f'{module_imports}\n'
             f'\n\nnamespace hog\n\ndef data := ['
             f'{module_part_names}\n'

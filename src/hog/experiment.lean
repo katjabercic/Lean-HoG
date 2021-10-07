@@ -1,5 +1,6 @@
 import .decode
 import .graph_invariant
+import .raw_hog
 import .hog
 import .data.hog_data_001
 
@@ -82,8 +83,8 @@ def from_preadjacency (G : preadjacency) (n : ℕ) : adjacency_list :=
 -- #eval ((let (n, f) := hog.decode_graph6 "IheA@GUAo" in from_preadjacency f n) : list (ℕ × ℕ))
 
 -- Test the max_degree invariant
-#check hog.to_simple_graph hog.hog00001
+#check hog.to_simple_graph hog.raw_hog00001
 
-def g := hog.to_simple_graph hog.hog00001
+def g := hog.to_simple_graph hog.raw_hog00001
 
 -- #check graph_invariant.max_degree g
