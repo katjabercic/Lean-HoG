@@ -19,6 +19,19 @@ Assuming you have [installed Lean 3 and Mathlib](https://leanprover-community.gi
 * `make build` or `leanpkg build` - compile all the Lean files
 * `make clean` - delete the generated Lean files
 
+## Reading and references
+
+### Lean
+
+* [Logical verification 2020](https://github.com/blanchette/logical_verification_2020) - textbook
+* [The Natural Number Game](https://www.ma.imperial.ac.uk/~buzzard/xena/natural_number_game/)
+* [A Metaprogramming Framework for Formal Verification](https://leanprover.github.io/papers/tactic.pdf)
+* [How to connect Mathematica and Lean](https://deepai.org/publication/an-extensible-ad-hoc-interface-between-lean-and-mathematica)
+
+### Other
+
+* [NAUTY](https://www.swmath.org/software/611) - computing authomorphism groups of graphs and digraphs (also computes canonical labellings)
+
 ## House of Graphs
 
 The [House of Graphs](http://hog.grinvin.org/) is a database of simple graphs, encoded in the
