@@ -1,3 +1,4 @@
+import tactic
 import .decode
 import .graph_invariant
 import .raw_hog
@@ -77,7 +78,35 @@ def from_preadjacency (G : preadjacency) (n : ℕ) : adjacency_list :=
 
 -- Petersen graph as adjancency list
 -- #reduce from_preadjacency petersen 10
-#reduce from_preadjacency cycle3 3
+def adj_cyc_3 := from_preadjacency cycle3 3
+#check adj_cyc_3
+
+namespace tactic
+namespace interactive
+open expr tactic
+
+setup_tactic_parser
+  
+-- t ← mathematica.run_command_on (λ s, "StringReplace[ " ++ s ++ ", { \"[\" -> \"{\", \"]\" -> \"}\", \"(\" -> \"{\", \")\" -> \"}\"}] // ToExpression" ) e',
+
+meta def wololo (e : parse texpr) : tactic unit :=
+do
+  e' ← i_to_expr e,
+  t ← mathematica.run_command_on (λ s, s ++ "// LeanForm // Activate") e',
+  ts ← tactic.to_expr t,
+  tactic.trace ts,
+  return ()
+
+
+end interactive
+end tactic
+
+example : 1 = 1 :=
+begin
+  wololo [1,2]
+end
+
+
 
 -- "IsP@OkWHG" in HoG
 -- #eval ((let (n, f) := hog.decode_graph6 "IheA@GUAo" in from_preadjacency f n) : list (ℕ × ℕ))
