@@ -3,6 +3,7 @@ import .graph_invariant
 import .raw_hog
 import .hog
 import .data.hog_data_001
+import mathematica
 
 -- We define a pre-adjancency map as a ℕ → ℕ → bool. There is no information about the size of the graph, so
 -- effectively we are encoding countably infinite graphs.
@@ -75,22 +76,10 @@ def from_preadjacency (G : preadjacency) (n : ℕ) : adjacency_list :=
     list.filter (λ (p : ℕ × ℕ) , G' (prod.fst p) (prod.snd p)) (triangle n)
 
 -- Petersen graph as adjancency list
-#reduce from_preadjacency petersen 10
+-- #reduce from_preadjacency petersen 10
+#reduce from_preadjacency cycle3 3
 
 -- "IsP@OkWHG" in HoG
-#eval ((let (n, f) := hog.decode_graph6 "IheA@GUAo" in from_preadjacency f n) : list (ℕ × ℕ))
-
 -- #eval ((let (n, f) := hog.decode_graph6 "IheA@GUAo" in from_preadjacency f n) : list (ℕ × ℕ))
-
--- Test the max_degree invariant
-#check hog.to_simple_graph hog.raw_hog00001
-
-def g := hog.to_simple_graph hog.raw_hog00001
-
-def h1 := { hog.hog .
-  raw := hog.raw_hog00001,
-  number_of_vertices_eq_size := by refl
-}
-
 
 -- #check graph_invariant.max_degree g

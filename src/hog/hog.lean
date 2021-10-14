@@ -1,45 +1,23 @@
 import .raw_hog
+import .data.hog_data_001
+import tactic
 
-namespace hog
+open tactic
+open interactive (parse)
+open interactive.types (texpr)
+open lean.parser (ident)
 
 structure hog : Type :=
- (raw : raw_hog)
- (number_of_vertices_eq_size : raw.number_of_vertices = some (size raw))
---  (graph6 : string)
---  (acyclic : option bool)
---  (bipartite : option bool)
---  (chromatic_index : option nat)
---  (chromatic_number : option nat)
---  (circumference : option nat)
---  (claw_free : option bool)
---  (clique_number : option nat)
---  (connected : option bool)
---  (diameter : option nat)
---  (edge_connectivity : option nat)
---  (eulerian : option bool)
---  (genus : option nat)
---  (girth : option nat)
---  (hamiltonian : option bool)
---  (independence_number : option nat)
---  (longest_induced_cycle : option nat)
---  (longest_induced_path : option nat)
---  (matching_number : option nat)
---  (maximum_degree : option nat)
---  (minimum_degree : option nat)
---  (minimum_dominating_set : option nat)
---  (number_of_components : option nat)
---  (number_of_edges : option nat)
---  (number_of_triangles : option nat)
---  (number_of_vertices : option nat)
---  (planar : option bool)
---  (radius : option nat)
---  (regular : option bool)
---  (vertex_connectivity : option nat)
+ (raw : hog.raw_hog)
+ (number_of_vertices_eq_size : raw.number_of_vertices = some (hog.size raw))
 
--- This does not work
--- instance number_of_vertices_eq_size (h : hog) : h.raw.number_of_vertices = some (size h.raw) :=
--- begin
---   obviously
--- end
-
-end hog
+meta def tactic.interactive.roast (e : parse texpr) : tactic unit :=
+do { t ← tactic.i_to_expr ``((%%e).number_of_vertices = some (hog.size %%e)),
+     (_, p) ← solve_aux t (tactic.reflexivity),
+     r ← i_to_expr_strict ``(hog.mk %%e %%p),
+     exact r
+   }
+   
+-- #check list.head hog.db_001
+-- def hogs : list (list hog) := list.map (λ (rh : hog.raw_hog), by roast rh) (list.head hog.db_001)
+def hog1 : hog := by roast hog.raw_hog00001
