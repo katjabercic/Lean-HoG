@@ -11,7 +11,7 @@ structure pork : Type :=
   (p : pig)
   (roasted : p.n = p.m)
   
-class test (p : pig) := (eq : p.n = p.m)
+class test (p : pig) := (eq : p.n = p.m) 
 
 def piki : pig := 
 { n := 3, 
@@ -24,6 +24,8 @@ def jakob : pig :=
 def roast_piki : pork :=
 { p := piki,
   roasted := rfl }
+  
+#reduce has_to_pexpr pig
 
 meta def tactic.interactive.diag_tactic (e : parse texpr) : tactic unit :=
 do { t ← target, 
@@ -35,8 +37,6 @@ def foo (i : ℕ) : ℕ × ℕ :=
 begin
   diag_tactic (i + 3)
 end
-
-#print foo
 
 meta def tactic.interactive.roast (e : parse texpr) : tactic unit :=
 do { r ← i_to_expr_strict ``(pork.mk %%e (eq.refl (%%e).n)),
