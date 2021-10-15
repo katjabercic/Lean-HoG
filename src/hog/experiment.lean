@@ -1,15 +1,5 @@
-import tactic
-import .decode
 import .graph_invariant
-import .raw_hog
 import .hog
-import mathematica
-
--- We define a pre-adjancency map as a ℕ → ℕ → bool. There is no information about the size of the graph, so
--- effectively we are encoding countably infinite graphs.
-
-
--- Examples of preadjancency maps
 
 -- Complete graph (on however many vertices)
 def complete_preadjacency : hog.preadjacency
@@ -81,28 +71,31 @@ def adj_cyc_3 := from_preadjacency cycle3 3
 
 
 
-namespace tactic
-namespace interactive
-open expr tactic
+-- namespace tactic
+-- namespace interactive
+-- open expr tactic
 
-setup_tactic_parser
+-- setup_tactic_parser
   
--- t ← mathematica.run_command_on (λ s, "StringReplace[ " ++ s ++ ", { \"[\" -> \"{\", \"]\" -> \"}\", \"(\" -> \"{\", \")\" -> \"}\"}] // ToExpression" ) e',
+-- -- t ← mathematica.run_command_on (λ s, "StringReplace[ " ++ s ++ ", { \"[\" -> \"{\", \"]\" -> \"}\", \"(\" -> \"{\", \")\" -> \"}\"}] // ToExpression" ) e',
 
-meta def wololo (e : parse texpr) : tactic unit :=
-do
-  e' ← i_to_expr e,
-  t ← mathematica.run_command_on (λ s, s ++ "// LeanForm // Activate") e',
-  ts ← tactic.to_expr t,
-  tactic.trace ts,
-  return ()
+-- meta def wololo (e : parse texpr) : tactic unit :=
+-- do
+--   e' ← i_to_expr e,
+--   t ← mathematica.run_command_on (λ s, s ++ "// LeanForm // Activate") e',
+--   ts ← tactic.to_expr t,
+--   tactic.trace ts,
+--   return ()
 
 
-end interactive
-end tactic
+-- end interactive
+-- end tactic
 
-def graph_from_neighborhoods : hog.neighbor_relation → simple_graph
+def graph_from_neighborhoods : hog.neighbor_relation → simple_graph ℕ :=
+sorry
 
+
+def neighbors1 : hog.neighbor_relation := [(0, [4]), (1, [4]), (2,[3]), (3,[2,4]), (4,[0,1,3])]
 -- [(0, 4), (1, 4), (2, 3), (3, 2), (3, 4), (4, 0), (4, 1), (4, 3)]
 def adj1 : ℕ → ℕ → Prop
 | 0 4 := true
@@ -115,12 +108,45 @@ def adj1 : ℕ → ℕ → Prop
 | 4 3 := true
 | _ _ := false
 
-def graph1 := simple_graph.from_rel adj1
+def irr (f : ℕ → ℕ → Prop) : (ℕ → ℕ → Prop)
+| i j := i ≠ j ∧ (f i j ∨ f j i)
 
+lemma symmetric_irr (f : ℕ → ℕ → Prop) : symmetric (irr f) :=
+λ x y h, ⟨ne.symm h.left, or.symm h.right⟩ 
+-- begin
+--   unfold symmetric,
+--   unfold irr,
+--   intros x y h,
+--   split,
+--   symmetry,
+--   exact h.left,
+--   apply or.symm,
+--   exact h.right
+-- end
+
+lemma loopless_irr (f : ℕ → ℕ → Prop) : irreflexive (irr f) :=
+λ x h, false_of_ne h.left
+-- begin
+--   unfold irreflexive,
+--   unfold irr,
+--   intros x h,
+--   apply false_of_ne,
+--   exact h.left
+-- end
+
+def graph1 := simple_graph.from_rel adj1
 #check graph1
 
+def graph1' : simple_graph ℕ := {
+  adj := irr adj1,
+  sym := symmetric_irr adj1,
+  loopless := loopless_irr adj1
+}
 
--- "IsP@OkWHG" in HoG
--- #eval ((let (n, f) := hog.decode_graph6 "IheA@GUAo" in from_preadjacency f n) : list (ℕ × ℕ))
+def hog1 : hog.hog := {
+  neighborhoods := neighbors1,
+  preadjacency := adj1,
+  graph := graph1' 
+}
 
--- #check graph_invariant.max_degree g
+#reduce hog1
