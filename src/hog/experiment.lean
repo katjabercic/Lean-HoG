@@ -3,32 +3,30 @@ import .decode
 import .graph_invariant
 import .raw_hog
 import .hog
-import .data.hog_data_001
 import mathematica
 
 -- We define a pre-adjancency map as a ℕ → ℕ → bool. There is no information about the size of the graph, so
 -- effectively we are encoding countably infinite graphs.
 
-def preadjacency := ℕ → ℕ → bool
 
 -- Examples of preadjancency maps
 
 -- Complete graph (on however many vertices)
-def complete_preadjacency : preadjacency
+def complete_preadjacency : hog.preadjacency
 | i j := true
 
 -- cycle on 3 points
-def cycle3 : preadjacency
+def cycle3 : hog.preadjacency
 | 0 1 := tt
 | 1 2 := tt
 | 2 0 := tt
 | _ _ := ff -- catch all case for false
 
 -- cycle on n points
-def cycle (n : ℕ) : preadjacency
+def cycle (n : ℕ) : hog.preadjacency
 | i j := ((i + 1) % n = j)
 
-def petersen : preadjacency
+def petersen : hog.preadjacency
 -- outer cycle
 | 0 1 := tt
 | 1 2 := tt
@@ -60,14 +58,14 @@ def adjacency_list := list (ℕ × ℕ)
 -- Conversion between preadjancencies and adjancency lists
 
 -- convert an adjacency list to a preadjancency
-def from_adjacency_list (lst : adjacency_list) : preadjacency :=
+def from_adjacency_list (lst : adjacency_list) : hog.preadjacency :=
   λ i j, list.mem (i,j) lst
 
 -- cycle on 4 elements
-def C4 : preadjacency := from_adjacency_list [(0,1), (1,2), (2,3), (3,0)]
+def C4 : hog.preadjacency := from_adjacency_list [(0,1), (1,2), (2,3), (3,0)]
 
 -- We can generate the adjancency list but we need to provide the graph size,
-def from_preadjacency (G : preadjacency) (n : ℕ) : adjacency_list :=
+def from_preadjacency (G : hog.preadjacency) (n : ℕ) : adjacency_list :=
   let G' := irreflexive_symmetric G in
   let triangle (n : ℕ) :=
     list.join
@@ -80,6 +78,8 @@ def from_preadjacency (G : preadjacency) (n : ℕ) : adjacency_list :=
 -- #reduce from_preadjacency petersen 10
 def adj_cyc_3 := from_preadjacency cycle3 3
 #check adj_cyc_3
+
+
 
 namespace tactic
 namespace interactive
@@ -101,11 +101,23 @@ do
 end interactive
 end tactic
 
-example : 1 = 1 :=
-begin
-  wololo [1,2]
-end
+def graph_from_neighborhoods : hog.neighbor_relation → simple_graph
 
+-- [(0, 4), (1, 4), (2, 3), (3, 2), (3, 4), (4, 0), (4, 1), (4, 3)]
+def adj1 : ℕ → ℕ → Prop
+| 0 4 := true
+| 1 4 := true
+| 2 3 := true
+| 3 2 := true
+| 3 4 := true
+| 4 0 := true
+| 4 1 := true
+| 4 3 := true
+| _ _ := false
+
+def graph1 := simple_graph.from_rel adj1
+
+#check graph1
 
 
 -- "IsP@OkWHG" in HoG
