@@ -1,11 +1,17 @@
-import combinatorics.simple_graph.basic
 import .decode
 
 namespace hog
 
+def neighbor_relation : Type := list (ℕ × list ℕ)
+def adjacency_list: Type := list (ℕ × ℕ)
+def preadjacency := ℕ → ℕ → bool
+
+#check neighbor_relation
+
 -- The definition of data imported from HoG
 structure raw_hog : Type :=
- (graph6 : string)
+ (neighborhoods : neighbor_relation)
+ (adjacency: adjacency_list)
  (acyclic : option bool)
  (bipartite : option bool)
  (chromatic_index : option nat)
@@ -36,25 +42,15 @@ structure raw_hog : Type :=
  (regular : option bool)
  (vertex_connectivity : option nat)
 
-def size (h : raw_hog) : ℕ := graph6_size h.graph6
+-- def size (h : raw_hog) : ℕ := graph6_size h.graph6
 
--- raw lookup into adjacency matrix
-def graph6_rel (h : raw_hog) : fin (size h) → fin (size h) → Prop :=
-  λ i j, graph6_lookup h.graph6 i.val j.val
-
-def to_simple_graph (h : raw_hog) : simple_graph (fin (graph6_size h.graph6)) :=
- { adj := graph6_rel h,
-   sym := sorry,
-   loopless := sorry
-  }
-
-instance raw_hog_decidable_adj (h : raw_hog) : decidable_rel (to_simple_graph h).adj :=
-  begin
-    intros i j, 
-    unfold to_simple_graph,
-    simp,
-    unfold graph6_rel,
-    apply_instance,
-  end
+-- instance raw_hog_decidable_adj (h : raw_hog) : decidable_rel (to_simple_graph h).adj :=
+--   begin
+--     intros i j, 
+--     unfold to_simple_graph,
+--     simp,
+--     unfold graph6_rel,
+--     apply_instance,
+--   end
 
 end hog
