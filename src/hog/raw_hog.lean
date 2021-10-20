@@ -2,9 +2,6 @@ import .decode
 
 namespace hog
 
-def neighbor_relation : Type := list (ℕ × list ℕ)
-def adjacency_list: Type := list (ℕ × ℕ)
-def preadjacency := ℕ → ℕ → bool
 
 #check neighbor_relation
 
