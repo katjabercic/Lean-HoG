@@ -1,5 +1,6 @@
 import .graph_invariant
 import .hog
+import init.logic
 
 -- Complete graph (on however many vertices)
 def complete_preadjacency : hog.preadjacency
@@ -91,62 +92,94 @@ def adj_cyc_3 := from_preadjacency cycle3 3
 -- end interactive
 -- end tactic
 
+def neighborhoods_to_pred : hog.neighbor_relation → ℕ → ℕ → Prop
+| [] := λ _ _, false
+| (v :: vs) := 
+
+
 def graph_from_neighborhoods : hog.neighbor_relation → simple_graph ℕ :=
 sorry
 
 
 def neighbors1 : hog.neighbor_relation := [(0, [4]), (1, [4]), (2,[3]), (3,[2,4]), (4,[0,1,3])]
 -- [(0, 4), (1, 4), (2, 3), (3, 2), (3, 4), (4, 0), (4, 1), (4, 3)]
-def adj1 : ℕ → ℕ → Prop
-| 0 4 := true
-| 1 4 := true
-| 2 3 := true
-| 3 2 := true
-| 3 4 := true
-| 4 0 := true
-| 4 1 := true
-| 4 3 := true
-| _ _ := false
+@[simp, reducible]
+def adj1_bool : ℕ → ℕ → bool
+| 0 4 := tt
+| 1 4 := tt
+| 2 3 := tt
+| 3 2 := tt
+| 3 4 := tt
+| 4 0 := tt
+| 4 1 := tt
+| 4 3 := tt
+| _ _ := ff
+
+@[simp, reducible]
+def adj1 : ℕ → ℕ → Prop := λ i j, adj1_bool i j = tt
+
+
+def restrict {α : Type} (f : ℕ → ℕ → α) (n : ℕ) : fin n → fin n → α :=
+λ i j, f i.val j.val
+
+
+@[reducible]
+def my_to_bool (p : Prop) [h : decidable p] : bool :=
+decidable.cases_on h (λ h₁, bool.ff) (λ h₂, bool.tt)
+
+#check restrict adj1 17
 
 def irr (f : ℕ → ℕ → Prop) : (ℕ → ℕ → Prop)
 | i j := i ≠ j ∧ (f i j ∨ f j i)
 
 lemma symmetric_irr (f : ℕ → ℕ → Prop) : symmetric (irr f) :=
 λ x y h, ⟨ne.symm h.left, or.symm h.right⟩ 
--- begin
---   unfold symmetric,
---   unfold irr,
---   intros x y h,
---   split,
---   symmetry,
---   exact h.left,
---   apply or.symm,
---   exact h.right
--- end
 
 lemma loopless_irr (f : ℕ → ℕ → Prop) : irreflexive (irr f) :=
 λ x h, false_of_ne h.left
+
+-- def graph1 := simple_graph.from_rel adj1
+-- #check graph1
+
+-- def graph1' : simple_graph ℕ := {
+--   adj := irr adj1,
+--   sym := symmetric_irr adj1,
+--   loopless := loopless_irr adj1
+-- }
+
+-- def hog1 : hog.hog := {
+--   neighborhoods := neighbors1,
+--   preadjacency := adj1,
+--   graph := graph1' 
+-- }
+
+
+def test : ∀ (k : fin 100), k.val + 1 = k.val + 1 :=
+begin
+  simp,
+end
+
+#print test
+#check forall_congr
+#check forall_congr_eq
+#check trivial
+#check forall_const
+
+@[reducible]
+def cow {p : Prop} [d : decidable p] : my_to_bool p = true → p := by simp
+
+example: adj1 2 3 := 
+begin
+  simp, refl
+end
+
+example: ¬ adj1 2 2 := cow eq.refl
+
+example:  ∀ x, ¬(restrict adj1 4 x x) := cow eq.refl
 -- begin
---   unfold irreflexive,
---   unfold irr,
---   intros x h,
---   apply false_of_ne,
---   exact h.left
+--   simp, 
 -- end
 
-def graph1 := simple_graph.from_rel adj1
-#check graph1
 
-def graph1' : simple_graph ℕ := {
-  adj := irr adj1,
-  sym := symmetric_irr adj1,
-  loopless := loopless_irr adj1
-}
-
-def hog1 : hog.hog := {
-  neighborhoods := neighbors1,
-  preadjacency := adj1,
-  graph := graph1' 
-}
 
 #reduce hog1
