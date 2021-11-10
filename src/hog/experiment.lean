@@ -118,10 +118,8 @@ def adj1_bool : ℕ → ℕ → bool
 @[simp, reducible]
 def adj1 : ℕ → ℕ → Prop := λ i j, adj1_bool i j = tt
 
-
 def restrict {α : Type} (f : ℕ → ℕ → α) (n : ℕ) : fin n → fin n → α :=
 λ i j, f i.val j.val
-
 
 @[reducible]
 def my_to_bool (p : Prop) [h : decidable p] : bool :=
@@ -138,48 +136,45 @@ lemma symmetric_irr (f : ℕ → ℕ → Prop) : symmetric (irr f) :=
 lemma loopless_irr (f : ℕ → ℕ → Prop) : irreflexive (irr f) :=
 λ x h, false_of_ne h.left
 
--- def graph1 := simple_graph.from_rel adj1
--- #check graph1
-
--- def graph1' : simple_graph ℕ := {
---   adj := irr adj1,
---   sym := symmetric_irr adj1,
---   loopless := loopless_irr adj1
--- }
-
--- def hog1 : hog.hog := {
---   neighborhoods := neighbors1,
---   preadjacency := adj1,
---   graph := graph1' 
--- }
-
 
 def test : ∀ (k : fin 100), k.val + 1 = k.val + 1 :=
 begin
   simp,
 end
 
-#print test
-#check forall_congr
-#check forall_congr_eq
-#check trivial
-#check forall_const
-
+-- #print test
+-- #check forall_congr
+-- #check forall_congr_eq
+-- #check trivial
+-- #check forall_const
 @[reducible]
-def cow {p : Prop} [d : decidable p] : my_to_bool p = true → p := by simp
+def cow {p : Prop} [d : decidable p] : my_to_bool p = true → p := 
+begin
+  casesI d,
+  { simp [my_to_bool] },
+  { simp, exact d }
+end
 
 example: adj1 2 3 := 
 begin
   simp, refl
 end
 
-example: ¬ adj1 2 2 := cow eq.refl
+example: adj1 1 4 := cow rfl
 
-example:  ∀ x, ¬(restrict adj1 4 x x) := cow eq.refl
--- begin
---   simp, 
--- end
+example: ¬ adj1 2 2 := cow rfl
+
+example: decidable (∀ (x : fin 4), ¬restrict adj1 4 x x) :=
+begin
+  apply @nat.decidable_forall_fin 4 (λ i, ¬adj1 i i),
+end
+
+example:  ∀ x, ¬(restrict adj1 4 x x) :=
+begin
+  have d : decidable (∀ (x : fin 4), ¬restrict adj1 4 x x) := by 
+  apply @nat.decidable_forall_fin 4 (λ i, ¬adj1 i i),
+  apply cow refl
+end
 
 
 
-#reduce hog1
