@@ -14,10 +14,11 @@ def preadjacency := ℕ → ℕ → bool
 
 
 structure hog : Type :=
- (neighborhoods : neighbor_relation)
- (preadjacency : ℕ → ℕ → Prop)
+--  (neighborhoods : neighbor_relation)
+--  (preadjacency : ℕ → ℕ → Prop)
  (graph : simple_graph ℕ)
---  (number_of_vertices_eq_size : raw.number_of_vertices = some (hog.size raw))
+ (number_of_vertices : ℕ)
+ (number_of_vertices_eq_size : number_of_vertices = number_of_vertices)
 
 
 -- meta def roast (e : parse texpr) : tactic unit :=

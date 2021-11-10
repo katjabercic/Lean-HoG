@@ -2,6 +2,13 @@ import .graph_invariant
 import .hog
 import init.logic
 
+-- maybe too much is getting opened here
+import tactic
+open tactic
+open interactive (parse)
+open interactive.types (texpr)
+open lean.parser (ident tk)
+
 -- Complete graph (on however many vertices)
 def complete_preadjacency : hog.preadjacency
 | i j := true
@@ -17,7 +24,7 @@ def cycle3 : hog.preadjacency
 def cycle (n : ℕ) : hog.preadjacency
 | i j := ((i + 1) % n = j)
 
-def petersen : hog.preadjacency
+def petersen_preadj : hog.preadjacency
 -- outer cycle
 | 0 1 := tt
 | 1 2 := tt
@@ -92,14 +99,6 @@ def adj_cyc_3 := from_preadjacency cycle3 3
 -- end interactive
 -- end tactic
 
-def neighborhoods_to_pred : hog.neighbor_relation → ℕ → ℕ → Prop
-| [] := λ _ _, false
-| (v :: vs) := 
-
-
-def graph_from_neighborhoods : hog.neighbor_relation → simple_graph ℕ :=
-sorry
-
 
 def neighbors1 : hog.neighbor_relation := [(0, [4]), (1, [4]), (2,[3]), (3,[2,4]), (4,[0,1,3])]
 -- [(0, 4), (1, 4), (2, 3), (3, 2), (3, 4), (4, 0), (4, 1), (4, 3)]
@@ -118,6 +117,7 @@ def adj1_bool : ℕ → ℕ → bool
 @[simp, reducible]
 def adj1 : ℕ → ℕ → Prop := λ i j, adj1_bool i j = tt
 
+@[reducible]
 def restrict {α : Type} (f : ℕ → ℕ → α) (n : ℕ) : fin n → fin n → α :=
 λ i j, f i.val j.val
 
@@ -161,20 +161,39 @@ begin
 end
 
 example: adj1 1 4 := cow rfl
-
 example: ¬ adj1 2 2 := cow rfl
+example:  ∀ x, ¬(restrict adj1 4 x x) := cow rfl
 
-example: decidable (∀ (x : fin 4), ¬restrict adj1 4 x x) :=
-begin
-  apply @nat.decidable_forall_fin 4 (λ i, ¬adj1 i i),
-end
+@[reducible]
+def my_adj := restrict adj1 4
 
-example:  ∀ x, ¬(restrict adj1 4 x x) :=
-begin
-  have d : decidable (∀ (x : fin 4), ¬restrict adj1 4 x x) := by 
-  apply @nat.decidable_forall_fin 4 (λ i, ¬adj1 i i),
-  apply cow refl
-end
+example: simple_graph (fin 4) :=
+ { adj := my_adj,
+   sym := begin unfold symmetric, exact cow rfl end,
+   loopless := begin unfold irreflexive, exact cow rfl end
+ }
 
 
+example: simple_graph (fin 4) :=
+  simple_graph.mk
+    (restrict adj1 4)
+    (begin unfold symmetric, exact cow rfl end)
+    (begin unfold irreflexive, exact cow rfl end)
 
+meta def tactic.interactive.from_preadj (n : parse texpr) (_ : parse $ tk "with") (adj : parse texpr) : tactic unit :=
+do { r ← i_to_expr_strict
+                  ``(simple_graph.mk
+                      (restrict (%%adj) %%n)
+                      (begin unfold symmetric, exact cow rfl end)
+                      (begin unfold irreflexive, exact cow rfl end) : simple_graph (fin %%n)
+                  ),
+     exact r
+}
+
+def my_first_graph := by from_preadj 4 with adj1
+
+def petersen : hog.hog :=
+  { hog.hog . graph := by from_preadj 10 with (λ i j, petersen_preadj i j = tt),
+    number_of_vertices := 10,
+    number_of_vertices_eq_size := rfl
+  }
