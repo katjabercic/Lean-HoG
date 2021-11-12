@@ -77,31 +77,6 @@ def from_preadjacency (G : hog.preadjacency) (n : ℕ) : adjacency_list :=
 def adj_cyc_3 := from_preadjacency cycle3 3
 #check adj_cyc_3
 
-
-
--- namespace tactic
--- namespace interactive
--- open expr tactic
-
--- setup_tactic_parser
-  
--- -- t ← mathematica.run_command_on (λ s, "StringReplace[ " ++ s ++ ", { \"[\" -> \"{\", \"]\" -> \"}\", \"(\" -> \"{\", \")\" -> \"}\"}] // ToExpression" ) e',
-
--- meta def wololo (e : parse texpr) : tactic unit :=
--- do
---   e' ← i_to_expr e,
---   t ← mathematica.run_command_on (λ s, s ++ "// LeanForm // Activate") e',
---   ts ← tactic.to_expr t,
---   tactic.trace ts,
---   return ()
-
-
--- end interactive
--- end tactic
-
-
-def neighbors1 : hog.neighbor_relation := [(0, [4]), (1, [4]), (2,[3]), (3,[2,4]), (4,[0,1,3])]
--- [(0, 4), (1, 4), (2, 3), (3, 2), (3, 4), (4, 0), (4, 1), (4, 3)]
 @[simp, reducible]
 def adj1_bool : ℕ → ℕ → bool
 | 0 4 := tt
@@ -137,16 +112,6 @@ lemma loopless_irr (f : ℕ → ℕ → Prop) : irreflexive (irr f) :=
 λ x h, false_of_ne h.left
 
 
-def test : ∀ (k : fin 100), k.val + 1 = k.val + 1 :=
-begin
-  simp,
-end
-
--- #print test
--- #check forall_congr
--- #check forall_congr_eq
--- #check trivial
--- #check forall_const
 @[reducible]
 def cow {p : Prop} [d : decidable p] : my_to_bool p = true → p := 
 begin
@@ -192,8 +157,41 @@ do { r ← i_to_expr_strict
 
 def my_first_graph := by from_preadj 4 with adj1
 
+@[reducible]
+def petersen_preadj_prop : ℕ → ℕ → Prop :=
+λ i j, petersen_preadj i j = tt
+
 def petersen : hog.hog :=
-  { hog.hog . graph := by from_preadj 10 with (λ i j, petersen_preadj i j = tt),
+  { hog.hog . 
     number_of_vertices := 10,
-    number_of_vertices_eq_size := rfl
+    graph := by from_preadj 10 with adj1,
+    number_of_vertices_eq_size := rfl,
+    acyclic := option.none,
+    bipartite := option.none,
+    chromatic_index := option.none,
+    chromatic_number := option.none,
+    circumference := option.none,
+    claw_free := option.none,
+    clique_number := option.none,
+    connected := option.none,
+    diameter := option.none,
+    edge_connectivity := option.none,
+    eulerian := option.none,
+    genus := option.none,
+    girth := option.none,
+    hamiltonian := option.none,
+    independence_number := option.none,
+    longest_induced_cycle := option.none,
+    longest_induced_path := option.none,
+    matching_number := option.none,
+    maximum_degree := option.none,
+    minimum_degree := option.none,
+    minimum_dominating_set := option.none,
+    number_of_components := option.none,
+    number_of_edges := option.none,
+    number_of_triangles := option.none,
+    planar := option.none,
+    radius := option.none,
+    regular := option.none,
+    vertex_connectivity := option.none,
   }
