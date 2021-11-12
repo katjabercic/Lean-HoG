@@ -1,4 +1,3 @@
-import .graph_invariant
 import .hog
 import init.logic
 
@@ -10,21 +9,22 @@ open interactive.types (texpr)
 open lean.parser (ident tk)
 
 -- Complete graph (on however many vertices)
-def complete_preadjacency : hog.preadjacency
+def complete_preadj_bool : ℕ → ℕ → bool
 | i j := true
 
 -- cycle on 3 points
-def cycle3 : hog.preadjacency
+def cycle3_bool : ℕ → ℕ → bool
 | 0 1 := tt
 | 1 2 := tt
 | 2 0 := tt
 | _ _ := ff -- catch all case for false
 
 -- cycle on n points
-def cycle (n : ℕ) : hog.preadjacency
+def cycle_bool (n : ℕ) : ℕ → ℕ → bool
 | i j := ((i + 1) % n = j)
 
-def petersen_preadj : hog.preadjacency
+@[simp, reducible]
+def petersen_preadj_bool : ℕ → ℕ → bool
 -- outer cycle
 | 0 1 := tt
 | 1 2 := tt
@@ -157,14 +157,18 @@ do { r ← i_to_expr_strict
 
 def my_first_graph := by from_preadj 4 with adj1
 
-@[reducible]
-def petersen_preadj_prop : ℕ → ℕ → Prop :=
-λ i j, petersen_preadj i j = tt
+@[simp, reducible]
+def petersen_preadj : ℕ → ℕ → Prop :=
+λ i j, irreflexive_symmetric petersen_preadj_bool i j = tt
+
+@[simp, reducible]
+def complete_preadj : ℕ → ℕ → Prop :=
+λ i j, irreflexive_symmetric complete_preadj_bool i j = tt
 
 def petersen : hog.hog :=
   { hog.hog . 
     number_of_vertices := 10,
-    graph := by from_preadj 10 with adj1,
+    graph := by from_preadj 10 with petersen_preadj,
     number_of_vertices_eq_size := rfl,
     acyclic := option.none,
     bipartite := option.none,
@@ -195,3 +199,26 @@ def petersen : hog.hog :=
     regular := option.none,
     vertex_connectivity := option.none,
   }
+
+def graph_invariant (I : Type) := ∀ {n : ℕ}, simple_graph (fin n) → I
+
+-- the mathematical concept
+def card_verts {n : ℕ} (g : simple_graph (fin n)) := fintype.card (fin n)
+
+#check (@card_verts : graph_invariant ℕ)
+
+class hog_data {I : Type} (f : graph_invariant I) {n : ℕ} (g : simple_graph (fin n)) : Type :=
+  (hog_value : I)
+  (hog_correct : f g = hog_value )
+
+def Petersen : simple_graph (fin 10) := by from_preadj 10 with petersen_preadj
+
+@[simp, reducible]
+instance: hog_data @card_verts Petersen := ⟨ 10, rfl ⟩
+
+example : card_verts Petersen + 32 = 42 :=
+begin
+  -- we could just do this: simp [card_verts]
+  let ne : hog_data @card_verts Petersen := by apply_instance,
+  rw ne.hog_correct
+ end
