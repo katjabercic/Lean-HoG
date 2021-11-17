@@ -15,4 +15,4 @@ jobs:
     - name: Install mathlib
       uses: leanprover-contrib/lean-build-action@master
     - name: Make a hog
-      run: make build
+      run: lean --make --recursive src
