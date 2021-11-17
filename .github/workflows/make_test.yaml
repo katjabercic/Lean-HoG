@@ -11,6 +11,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Convert graphs
-      run: make convert
+      run: make convert LIMIT=10
     - name: Build project
       uses: leanprover-contrib/lean-build-action@master
