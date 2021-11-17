@@ -21,7 +21,7 @@ do { r ← i_to_expr_strict
      exact r
 }
 
--- We define a tactic that will do precisely the same as above
+-- Boolean reflection
 meta def bool_reflect : tactic unit :=
 do { p ← target,
      r ← i_to_expr_strict ``((to_bool_iff %%(p)).mp rfl),
