@@ -147,7 +147,7 @@ class HoGGraph:
         return (
             f'\n\n'
             f'def {self.name} : simple_graph (fin {count}) :=\n'
-            f'by from_preadjacency {count} with\n'
+            f'by from_adjacency {count} with\n'
             f'  λ (i : ℕ) (j : ℕ), (match i, j with'
             f'{adjacency}'
             f'\n'
