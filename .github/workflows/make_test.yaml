@@ -14,5 +14,3 @@ jobs:
       run: make convert LIMIT=10
     - name: Install mathlib
       uses: leanprover-contrib/lean-build-action@master
-    - name: Make a hog
-      run: lean --make --recursive src
