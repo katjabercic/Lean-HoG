@@ -20,7 +20,7 @@ def main():
     parser = ArgumentParser()
     parser.add_argument("-o", "--out", dest="output_path",
                         help="output Lean files to this directory")
-    parser.add_argument("-l", "--limit", dest="graph_limit",
+    parser.add_argument("-l", "--limit", dest="graph_limit", type=int,
                         help="number of graphs to process (0 for all)"
     )
     args = parser.parse_args()
