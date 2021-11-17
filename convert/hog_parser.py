@@ -57,6 +57,32 @@ class HoGGraph:
         self._write_floats = write_floats
         self._raw_hog_type = lean_type
     
+    # def _graph_from_preadjacency(self, num, preadjacency):
+    #     return f'def {self._graph_name(num)} : preadjacency := from_adjacency_list {str(preadjacency)}'
+
+    def _get_preadjacency(self, neighborhoods):
+        adjacency_pattern = re.compile('(?P<vertex>[0-9]+):(?P<neighbors>[0-9 ]*)\n')
+
+        # HoG vertices start at 1
+        def to_int_minus1(x):
+            assert int(x) > 0
+            return int(x) - 1
+
+        def parse_vertex(match):
+            vertex = to_int_minus1(match.group('vertex'))
+            # sort and filter the neighbors of vertex
+            neighbors = sorted(filter(lambda x: vertex < x, map(to_int_minus1, match.group('neighbors').split())))
+            return list(map(lambda x: (vertex, x), neighbors))
+
+        preadjacency = []
+        count = 0
+        for m in adjacency_pattern.finditer(neighborhoods):
+            count += 1
+            preadjacency += parse_vertex(m)
+        for p in preadjacency:
+            assert p[0] >= 0 and p[1] >= 0
+        return count, preadjacency
+
     def _get_invariants(self, invariants):
         """Convert an iterator of invariant strings into a list of tuples (name, type, value)"""
 
@@ -111,6 +137,13 @@ class HoGGraph:
             raise ValueError
         # size, preadjacency = self._get_preadjacency(match.group('adjacency'))
         
+        count, adj = self._get_preadjacency(match.group('adjacency'))
+        for e in adj:
+            assert e[0] >= 0 and e[1] >= 0
+        adjacency = '\n'.join(
+            f'  | {e[0]}, {e[1]} := tt | {e[1]}, {e[0]} := tt' for e in adj
+        ) + '\n  | _, _ := ff -- catch all case for false'
+
         invariants = ',\n'.join(
             lean_property(m[0], m[2]) for m in self._get_invariants(match.group('invariants'))
             if m[1] != 'float' or self._write_floats # m: (name, inv_type, value)
@@ -118,11 +151,15 @@ class HoGGraph:
         
         return (
             f'\n\n'
-            f'def {self.name} := {{ {self._raw_hog_type} .\n'
-            f'  graph6 := "{self.escaped_g6}",\n'
-            f'{invariants}'
-            f'\n}}'
+            f'def {self.name} : simple_graph (fin {count}) :=\n'
+            f'by from_preadjacency {count} with\n'
+            f'  λ (i : ℕ) (j : ℕ), (match i, j with'
+            f'{adjacency}'
+            f'\n'
+            f'  end : bool)'
         )
+            # f'  graph6 := "{self.escaped_g6}",\n'
+            # f'{invariants}'
     
     def structure_to_lean(self):
         """Output the Lean structure definition."""
@@ -193,7 +230,7 @@ class HoGIterator:
         try:
             file_in, file_g6 = self._get_filenames(next(self._inputs))
             self._fh_in = open(file_in, 'r')
-            self._fh_g6 = open(file_g6, 'r')
+            self._fh_g6 = open(file_g6, 'r') # DO NOT USE, THIS IS NOT THE CORRECT GRAPH6!
         except: # stop iterating if out of inputs or can't open file
             raise StopIteration
 
@@ -215,8 +252,6 @@ class HoGIterator:
 class HoGParser:
     """Converter from original HoG data to Lean code."""
 
-    adjacency_pattern = re.compile('(?P<vertex>[0-9])+:(?P<neighbors>[0-9 ]*)\n')
-
     def __init__(self, settings):
         def number_of_digits(n):
             return int(math.log10(math.ceil(n))) + 1
@@ -229,6 +264,7 @@ class HoGParser:
             max_estimate = number_of_digits(self._s['limit'])
         self._graph_name_length = max_estimate
         self._part_name_length = number_of_digits(pow(10, max_estimate) / self._s['graphs_per_file'])
+        self._obj_name = self._s['obj_name']
         self._raw_hog_type = self._s['raw_hog_type']
         self._raw_hog_namespace = self._s['raw_hog_namespace']
 
@@ -247,7 +283,7 @@ class HoGParser:
 
     def _graph_name(self, num):
         """The name of the n-th graph in Lean data modules."""
-        return self._raw_hog_type + str(num).zfill(self._graph_name_length)
+        return self._obj_name + str(num).zfill(self._graph_name_length)
 
     def _lean_module_part(self, n):
         """The name of the n-th Lean data module."""
@@ -274,11 +310,11 @@ class HoGParser:
         return r + ']'
     
     def _get_db_preamble(self):
-        return f'import ..{self._raw_hog_type}\n\nnamespace hog\n\n'
+        return f'import ..tactic\n\nnamespace hog\n\n'
 
     def _get_db_epilog(self, start, end, part):
         identifier = 'db_' + self._part_number(part)
-        return '\n\ndef ' + identifier + ' := [\n' + self._names_list(start, end) + '\n]\n\nend hog'
+        return '\n\n\ndef ' + identifier + ' := [\n' + self._names_list(start, end) + '\n]\n\nend hog'
     
     # Write a single file
 
@@ -320,7 +356,7 @@ class HoGParser:
             for p in range(1, num_parts)
             ])
         return (
-            f'import ..{self._raw_hog_type}\n\n'
+            f'import ..tactic\n\n'
             f'{module_imports}\n'
             f'\n\nnamespace hog\n\ndef data := ['
             f'{module_part_names}\n'
@@ -348,27 +384,3 @@ class HoGParser:
         with open(self._output_file_main(), 'w') as fh_out:
             fh_out.write(self._get_main_db(self._part))
         print(f'Total number of graphs: {count}')
-
-
-    # Old preadjacency code
-
-    # def _graph_from_preadjacency(self, num, preadjacency):
-    #     return f'def {self._graph_name(num)} : preadjacency := from_adjacency_list {str(preadjacency)}'
-
-    # def _get_preadjacency(self, neighborhoods):
-    #     # HoG vertices start at 1
-    #     def to_int_minus1(x):
-    #         return int(x) - 1
-
-    #     def parse_vertex(match):
-    #         vertex = to_int_minus1(match.group('vertex'))
-    #         # sort and filter the neighbors of vertex
-    #         neighbors = sorted(filter(lambda x: vertex < x, map(to_int_minus1, match.group('neighbors').split())))
-    #         return list(map(lambda x: (vertex, x), neighbors))
-
-    #     preadjacency = []
-    #     count = 0
-    #     for m in self.adjacency_pattern.finditer(neighborhoods):
-    #         count += 1
-    #         preadjacency += parse_vertex(m)
-    #     return count, preadjacency
