@@ -157,7 +157,6 @@ class HoGGraph:
             lean_property(m[0], m[2]) for m in parsed_invariants
             if m[1] != 'float' or self._write_floats # m: (name, inv_type, value)
         )
-        print(invariants)
 
         return (
             f'\n\n'
@@ -170,8 +169,6 @@ class HoGGraph:
             f'{adjacency(pad = 6)}\n'
             f'      end : bool))\n}}'
         )
-            # f'  graph6 := "{self.escaped_g6}",\n'
-            # f'{invariants}'
     
     def lean_edge_size_instance(self):
         return f'\ninstance: hog_edge_size {self.name} := ⟨ {self._invariants["Number of Edges"]} , rfl ⟩\n'
@@ -406,7 +403,6 @@ class HoGParser:
         exhausted_all_graphs = False
         while not exhausted_all_graphs:
             count, exhausted_all_graphs = self._write_graph_files(start)
-            count, exhausted_all_graphs = self._write_graph_files(start)
             self._part += 1
             start = count + 1
 
@@ -414,3 +410,4 @@ class HoGParser:
         with open(self._output_file_main(), 'w') as fh_out:
             fh_out.write(self._get_main_db(self._part))
         print(f'Total number of graphs: {count}')
+ 
