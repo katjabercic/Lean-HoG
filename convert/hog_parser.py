@@ -324,8 +324,9 @@ class HoGParser:
             r += br + self._graph_name(start + i)
         return r + ']'
     
-    def _get_db_instance_preamble(self):
-        return f'import ..tactic\nimport ..graph\n\nnamespace hog\n\n'
+    def _get_db_instance_preamble(self, part):
+        part = self._part_number(part)
+        return f'import ..tactic\nimport ..graph\nimport .hog_graph_{part}\n\nnamespace hog\n\n'
 
     def _get_db_instance_epilog(self):
         return '\n\nend hog'
@@ -351,7 +352,7 @@ class HoGParser:
                     fh_out = open(self._output_file_part('graph', self._part), 'w')
                     fh_out.write(self._get_db_preamble())
                     fh_out_edge_size = open(self._output_file_part('edge_size', self._part), 'w')
-                    fh_out_edge_size.write(self._get_db_instance_preamble())
+                    fh_out_edge_size.write(self._get_db_instance_preamble(self._part))
                 graph = HoGGraph(self._graph_name(count), g6, inv, self._raw_hog_type, self._s['write_floats'])
                 lean_graph = graph.to_lean()
                 lean_edge_size = graph.lean_edge_size_instance()
