@@ -140,23 +140,42 @@ class HoGGraph:
         count, adj = self._get_preadjacency(match.group('adjacency'))
         for e in adj:
             assert e[0] >= 0 and e[1] >= 0
-        adjacency = '\n'.join(
-            f'  | {e[0]}, {e[1]} := tt | {e[1]}, {e[0]} := tt' for e in adj
-        ) + '\n  | _, _ := ff -- catch all case for false'
+
+        def adjacency(pad = 0):
+            def arc(v1, v2):
+                return f'| {v1}, {v2} := tt'
+            def line(v1, v2):
+                return pad*' ' + arc(v1, v2) + ' ' + arc(v2, v1)
+            catch_all = pad*' ' + '| _, _ := ff -- catch all case for false'
+            return '\n'.join(line(*e) for e in adj) + '\n' + catch_all
 
         invariants = ',\n'.join(
             lean_property(m[0], m[2]) for m in self._get_invariants(match.group('invariants'))
             if m[1] != 'float' or self._write_floats # m: (name, inv_type, value)
         )
         
+# def cycle3 : simple_irreflexive_graph :=
+#   { vertex_size := 3,
+#     edge :=
+#       (λ (i : fin 3) (j : fin 3),
+#         (match i.val, j.val with
+#         | 0, 1 := tt | 1, 0 := tt
+#         | 1, 2 := tt | 2, 1 := tt
+#         | 2, 0 := tt | 0, 2 := tt
+#         | _, _ := ff -- catch all case for false
+#       end : bool)     
+#   }
+
         return (
             f'\n\n'
-            f'def {self.name} : simple_graph (fin {count}) :=\n'
-            f'by from_preadjacency {count} with\n'
-            f'  λ (i : ℕ) (j : ℕ), (match i, j with'
-            f'{adjacency}'
-            f'\n'
-            f'  end : bool)'
+            f'def {self.name} : simple_irreflexive_graph :=\n'
+            f'{{ simple_irreflexive_graph .\n'
+            f'  vertex_size := {count},\n'
+            f'  edge :=\n'
+            f'    (λ (i : fin {count}) (j : fin {count}),\n'
+            f'      (match i.val, j.val with\n'
+            f'{adjacency(pad = 6)}\n'
+            f'      end : bool))\n}}'
         )
             # f'  graph6 := "{self.escaped_g6}",\n'
             # f'{invariants}'
@@ -310,7 +329,7 @@ class HoGParser:
         return r + ']'
     
     def _get_db_preamble(self):
-        return f'import ..tactic\n\nnamespace hog\n\n'
+        return f'import ..tactic\nimport ..graph\n\nnamespace hog\n'
 
     def _get_db_epilog(self, start, end, part):
         identifier = 'db_' + self._part_number(part)
@@ -356,7 +375,8 @@ class HoGParser:
             for p in range(1, num_parts)
             ])
         return (
-            f'import ..tactic\n\n'
+            f'import ..tactic\n'
+            f'import ..graph\n\n'
             f'{module_imports}\n'
             f'\n\nnamespace hog\n\ndef data := ['
             f'{module_part_names}\n'
