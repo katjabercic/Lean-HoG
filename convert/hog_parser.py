@@ -61,10 +61,11 @@ class HoGGraph:
     #     return f'def {self._graph_name(num)} : preadjacency := from_adjacency_list {str(preadjacency)}'
 
     def _get_preadjacency(self, neighborhoods):
-        adjacency_pattern = re.compile('(?P<vertex>[0-9])+:(?P<neighbors>[0-9 ]*)\n')
+        adjacency_pattern = re.compile('(?P<vertex>[0-9]+):(?P<neighbors>[0-9 ]*)\n')
 
         # HoG vertices start at 1
         def to_int_minus1(x):
+            assert int(x) > 0
             return int(x) - 1
 
         def parse_vertex(match):
@@ -78,6 +79,8 @@ class HoGGraph:
         for m in adjacency_pattern.finditer(neighborhoods):
             count += 1
             preadjacency += parse_vertex(m)
+        for p in preadjacency:
+            assert p[0] >= 0 and p[1] >= 0
         return count, preadjacency
 
     def _get_invariants(self, invariants):
@@ -135,6 +138,8 @@ class HoGGraph:
         # size, preadjacency = self._get_preadjacency(match.group('adjacency'))
         
         count, adj = self._get_preadjacency(match.group('adjacency'))
+        for e in adj:
+            assert e[0] >= 0 and e[1] >= 0
         adjacency = '\n'.join(
             f'  | {e[0]}, {e[1]} := tt | {e[1]}, {e[0]} := tt' for e in adj
         ) + '\n  | _, _ := ff -- catch all case for false'
