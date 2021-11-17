@@ -20,11 +20,17 @@ def main():
     parser = ArgumentParser()
     parser.add_argument("-o", "--out", dest="output_path",
                         help="output Lean files to this directory")
+    parser.add_argument("-l", "--limit", dest="graph_limit",
+                        help="number of graphs to process (0 for all)"
+    )
     args = parser.parse_args()
 
     # override default output directory if one is passed as an argument
     if args.output_path is not None:
         settings['output_path'] = args.output_path
+
+    if args.graph_limit is not None:
+        settings['limit'] = args.graph_limit
 
     hog = hog_parser.HoGParser(settings)
 
