@@ -2,10 +2,10 @@
 -- https://users.cecs.anu.edu.au/~bdm/data/formats.txt
 
 import tactic
-namespace hog
+open tactic
 
 -- decode a string to a list of numbers, all in the range 0 to 63
-private def decode (s : string) :=
+private def string_to_codes (s : string) :=
   list.reverse $
   string.fold []
     (λ lst c, (min 63 (char.to_nat c - 63)) :: lst)
@@ -23,6 +23,7 @@ private def split : list ℕ → ℕ × list ℕ
     (n, lst)
 | (n :: lst) := (n, lst)
 
+-- pad a list of at most 6 booleans to exactly 6 booleans
 private def pad6 : list bool → list bool
 | [] := [ff, ff, ff, ff, ff, ff]
 | [b0] := [ff, ff, ff, ff, ff, b0]
@@ -32,20 +33,22 @@ private def pad6 : list bool → list bool
 | [b4, b3, b2, b1, b0] := [ff, b4, b3, b2, b1, b0]
 | (b5 :: b4 :: b3 :: b2 :: b1 :: b0 :: _) := [b5, b4, b3, b2, b1, b0]
 
+-- convert a list of numbers to their encodings as hextuples of booleans
 private def bits6 (lst : list ℕ) :=
   list.join $
   list.map (λ n , pad6 $ list.reverse $ nat.bits n) lst
 
+-- get the n-th bit in a list
 private def get_bit : list bool → ℕ → bool
 | [] k := ff
 | (b :: _) 0 := b
 | (_ :: lst) (k + 1) := get_bit lst k
 
--- not finished, it just computes the size and the bit list
--- representing the adjancy matrix (upper triangle)
-
-def decode_graph6 (s : string) : ℕ × (ℕ → ℕ → bool) :=
-  let (n, lst) := split (decode s) in
+-- decode the given string as a pair (n, adj) where
+-- n is the vertex count of the graph and adj is the
+-- adjancency relation encoded by s (symmetrized)
+def decode (s : string) : ℕ × (ℕ → ℕ → bool) :=
+  let (n, lst) := split (string_to_codes s) in
   let adj := bits6 lst in
   let lookup i j :=
     if i = j then
@@ -56,54 +59,47 @@ def decode_graph6 (s : string) : ℕ × (ℕ → ℕ → bool) :=
   in
   (n, lookup)
 
-def graph6_size (s : string) : ℕ := (split (decode s)).fst
+-- the size of the graph encoded by the given string
+def size (s : string) : ℕ := (split (string_to_codes s)).fst
 
-@[simp]
-def graph6_lookup (s : string) (i j : ℕ) : bool :=
+def lookup (s : string) (i j : ℕ) : bool :=
   if i = j then
     ff
   else
     let (i, j) := (min i j, max i j) in
-    let (n, lst) := split (decode s) in
+    let (n, lst) := split (string_to_codes s) in
     let adj := bits6 lst in
     get_bit adj (nat.div2 (j * nat.pred j) + i)
 
-lemma lookup_irreflexive' (s : string) : 
-  ∀ k < graph6_size s, ¬ graph6_lookup s k k :=
-  by simp
-
+-- graph6_lookup is irreflexive
 lemma lookup_irreflexive (s : string) :
-  irreflexive (λ i j , graph6_lookup s i j) :=
+  irreflexive (λ i j , lookup s i j) :=
   begin
-    intro, simp 
+    intro, simp [lookup]
   end
 
+-- the proof that the graph6 decoding results in a symmetric relation
 lemma lookup_symmetric (s : string) : 
-  symmetric (λ i j , graph6_lookup s i j)
+  symmetric (λ i j , lookup s i j)
   :=
-  begin
-    unfold symmetric,
-    intros x y p,
-    unfold graph6_lookup at p ⊢,
-    have q: x=y ∨ x≠y, exact em (x = y),
-    cases q,
-    {
-      rw if_pos at p,
-      simp at p,
-      exfalso,
-      exact p,
-      exact q,
-    },
-    {
-      rw if_neg at p,
-      rw if_neg,
-      rw min_comm,
-      rw max_comm,
-      exact p,
-      simp * at *,
-      cc,
-      cc,
-    },
-  end
+begin
+  intros x y p,
+  unfold lookup at p ⊢,
+  cases (nat.decidable_eq x y),
+  {
+    rw if_neg at p,
+    rw if_neg,
+    rw min_comm,
+    rw max_comm,
+    exact p,
+    cc, cc
+  },
+  { rw if_pos at p,
+    rw if_pos,
+    exact p,
+    cc, cc      
+  }
+end
 
-end hog
+-- the Petersen graph
+example := decode "IheA@GUAo"

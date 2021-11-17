@@ -50,12 +50,40 @@ class HoGGraph:
     # The last line is used to check the terminating condition
     last_line_start = "Vertex Connectivity"
 
-    def __init__(self, name, g6, txt, write_floats):
+    def __init__(self, name, g6, txt, lean_type, write_floats):
         self.name = name
         self.escaped_g6 = g6.strip().replace('\\', '\\\\')
         self._raw = txt
         self._write_floats = write_floats
+        self._raw_hog_type = lean_type
+        self._invariants = {}
     
+    # def _graph_from_preadjacency(self, num, preadjacency):
+    #     return f'def {self._graph_name(num)} : preadjacency := from_adjacency_list {str(preadjacency)}'
+
+    def _get_preadjacency(self, neighborhoods):
+        adjacency_pattern = re.compile('(?P<vertex>[0-9]+):(?P<neighbors>[0-9 ]*)\n')
+
+        # HoG vertices start at 1
+        def to_int_minus1(x):
+            assert int(x) > 0
+            return int(x) - 1
+
+        def parse_vertex(match):
+            vertex = to_int_minus1(match.group('vertex'))
+            # sort and filter the neighbors of vertex
+            neighbors = sorted(filter(lambda x: vertex < x, map(to_int_minus1, match.group('neighbors').split())))
+            return list(map(lambda x: (vertex, x), neighbors))
+
+        preadjacency = []
+        count = 0
+        for m in adjacency_pattern.finditer(neighborhoods):
+            count += 1
+            preadjacency += parse_vertex(m)
+        for p in preadjacency:
+            assert p[0] >= 0 and p[1] >= 0
+        return count, preadjacency
+
     def _get_invariants(self, invariants):
         """Convert an iterator of invariant strings into a list of tuples (name, type, value)"""
 
@@ -110,23 +138,48 @@ class HoGGraph:
             raise ValueError
         # size, preadjacency = self._get_preadjacency(match.group('adjacency'))
         
+        count, adj = self._get_preadjacency(match.group('adjacency'))
+        for e in adj:
+            assert e[0] >= 0 and e[1] >= 0
+
+        def adjacency(pad = 0):
+            def arc(v1, v2):
+                return f'| {v1}, {v2} := tt'
+            def line(v1, v2):
+                return pad*' ' + arc(v1, v2) + ' ' + arc(v2, v1)
+            catch_all = pad*' ' + '| _, _ := ff -- catch all case for false'
+            return '\n'.join(line(*e) for e in adj) + '\n' + catch_all
+
+        parsed_invariants = self._get_invariants(match.group('invariants'))
+        for i in parsed_invariants:
+            self._invariants[i[0]] = i[2]
         invariants = ',\n'.join(
-            lean_property(m[0], m[2]) for m in self._get_invariants(match.group('invariants'))
+            lean_property(m[0], m[2]) for m in parsed_invariants
             if m[1] != 'float' or self._write_floats # m: (name, inv_type, value)
         )
-        
+        print(invariants)
+
         return (
             f'\n\n'
-            f'def {self.name} := {{ hog .\n'
-            f'  graph6 := "{self.escaped_g6}",\n'
-            f'{invariants}'
-            f'\n}}'
+            f'def {self.name} : simple_irreflexive_graph :=\n'
+            f'{{ simple_irreflexive_graph .\n'
+            f'  vertex_size := {count},\n'
+            f'  edge :=\n'
+            f'    (λ (i : fin {count}) (j : fin {count}),\n'
+            f'      (match i.val, j.val with\n'
+            f'{adjacency(pad = 6)}\n'
+            f'      end : bool))\n}}'
         )
+            # f'  graph6 := "{self.escaped_g6}",\n'
+            # f'{invariants}'
     
+    def lean_edge_size_instance(self):
+        return f'\ninstance: hog_edge_size {self.name} := ⟨ {self._invariants["Number of Edges"]} , rfl ⟩\n'
+
     def structure_to_lean(self):
         """Output the Lean structure definition."""
 
-        out = 'structure hog : Type :=\n (graph6 : string)\n'
+        out = f'structure {self._raw_hog_type} : Type :=\n (graph6 : string)\n'
         for i, t in self._structure.items():
             n = self.convert_invariant_name(i)
             if t == 'bool':
@@ -192,7 +245,7 @@ class HoGIterator:
         try:
             file_in, file_g6 = self._get_filenames(next(self._inputs))
             self._fh_in = open(file_in, 'r')
-            self._fh_g6 = open(file_g6, 'r')
+            self._fh_g6 = open(file_g6, 'r') # DO NOT USE, THIS IS NOT THE CORRECT GRAPH6!
         except: # stop iterating if out of inputs or can't open file
             raise StopIteration
 
@@ -214,8 +267,6 @@ class HoGIterator:
 class HoGParser:
     """Converter from original HoG data to Lean code."""
 
-    adjacency_pattern = re.compile('(?P<vertex>[0-9])+:(?P<neighbors>[0-9 ]*)\n')
-
     def __init__(self, settings):
         def number_of_digits(n):
             return int(math.log10(math.ceil(n))) + 1
@@ -228,6 +279,9 @@ class HoGParser:
             max_estimate = number_of_digits(self._s['limit'])
         self._graph_name_length = max_estimate
         self._part_name_length = number_of_digits(pow(10, max_estimate) / self._s['graphs_per_file'])
+        self._obj_name = self._s['obj_name']
+        self._raw_hog_type = self._s['raw_hog_type']
+        self._raw_hog_namespace = self._s['raw_hog_namespace']
 
     def _ensure_output_directory(self):
         """Create the output directory if it does not exist yet."""
@@ -244,19 +298,19 @@ class HoGParser:
 
     def _graph_name(self, num):
         """The name of the n-th graph in Lean data modules."""
-        return 'hog' + str(num).zfill(self._graph_name_length)
+        return self._obj_name + str(num).zfill(self._graph_name_length)
 
-    def _lean_module_part(self, n):
+    def _lean_module_part(self, invariant, n):
         """The name of the n-th Lean data module."""
-        return f"{self._s['db_name']}{self._part_number(n)}"
+        return f"{self._s['db_name']}{invariant}_{self._part_number(n)}"
 
     def _output_file_main(self):
         """The name of main Lean data file."""
         return os.path.join(self._s['output_path'], f"{self._s['db_main']}.lean")
 
-    def _output_file_part(self, n):
+    def _output_file_part(self, invariant, n):
         """The name of the n-th Lean data file."""
-        return os.path.join(self._s['output_path'], f"{self._lean_module_part(n)}.lean")
+        return os.path.join(self._s['output_path'], f"{self._lean_module_part(invariant, n)}.lean")
     
     # Templates
 
@@ -270,16 +324,23 @@ class HoGParser:
             r += br + self._graph_name(start + i)
         return r + ']'
     
+    def _get_db_instance_preamble(self, part):
+        part = self._part_number(part)
+        return f'import ..tactic\nimport ..graph\nimport .hog_graph_{part}\n\nnamespace hog\n\n'
+
+    def _get_db_instance_epilog(self):
+        return '\n\nend hog'
+    
     def _get_db_preamble(self):
-        return 'import ..hog\n\nnamespace hog\n\n'
+        return f'import ..tactic\nimport ..graph\n\nnamespace hog\n'
 
     def _get_db_epilog(self, start, end, part):
         identifier = 'db_' + self._part_number(part)
-        return '\n\ndef ' + identifier + ' := [\n' + self._names_list(start, end) + '\n]\n\nend hog'
+        return '\n\n\ndef ' + identifier + ' := [\n' + self._names_list(start, end) + '\n]\n\nend hog'
     
     # Write a single file
 
-    def _write_graph_file(self, start):
+    def _write_graph_files(self, start):
         exhausted_all_graphs = False
         had_graphs = False
         count = start - 1
@@ -288,14 +349,18 @@ class HoGParser:
                 count, g6, inv = next(self._hog_iterator)
                 if i == 0 and self._s['output_path'] != None: # write beginning of file
                     had_graphs = True
-                    fh_out = open(self._output_file_part(self._part), 'w')
+                    fh_out = open(self._output_file_part('graph', self._part), 'w')
                     fh_out.write(self._get_db_preamble())
-                graph = HoGGraph(self._graph_name(count), g6, inv, self._s['write_floats'])
-                lean_code = graph.to_lean()
+                    fh_out_edge_size = open(self._output_file_part('edge_size', self._part), 'w')
+                    fh_out_edge_size.write(self._get_db_instance_preamble(self._part))
+                graph = HoGGraph(self._graph_name(count), g6, inv, self._raw_hog_type, self._s['write_floats'])
+                lean_graph = graph.to_lean()
+                lean_edge_size = graph.lean_edge_size_instance()
                 if self._s['output_path'] != None:
-                    fh_out.write(lean_code)
+                    fh_out.write(lean_graph)
+                    fh_out_edge_size.write(lean_edge_size)
                 else:
-                    print(lean_code)
+                    print(lean_graph)
                 if self._s['limit'] > 0 and count > self._s['limit']:
                     break
             except StopIteration:
@@ -304,12 +369,14 @@ class HoGParser:
         if self._s['output_path'] != None and had_graphs:
             fh_out.write(self._get_db_epilog(start, count, self._part))
             fh_out.close()
+            fh_out_edge_size.write(self._get_db_instance_epilog())
+            fh_out_edge_size.close()
         print(f'Converting graphs: {count}  ', end='\r')
         return count, exhausted_all_graphs
 
     def _get_main_db(self, num_parts):
         module_imports = '\n'.join([
-            f'import .{self._lean_module_part(p)}'
+            f'import .{self._lean_module_part("graph", p)}'
             for p in range(1, num_parts)
             ])
         module_part_names = ', '.join([
@@ -317,7 +384,8 @@ class HoGParser:
             for p in range(1, num_parts)
             ])
         return (
-            f'import ..hog\n\n'
+            f'import ..tactic\n'
+            f'import ..graph\n\n'
             f'{module_imports}\n'
             f'\n\nnamespace hog\n\ndef data := ['
             f'{module_part_names}\n'
@@ -337,7 +405,8 @@ class HoGParser:
         start = 1
         exhausted_all_graphs = False
         while not exhausted_all_graphs:
-            count, exhausted_all_graphs = self._write_graph_file(start)
+            count, exhausted_all_graphs = self._write_graph_files(start)
+            count, exhausted_all_graphs = self._write_graph_files(start)
             self._part += 1
             start = count + 1
 
@@ -345,27 +414,3 @@ class HoGParser:
         with open(self._output_file_main(), 'w') as fh_out:
             fh_out.write(self._get_main_db(self._part))
         print(f'Total number of graphs: {count}')
-
-
-    # Old preadjacency code
-
-    # def _graph_from_preadjacency(self, num, preadjacency):
-    #     return f'def {self._graph_name(num)} : preadjacency := from_adjacency_list {str(preadjacency)}'
-
-    # def _get_preadjacency(self, neighborhoods):
-    #     # HoG vertices start at 1
-    #     def to_int_minus1(x):
-    #         return int(x) - 1
-
-    #     def parse_vertex(match):
-    #         vertex = to_int_minus1(match.group('vertex'))
-    #         # sort and filter the neighbors of vertex
-    #         neighbors = sorted(filter(lambda x: vertex < x, map(to_int_minus1, match.group('neighbors').split())))
-    #         return list(map(lambda x: (vertex, x), neighbors))
-
-    #     preadjacency = []
-    #     count = 0
-    #     for m in self.adjacency_pattern.finditer(neighborhoods):
-    #         count += 1
-    #         preadjacency += parse_vertex(m)
-    #     return count, preadjacency
