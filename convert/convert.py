@@ -5,7 +5,7 @@ def main():
     settings = {
         'srcdir': 'data', # Input directory, relative to the project root
         'output_path': 'src/hog/data', # default output directory, relative to project root
-        'db_name': 'hog_data_', # prefix for output file names
+        'db_name': 'hog_', # prefix for output file names
         'db_main': 'hog_data', # name of the main data Lean module
         'obj_name': 'hog', # objects will be named `obj_name####`
         'raw_hog_type': 'raw_hog', # lean type for the raw graph data
