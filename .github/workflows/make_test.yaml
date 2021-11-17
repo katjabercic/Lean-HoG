@@ -12,5 +12,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: Convert graphs
       run: make convert LIMIT=10
-    - name: Build project
+    - name: Install mathlib
       uses: leanprover-contrib/lean-build-action@master
+    - name: Make a hog
+      run: make build
