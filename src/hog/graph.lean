@@ -9,6 +9,13 @@ structure simple_irreflexive_graph : Type :=
   (irreflexive : (∀ i, ¬ edge i i) . bool_reflect)
   (symmetric : (∀ i j, edge i j → edge j i) . bool_reflect)
 
+def edge_size (g : simple_irreflexive_graph) : ℕ :=
+  fintype.card { e : fin g.vertex_size × fin g.vertex_size | e.fst < e.snd  ∧ g.edge e.fst e.snd }
+
+class hog_edge_size (g : simple_irreflexive_graph) : Type :=
+  (edge_size_val : ℕ)
+  (edge_size_eq : edge_size g = edge_size_val . obviously)
+
 def cycle3 : simple_irreflexive_graph :=
   { simple_irreflexive_graph .
     vertex_size := 3,
@@ -21,3 +28,5 @@ def cycle3 : simple_irreflexive_graph :=
         | _, _ := ff -- catch all case for false
         end : bool))     
   }
+
+instance: hog_edge_size cycle3 := ⟨ 3 , rfl ⟩
