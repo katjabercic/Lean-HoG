@@ -1,0 +1,8 @@
+def $name : simple_irreflexive_graph :=
+{ simple_irreflexive_graph .
+  vertex_size := $size,
+  edge :=
+  (λ (i : fin $size) (j : fin $size),
+    (match i.val, j.val with
+      $adjacency
+    end : bool))}

@@ -1,6 +1,7 @@
 import re
 import os
 import math
+from string import Template
 
 class HoGGraph:
     """Holds structural information about HoG graphs. 
@@ -47,29 +48,41 @@ class HoGGraph:
         "Smallest Eigenvalue": "float",
         "Vertex Connectivity": "int"
     }
+
     # The last line is used to check the terminating condition
     last_line_start = "Vertex Connectivity"
 
     def __init__(self, name, g6, txt, lean_type, write_floats):
         self.name = name
         self.escaped_g6 = g6.strip().replace('\\', '\\\\')
-        self._raw = txt
         self._write_floats = write_floats
         self._raw_hog_type = lean_type
-        self._invariants = {}
-    
-    # def _graph_from_preadjacency(self, num, preadjacency):
-    #     return f'def {self._graph_name(num)} : preadjacency := from_adjacency_list {str(preadjacency)}'
 
-    def _get_preadjacency(self, neighborhoods):
+        graph_pattern = re.compile('(?P<adjacency>(?:[0-9]+:[0-9 ]*\n)*)(?P<invariants>(?:[a-zA-Z- ]+:.+\n)+)')
+        match = graph_pattern.search(txt)
+        if not match:
+            raise ValueError
+        self._size, self._adjacency = self._get_size_adjacency(match.group('adjacency'))
+        self._invariants = self._get_invariants(match.group('invariants'))
+        
+        # INSTANCES
+        self.lean_instances = {
+            'edge_size': f'\ninstance: hog_edge_size {self.name} := ⟨ {self._invariants["Number of Edges"]["value"]} , rfl ⟩\n'
+        }
+        
+    def _get_size_adjacency(self, raw_adjacency):
+        """Return the number of vertices and the list of edges (i, j), such that i < j."""
+
         adjacency_pattern = re.compile('(?P<vertex>[0-9]+):(?P<neighbors>[0-9 ]*)\n')
 
         # HoG vertices start at 1
         def to_int_minus1(x):
+            """Convert a vertex label of type 1--n to one of type 0--(n-1)"""
             assert int(x) > 0
             return int(x) - 1
 
         def parse_vertex(match):
+            """Given a match group for a list of neighbors of a vertex, return a list of edges"""
             vertex = to_int_minus1(match.group('vertex'))
             # sort and filter the neighbors of vertex
             neighbors = sorted(filter(lambda x: vertex < x, map(to_int_minus1, match.group('neighbors').split())))
@@ -77,7 +90,7 @@ class HoGGraph:
 
         preadjacency = []
         count = 0
-        for m in adjacency_pattern.finditer(neighborhoods):
+        for m in adjacency_pattern.finditer(raw_adjacency):
             count += 1
             preadjacency += parse_vertex(m)
         for p in preadjacency:
@@ -108,89 +121,32 @@ class HoGGraph:
                     raise ValueError # fail early
             return value
 
-        inv_list = []
+        inv_list = {}
         invariant_pattern = re.compile('(?:(?P<invariant>[a-zA-Z- ]+): (?P<value>.+))')
         for m in invariant_pattern.finditer(invariants):
             name = m.group('invariant')
             inv_type = self._structure[name]
             value = checked_invariant_value(inv_type, m.group('value'))
-            inv_list.append((name, inv_type, value))
+            inv_list[name] = { 'type': inv_type, 'value': value }
         return inv_list
 
-    def to_lean(self):
+    def lean_graph_def(self):
         """Output a single graph as a Lean structure."""
 
-        # just prints out default for floats
-        def lean_property(name, value):
-            n = (name.lower()).replace(' ', '_').replace('-', '_')
-            v = f'some ({value})'
-            if value is True:
-                v = 'some tt'
-            elif value is False:
-                v = 'some ff'
-            elif value is None or value == 'infinity':
-                v = 'none'
-            return f'  {n} := {v}'
+        fh_template = open(os.path.join('convert', 'template_graph.txt'), 'r')
+        raw_template = fh_template.read()
+        template = Template(raw_template)
+        fh_template.close()
 
-        graph_pattern = re.compile('(?P<adjacency>(?:[0-9]+:[0-9 ]*\n)*)(?P<invariants>(?:[a-zA-Z- ]+:.+\n)+)')
-        match = graph_pattern.search(self._raw)
-        if not match:
-            raise ValueError
-        # size, preadjacency = self._get_preadjacency(match.group('adjacency'))
-        
-        count, adj = self._get_preadjacency(match.group('adjacency'))
-        for e in adj:
-            assert e[0] >= 0 and e[1] >= 0
+        pad = len(re.search('(?P<indent> *)\$adjacency', raw_template).group('indent'))
+        def arc(v1, v2):
+            return f'| {v1}, {v2} := tt'
+        def line(v1, v2):
+            return pad*' ' + arc(v1, v2) + ' ' + arc(v2, v1)
+        catch_all = pad*' ' + '| _, _ := ff -- catch all case for false'
+        adj = '\n'.join(line(*e) for e in self._adjacency) + '\n' + catch_all
 
-        def adjacency(pad = 0):
-            def arc(v1, v2):
-                return f'| {v1}, {v2} := tt'
-            def line(v1, v2):
-                return pad*' ' + arc(v1, v2) + ' ' + arc(v2, v1)
-            catch_all = pad*' ' + '| _, _ := ff -- catch all case for false'
-            return '\n'.join(line(*e) for e in adj) + '\n' + catch_all
-
-        parsed_invariants = self._get_invariants(match.group('invariants'))
-        for i in parsed_invariants:
-            self._invariants[i[0]] = i[2]
-        invariants = ',\n'.join(
-            lean_property(m[0], m[2]) for m in parsed_invariants
-            if m[1] != 'float' or self._write_floats # m: (name, inv_type, value)
-        )
-
-        return (
-            f'\n\n'
-            f'def {self.name} : simple_irreflexive_graph :=\n'
-            f'{{ simple_irreflexive_graph .\n'
-            f'  vertex_size := {count},\n'
-            f'  edge :=\n'
-            f'    (λ (i : fin {count}) (j : fin {count}),\n'
-            f'      (match i.val, j.val with\n'
-            f'{adjacency(pad = 6)}\n'
-            f'      end : bool))\n}}'
-        )
-    
-    def lean_edge_size_instance(self):
-        return f'\ninstance: hog_edge_size {self.name} := ⟨ {self._invariants["Number of Edges"]} , rfl ⟩\n'
-
-    def structure_to_lean(self):
-        """Output the Lean structure definition."""
-
-        out = f'structure {self._raw_hog_type} : Type :=\n (graph6 : string)\n'
-        for i, t in self._structure.items():
-            n = self.convert_invariant_name(i)
-            if t == 'bool':
-                out += f' ({n} : option bool)\n'
-            elif t == 'int':
-                out += f' ({n} : option nat)\n'
-            elif t == 'float':
-                if self._s['write_floats']:
-                    out += f' ({n} : option real)\n'
-                else:
-                    continue
-            else:
-                raise ValueError
-        print(out)
+        return '\n\n' + template.substitute(name=self.name, size=self._size, adjacency=adj)
 
 
 # Iterates over the given list of files with HoG exports, graph by graph
@@ -324,50 +280,62 @@ class HoGParser:
     def _get_db_instance_preamble(self, part):
         part = self._part_number(part)
         return f'import ..tactic\nimport ..graph\nimport .hog_graph_{part}\n\nnamespace hog\n\n'
-
     def _get_db_instance_epilog(self):
         return '\n\nend hog'
     
     def _get_db_preamble(self):
         return f'import ..tactic\nimport ..graph\n\nnamespace hog\n'
-
     def _get_db_epilog(self, start, end, part):
         identifier = 'db_' + self._part_number(part)
         return '\n\n\ndef ' + identifier + ' := [\n' + self._names_list(start, end) + '\n]\n\nend hog'
     
-    # Write a single file
-
     def _write_graph_files(self, start):
+        """Write a set of graph files, one file for graph definitions, one for each of the invariants"""
+
         exhausted_all_graphs = False
         had_graphs = False
         count = start - 1
         for i in range(self._s['graphs_per_file']):
             try:
                 count, g6, inv = next(self._hog_iterator)
+                graph = HoGGraph(self._graph_name(count), g6, inv, self._raw_hog_type, self._s['write_floats'])
+                instances = graph.lean_instances
+
+                # If the output path is set, open files at the beginning
                 if i == 0 and self._s['output_path'] != None: # write beginning of file
                     had_graphs = True
                     fh_out = open(self._output_file_part('graph', self._part), 'w')
                     fh_out.write(self._get_db_preamble())
-                    fh_out_edge_size = open(self._output_file_part('edge_size', self._part), 'w')
-                    fh_out_edge_size.write(self._get_db_instance_preamble(self._part))
-                graph = HoGGraph(self._graph_name(count), g6, inv, self._raw_hog_type, self._s['write_floats'])
-                lean_graph = graph.to_lean()
-                lean_edge_size = graph.lean_edge_size_instance()
+                    fh_out_inst = {}
+                    for type_class in instances.keys():
+                        fh_out_inst[type_class] = open(self._output_file_part(type_class, self._part), 'w')
+                        fh_out_inst[type_class].write(self._get_db_instance_preamble(self._part))
+
+                print(graph.name, fh_out_inst.keys())
+                # Print the graph definition 
+                lean_graph = graph.lean_graph_def()
                 if self._s['output_path'] != None:
                     fh_out.write(lean_graph)
-                    fh_out_edge_size.write(lean_edge_size)
-                else:
+                    for type_class, instance in instances.items():
+                        fh_out_inst[type_class].write(instance)
+                else: # When not writing to files
                     print(lean_graph)
+
+                # Stop if printed enough graphs
                 if self._s['limit'] > 0 and count > self._s['limit']:
                     break
+
             except StopIteration:
                 exhausted_all_graphs = True
                 break
+
+        # Close all files that need closing
         if self._s['output_path'] != None and had_graphs:
             fh_out.write(self._get_db_epilog(start, count, self._part))
             fh_out.close()
-            fh_out_edge_size.write(self._get_db_instance_epilog())
-            fh_out_edge_size.close()
+            for type_class in instances.keys():
+                fh_out_inst[type_class].write(self._get_db_instance_epilog())
+                fh_out_inst[type_class].close()
         print(f'Converting graphs: {count}  ', end='\r')
         return count, exhausted_all_graphs
 
