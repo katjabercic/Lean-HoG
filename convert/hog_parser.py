@@ -295,6 +295,10 @@ class HoGParser:
     def _lean_module_part(self, invariant, n):
         """The name of the n-th Lean data module for an invariant."""
         return f"{self._s['db_name']}{invariant}_{self._part_number(n)}"
+    
+    def _db_part(self, p):
+        """Name of the n-th database structure part"""
+        return f'db_{self._part_number(p)}'
 
     def _output_file_part(self, invariant):
         """The file for the n-th Lean data module for an invariant."""
@@ -347,7 +351,7 @@ class HoGParser:
                     fhg = pfile_open_write_preamble('graph', gt_pre.substitute())
                     fhi = {}
                     for type_class in instances.keys():
-                        fhi[type_class] = pfile_open_write_preamble(type_class, it_pre.substitute(part=self._part))
+                        fhi[type_class] = pfile_open_write_preamble(type_class, it_pre.substitute(module_part=self._lean_module_part('graph', self._part)))
 
                 # Print the graph definition 
                 lean_graph = graph.lean_graph_def()
@@ -368,7 +372,7 @@ class HoGParser:
 
         # Close all files that need closing
         if self._s['output_path'] != None and had_graphs:
-            pfile_write_epilog_close(fhg, gt_epl.substitute(part=self._part, lists=self._names_list(start, count)))
+            pfile_write_epilog_close(fhg, gt_epl.substitute(db_part=self._db_part(self._part), lists=self._names_list(start, count)))
             for type_class in instances.keys():
                 pfile_write_epilog_close(fhi[type_class], it_epl.substitute())
         print(f'Converting graphs: {count}  ', end='\r')
@@ -394,7 +398,7 @@ class HoGParser:
         # Write out the main data file
         with open(self._output_file_main(), 'w') as fh_out:
             module_imports = _join_templates('\n', lambda p: f'import .{self._lean_module_part("graph", p)}', 1, self._part)
-            module_part_names = _join_templates(', ', lambda p: f'db_{self._part_number(p)}', 1, self._part)
+            module_part_names = _join_templates(', ', lambda p: self._db_part(p), 1, self._part)
             template = _get_template('db_main')[0]
             fh_out.write(template.substitute(import_graph_modules=module_imports, db_parts_list=module_part_names))
 

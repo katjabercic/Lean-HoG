@@ -7,7 +7,7 @@ namespace hog
 $graphs
 
 
-def db_$part := [
+def $db_part := [
 $lists
 ]
 

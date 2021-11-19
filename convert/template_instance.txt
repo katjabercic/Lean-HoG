@@ -1,6 +1,6 @@
 import ..tactic
 import ..graph
-import .hog_graph_$part
+import .$module_part
 
 namespace hog
 

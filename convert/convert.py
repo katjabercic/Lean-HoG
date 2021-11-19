@@ -10,9 +10,9 @@ def main():
         'obj_name': 'hog', # objects will be named `obj_name####`
         'write_floats': False, # ignore fields that contain floating point values
         'graph_id_length': 5, # number of digits needed to represent all graphs (used when converting all graphs)
-        'graphs_per_file': 1000,
+        'graphs_per_file': 500,
         'graphs_per_line': 10,
-        'limit': 3 # if non-zero, output this many graphs
+        'limit': 2000 # if non-zero, output this many graphs
     }
 
     parser = ArgumentParser()
