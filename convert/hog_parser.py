@@ -312,12 +312,12 @@ class HoGParser:
 
     def _names_list(self, start, end):
         """Prints a list of lists of graph names from start to end (including end)"""
-        gpl = self._s['graphs_per_file']
+        gpl = self._s['graphs_per_line']
         if gpl < 1: return ''
-        else: return '[' + '\n'.join(
+        else: return ',\n'.join(
             _join_templates(', ', self._graph_name, i, min(i + gpl, end + 1), '[', ']')
-            for i in [start + j*gpl for j in range((end-start)//gpl)]
-            ) + ']'
+            for i in [start + j*gpl for j in range((end-start)//gpl + 1)]
+            )
 
     def _write_graph_files(self, start):
         """Write a set of graph files, one file for graph definitions, one for each of the invariants"""
@@ -363,7 +363,7 @@ class HoGParser:
                     print(lean_graph)
 
                 # Stop if printed enough graphs
-                if self._s['limit'] > 0 and count > self._s['limit']:
+                if self._s['limit'] > 0 and count >= self._s['limit']:
                     break
 
             except StopIteration:
@@ -376,6 +376,7 @@ class HoGParser:
             for type_class in instances.keys():
                 pfile_write_epilog_close(fhi[type_class], it_epl.substitute())
         print(f'Converting graphs: {count}  ', end='\r')
+        if count == self._s['limit']: exhausted_all_graphs = True
         return count, exhausted_all_graphs
 
     # Write all Lean module files
