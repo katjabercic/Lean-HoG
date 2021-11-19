@@ -1,0 +1,14 @@
+import ..tactic
+import ..graph
+
+namespace hog
+
+
+$graphs
+
+
+def db_$part := [
+$lists
+]
+
+end hog
