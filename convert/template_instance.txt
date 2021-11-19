@@ -1,0 +1,11 @@
+import ..tactic
+import ..graph
+import .hog_graph_$part
+
+namespace hog
+
+
+$instances
+
+
+end hog
