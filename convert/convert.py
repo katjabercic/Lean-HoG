@@ -6,15 +6,13 @@ def main():
         'srcdir': 'data', # Input directory, relative to the project root
         'output_path': 'src/hog/data', # default output directory, relative to project root
         'db_name': 'hog_', # prefix for output file names
-        'db_main': 'hog_data', # name of the main data Lean module
+        'db_main': 'data', # name of the main data Lean module, without the prefix
         'obj_name': 'hog', # objects will be named `obj_name####`
-        'raw_hog_type': 'raw_hog', # lean type for the raw graph data
-        'raw_hog_namespace': 'hog',# lean namespace for hog data
         'write_floats': False, # ignore fields that contain floating point values
-        'graph_id_length': 5, # number of digits needed to represent all graphs
-        'graphs_per_file': 1000,
+        'graph_id_length': 5, # number of digits needed to represent all graphs (used when converting all graphs)
+        'graphs_per_file': 500,
         'graphs_per_line': 10,
-        'limit': 3 # if non-zero, output this many graphs
+        'limit': 2000 # if non-zero, output this many graphs
     }
 
     parser = ArgumentParser()

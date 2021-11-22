@@ -1,0 +1,10 @@
+$import_graph_modules
+
+
+namespace hog
+
+def data := [
+$db_parts_list
+]
+
+end hog
