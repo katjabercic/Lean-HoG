@@ -30,3 +30,12 @@ def max_degree (g : simple_irreflexive_graph) : ℕ := simple_graph.max_degree (
 class hog_max_degree (g : simple_irreflexive_graph) : Type :=
   (val : ℕ)
   (mag_degree_eq : max_degree g = val . obviously)
+
+def min_degree (g : simple_irreflexive_graph) : ℕ := simple_graph.min_degree (to_simple_graph g)
+
+class hog_min_degree (g : simple_irreflexive_graph) : Type :=
+  (val : ℕ)
+  (min_degree_eq : min_degree g = val . obviously)
+
+class hog_regular (g : simple_irreflexive_graph) [max : hog_max_degree g] [min : hog_min_degree g] : Type :=
+  (hog_regular : max.val = min.val . obviously)
