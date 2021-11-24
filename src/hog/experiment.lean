@@ -222,3 +222,24 @@ begin
   let ne : hog_data @card_verts Petersen := by apply_instance,
   rw ne.hog_correct
  end
+
+
+inductive int_tree : Type
+| empty {} : int_tree
+| leaf     : ℤ → int_tree
+| node     : ℤ → list int_tree → int_tree
+
+def t : int_tree := int_tree.node 3 [int_tree.leaf 1, int_tree.leaf 4, (int_tree.node (-1) [int_tree.empty, int_tree.leaf 5])]
+
+
+meta def BFS : int_tree → ℤ → bool
+| int_tree.empty k := ff
+| (int_tree.leaf val) k := val = k
+| (int_tree.node val l) k := 
+  match l with
+  | [] := ff
+  | (n :: ns) := (val = k) || (BFS (int_tree.node val ns)) k || (BFS n k)
+  end
+
+#eval BFS t 5
+#eval BFS t 12
