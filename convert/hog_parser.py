@@ -266,11 +266,24 @@ class HoGParser:
             return int(math.log10(math.ceil(n))) + 1
 
         self._s = settings
-        self._iterator = iter(HoGIterator(settings['srcdir'], settings['limit'], HoGGraph.last_line_start))
-        self._part = 0
         max_estimate = self._s['graph_id_length']
-        if self._s['limit'] > 0:
-            max_estimate = number_of_digits(self._s['limit'])
+
+        if settings['range'] is not None:
+            self._first_graph = settings['range']['start']
+            self._last_graph = settings['range']['end']
+            if self._last_graph > 0:
+                max_estimate = number_of_digits(self._last_graph - self._first_graph)
+        else:
+            self._first_graph = 1
+            self._last_graph = 0
+
+        # Set up iterator, possibly skip some graphs
+        self._iterator = iter(HoGIterator(settings['srcdir'], self._last_graph, HoGGraph.last_line_start))
+        if self._first_graph != 1:
+            for _ in range(self._first_graph - 1): # skip self._first_graph-1 graphs
+                next(self._iterator)
+        
+        self._part = 0        
         self._graph_name_length = max_estimate
         self._part_name_length = number_of_digits(pow(10, max_estimate) / self._s['graphs_per_file'])
         self._obj_name = self._s['obj_name']
@@ -338,7 +351,6 @@ class HoGParser:
         # Main loop
         exhausted_all_graphs = False
         had_graphs = False
-        count = start - 1
         for i in range(self._s['graphs_per_file']):
             try:
                 count, g6, inv = next(self._iterator)
@@ -363,7 +375,7 @@ class HoGParser:
                     print(lean_graph)
 
                 # Stop if printed enough graphs
-                if self._s['limit'] > 0 and count >= self._s['limit']:
+                if self._last_graph > 0 and count >= self._last_graph:
                     break
 
             except StopIteration:
@@ -376,7 +388,7 @@ class HoGParser:
             for type_class in instances.keys():
                 pfile_write_epilog_close(fhi[type_class], it_epl.substitute())
         print(f'Converting graphs: {count}  ', end='\r')
-        if count == self._s['limit']: exhausted_all_graphs = True
+        if count == self._last_graph: exhausted_all_graphs = True
         return count, exhausted_all_graphs
 
     # Write all Lean module files
@@ -389,12 +401,12 @@ class HoGParser:
 
         # Write out data files
         self._part = 1
-        start = 1
         exhausted_all_graphs = False
+        start_graphs_at = self._first_graph
         while not exhausted_all_graphs:
-            count, exhausted_all_graphs = self._write_graph_files(start)
+            count, exhausted_all_graphs = self._write_graph_files(start_graphs_at)
             self._part += 1
-            start = count + 1
+            start_graphs_at = count + 1
 
         # Write out the main data file
         with open(self._output_file_main(), 'w') as fh_out:
@@ -404,5 +416,5 @@ class HoGParser:
             fh_out.write(template.substitute(import_graph_modules=module_imports, db_parts_list=module_part_names))
 
         # Report on the number of graphs processed
-        print(f'Total number of graphs: {count}')
+        print(f'Total number of graphs: {count - self._first_graph + 1}')
  
