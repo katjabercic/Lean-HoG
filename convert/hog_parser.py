@@ -323,8 +323,12 @@ class HoGParser:
         return os.path.join(self._s['output_path'], f"{self._lean_module_part(invariant, self._part)}.lean")
 
     def _output_file_main(self):
-        """The name of main Lean data file."""
+        """The name of the main Lean data file."""
         return os.path.join(self._s['output_path'], f"{self._s['db_name']}{self._s['db_main']}.lean")
+    
+    def _output_stats_file(self):
+        """The name of the stats file."""
+        return os.path.join(self._s['output_path'], f"{self._s['obj_name']}.csv")
     
     # Templates, files
 
@@ -362,8 +366,9 @@ class HoGParser:
         for i in range(self._s['graphs_per_file']):
             try:
                 count, g6, inv = next(self._iterator)
-                print(count, g6, inv)
                 graph = HoGGraph(self._graph_name(count), g6, inv, self._s['write_floats'])
+                self._stats.append([count, graph._size, graph._invariants['Number of Edges']['value']])
+
                 instances = graph.lean_instances
 
                 # If the output path is set, open files at the beginning
@@ -427,6 +432,11 @@ class HoGParser:
             else:
                 template = _get_template('db_main')[0]
                 fh_out.write(template.substitute(import_graph_modules=module_imports, db_parts_list=module_part_names))
+        
+        with open(self._output_stats_file(), 'w+') as fhs_out:
+            # Id, Vertices, Edges
+            for s in self._stats:
+                fhs_out.write(','.join(map(str, s)) + '\n')
 
         # Report on the number of graphs processed
         print(f'Total number of graphs: {count - self._first_graph + 1}')
