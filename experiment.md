@@ -21,3 +21,14 @@ Opozorila za ekscesno porabo spomina javlja `lean --profile --memory=1000` že p
 ```
 make convert SKIP=15000 LIMIT=2
 ```
+
+# E3
+Za `make convert LIMIT=2 SKIP=18000` mi pri lean ukazu 
+```
+lean --profile --memory=20000 --make src/hog/data
+```
+Zmanjka spomina pri preverjanju števila vozlišč. Dobim error
+```
+error: excessive memory consumption detected at 'replace' (potential solution: increase memory consumption threshold)
+```
+Buildanje .olean datoteke se potem ustavi.
