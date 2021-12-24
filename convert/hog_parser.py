@@ -271,8 +271,6 @@ class HoGParser:
         if settings['range'] is not None:
             self._first_graph = settings['range']['start']
             self._last_graph = settings['range']['end']
-            if self._last_graph > 0:
-                max_estimate = number_of_digits(self._last_graph - self._first_graph)
         else:
             self._first_graph = 1
             self._last_graph = 0
@@ -292,6 +290,8 @@ class HoGParser:
             self._one_per_file = True
             self._part_name_length = self._graph_name_length
         self._obj_name = self._s['obj_name']
+
+        self._stats = []
 
     def _ensure_output_directory(self):
         """Create the output directory if it does not exist yet."""
@@ -362,6 +362,7 @@ class HoGParser:
         for i in range(self._s['graphs_per_file']):
             try:
                 count, g6, inv = next(self._iterator)
+                print(count, g6, inv)
                 graph = HoGGraph(self._graph_name(count), g6, inv, self._s['write_floats'])
                 instances = graph.lean_instances
 
