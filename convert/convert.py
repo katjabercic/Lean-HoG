@@ -10,13 +10,13 @@ def main():
         'obj_name': 'hog', # objects will be named `obj_name####`
         'write_floats': False, # ignore fields that contain floating point values
         'graph_id_length': 5, # number of digits needed to represent all graphs (used when converting all graphs)
-        'graphs_per_file': 50,
+        'graphs_per_file': 1,
         'graphs_per_line': 10,
         # sets the range of graphs to be converted, overrides limit, respects graphs per line/file
         # - None, to get the old behaviour, using limit
         # - skips all graphs from index 0 to start-1
         # - the graph at index end is also converted
-        'range': {'start': 1, 'end': 200}
+        'range': {'start': 1, 'end': 1}
     }
 
     parser = ArgumentParser()
