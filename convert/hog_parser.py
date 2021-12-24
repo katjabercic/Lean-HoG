@@ -285,7 +285,12 @@ class HoGParser:
         
         self._part = 0        
         self._graph_name_length = max_estimate
-        self._part_name_length = number_of_digits(pow(10, max_estimate) / self._s['graphs_per_file'])
+        if self._s['graphs_per_file'] > 1:
+            self._one_per_file = False
+            self._part_name_length = number_of_digits(pow(10, max_estimate) / self._s['graphs_per_file'])
+        else: 
+            self._one_per_file = True
+            self._part_name_length = self._graph_name_length
         self._obj_name = self._s['obj_name']
 
     def _ensure_output_directory(self):
@@ -346,7 +351,10 @@ class HoGParser:
             fh.close()
 
         it_pre, it_epl = _get_split_template('instance', '$instances')
-        gt_pre, gt_epl = _get_split_template('db_part', '$graphs')
+        if self._one_per_file:
+            gt_pre, gt_epl = _get_split_template('db_part_one_graph', '$graph')
+        else:
+            gt_pre, gt_epl = _get_split_template('db_part', '$graphs')
 
         # Main loop
         exhausted_all_graphs = False
@@ -412,8 +420,12 @@ class HoGParser:
         with open(self._output_file_main(), 'w') as fh_out:
             module_imports = _join_templates('\n', lambda p: f'import .{self._lean_module_part("graph", p)}', 1, self._part)
             module_part_names = _join_templates(', ', lambda p: self._db_part(p), 1, self._part)
-            template = _get_template('db_main')[0]
-            fh_out.write(template.substitute(import_graph_modules=module_imports, db_parts_list=module_part_names))
+            if self._one_per_file:
+                template = _get_template('db_main_one_graph')[0]
+                fh_out.write(template.substitute(import_graph_modules=module_imports, graph_lists=self._names_list(self._first_graph, count)))
+            else:
+                template = _get_template('db_main')[0]
+                fh_out.write(template.substitute(import_graph_modules=module_imports, db_parts_list=module_part_names))
 
         # Report on the number of graphs processed
         print(f'Total number of graphs: {count - self._first_graph + 1}')
