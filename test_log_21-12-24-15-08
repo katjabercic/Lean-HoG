@@ -1,0 +1,1190 @@
+101,7,14
+
+blocks in:	0
+blocks out:	1440
+maxrss:		482
+Graph size: 22785
+Edge size: 624
+201,7,9
+
+blocks in:	0
+blocks out:	88
+maxrss:		483
+Graph size: 17560
+Edge size: 624
+301,2,1
+
+blocks in:	0
+blocks out:	24
+maxrss:		452
+Graph size: 3076
+Edge size: 570
+401,8,15
+
+blocks in:	0
+blocks out:	72
+maxrss:		486
+Graph size: 27379
+Edge size: 610
+501,7,16
+
+blocks in:	0
+blocks out:	136
+maxrss:		482
+Graph size: 25622
+Edge size: 610
+601,8,16
+
+blocks in:	0
+blocks out:	72
+maxrss:		461
+Graph size: 27913
+Edge size: 610
+701,7,12
+
+blocks in:	0
+blocks out:	64
+maxrss:		482
+Graph size: 21056
+Edge size: 624
+801,8,11
+
+blocks in:	0
+blocks out:	64
+maxrss:		461
+Graph size: 22747
+Edge size: 624
+901,8,13
+
+blocks in:	0
+blocks out:	64
+maxrss:		486
+Graph size: 24232
+Edge size: 624
+1001,10,9
+
+blocks in:	0
+blocks out:	1440
+maxrss:		494
+Graph size: 23840
+Edge size: 624
+1101,9,6
+
+blocks in:	0
+blocks out:	56
+maxrss:		487
+Graph size: 18105
+Edge size: 621
+1201,11,20
+
+blocks in:	0
+blocks out:	112
+maxrss:		503
+Graph size: 45257
+Edge size: 627
+1301,9,26
+
+blocks in:	0
+blocks out:	112
+maxrss:		492
+Graph size: 46703
+Edge size: 627
+1401,9,26
+
+blocks in:	0
+blocks out:	112
+maxrss:		492
+Graph size: 46411
+Edge size: 627
+1501,9,19
+
+blocks in:	0
+blocks out:	88
+maxrss:		491
+Graph size: 36282
+Edge size: 627
+1601,11,31
+
+blocks in:	0
+blocks out:	136
+maxrss:		509
+Graph size: 60877
+Edge size: 613
+1701,11,22
+
+blocks in:	0
+blocks out:	112
+maxrss:		502
+Graph size: 47068
+Edge size: 627
+1801,14,13
+
+blocks in:	0
+blocks out:	96
+maxrss:		518
+Graph size: 39907
+Edge size: 624
+1901,17,16
+
+blocks in:	0
+blocks out:	136
+maxrss:		549
+Graph size: 60362
+Edge size: 610
+2001,14,19
+
+blocks in:	0
+blocks out:	120
+maxrss:		522
+Graph size: 53014
+Edge size: 627
+2101,12,22
+
+blocks in:	0
+blocks out:	1656
+maxrss:		476
+Graph size: 50650
+Edge size: 627
+2201,19,36
+
+blocks in:	0
+blocks out:	248
+maxrss:		584
+Graph size: 118752
+Edge size: 630
+2301,12,21
+
+blocks in:	0
+blocks out:	112
+maxrss:		506
+Graph size: 45560
+Edge size: 627
+2401,12,33
+
+blocks in:	0
+blocks out:	160
+maxrss:		511
+Graph size: 71104
+Edge size: 630
+2501,12,24
+
+blocks in:	0
+blocks out:	128
+maxrss:		509
+Graph size: 54440
+Edge size: 627
+2601,14,13
+
+blocks in:	0
+blocks out:	104
+maxrss:		526
+Graph size: 42414
+Edge size: 624
+2701,14,49
+
+blocks in:	0
+blocks out:	240
+maxrss:		530
+Graph size: 114643
+Edge size: 630
+2801,21,60
+
+blocks in:	0
+blocks out:	400
+maxrss:		631
+Graph size: 195977
+Edge size: 630
+2901,21,58
+
+blocks in:	0
+blocks out:	384
+maxrss:		620
+Graph size: 187310
+Edge size: 630
+3001,20,44
+
+blocks in:	0
+blocks out:	304
+maxrss:		599
+Graph size: 145998
+Edge size: 630
+3101,20,44
+
+blocks in:	0
+blocks out:	1680
+maxrss:		600
+Graph size: 146144
+Edge size: 630
+3201,21,34
+
+blocks in:	0
+blocks out:	264
+maxrss:		614
+Graph size: 125653
+Edge size: 630
+3301,20,34
+
+blocks in:	0
+blocks out:	256
+maxrss:		597
+Graph size: 120459
+Edge size: 630
+3401,20,30
+
+blocks in:	0
+blocks out:	224
+maxrss:		600
+Graph size: 106200
+Edge size: 627
+3501,20,30
+
+blocks in:	0
+blocks out:	232
+maxrss:		599
+Graph size: 107440
+Edge size: 627
+3601,20,30
+
+blocks in:	0
+blocks out:	224
+maxrss:		595
+Graph size: 105620
+Edge size: 627
+3701,22,67
+
+blocks in:	0
+blocks out:	456
+maxrss:		646
+Graph size: 223991
+Edge size: 633
+3801,22,39
+
+blocks in:	0
+blocks out:	336
+maxrss:		631
+Graph size: 145833
+Edge size: 630
+3901,22,39
+
+blocks in:	0
+blocks out:	1688
+maxrss:		628
+Graph size: 147473
+Edge size: 630
+4001,22,36
+
+blocks in:	0
+blocks out:	288
+maxrss:		627
+Graph size: 137143
+Edge size: 630
+4101,22,37
+
+blocks in:	0
+blocks out:	296
+maxrss:		609
+Graph size: 140872
+Edge size: 630
+4201,22,36
+
+blocks in:	0
+blocks out:	384
+maxrss:		634
+Graph size: 137270
+Edge size: 630
+4301,22,37
+
+blocks in:	0
+blocks out:	1672
+maxrss:		630
+Graph size: 140337
+Edge size: 630
+4401,23,49
+
+blocks in:	0
+blocks out:	480
+maxrss:		633
+Graph size: 185988
+Edge size: 630
+4501,23,37
+
+blocks in:	0
+blocks out:	312
+maxrss:		647
+Graph size: 147665
+Edge size: 630
+4601,23,39
+
+blocks in:	0
+blocks out:	320
+maxrss:		645
+Graph size: 152607
+Edge size: 630
+4701,23,38
+
+blocks in:	0
+blocks out:	312
+maxrss:		563
+Graph size: 148370
+Edge size: 630
+4801,23,38
+
+blocks in:	0
+blocks out:	312
+maxrss:		654
+Graph size: 148872
+Edge size: 630
+4901,23,73
+
+blocks in:	0
+blocks out:	504
+maxrss:		662
+Graph size: 249085
+Edge size: 633
+5001,24,56
+
+blocks in:	0
+blocks out:	528
+maxrss:		671
+Graph size: 209650
+Edge size: 630
+5101,24,72
+
+blocks in:	0
+blocks out:	1888
+maxrss:		678
+Graph size: 251818
+Edge size: 633
+5201,24,84
+
+blocks in:	0
+blocks out:	592
+maxrss:		685
+Graph size: 291240
+Edge size: 633
+5301,24,36
+
+blocks in:	0
+blocks out:	304
+maxrss:		660
+Graph size: 146187
+Edge size: 630
+5401,24,36
+
+blocks in:	0
+blocks out:	312
+maxrss:		667
+Graph size: 147508
+Edge size: 630
+5501,24,36
+
+blocks in:	0
+blocks out:	304
+maxrss:		662
+Graph size: 146562
+Edge size: 630
+5601,24,36
+
+blocks in:	0
+blocks out:	304
+maxrss:		666
+Graph size: 143988
+Edge size: 630
+5701,24,73
+
+blocks in:	0
+blocks out:	624
+maxrss:		683
+Graph size: 262004
+Edge size: 633
+5801,25,86
+
+blocks in:	0
+blocks out:	2008
+maxrss:		721
+Graph size: 313942
+Edge size: 633
+5901,25,65
+
+blocks in:	0
+blocks out:	504
+maxrss:		698
+Graph size: 249161
+Edge size: 633
+6001,25,65
+
+blocks in:	0
+blocks out:	512
+maxrss:		700
+Graph size: 249924
+Edge size: 633
+6101,25,65
+
+blocks in:	0
+blocks out:	504
+maxrss:		701
+Graph size: 248690
+Edge size: 633
+6201,25,65
+
+blocks in:	0
+blocks out:	504
+maxrss:		701
+Graph size: 247858
+Edge size: 633
+6301,25,65
+
+blocks in:	0
+blocks out:	504
+maxrss:		688
+Graph size: 246644
+Edge size: 633
+6401,25,80
+
+blocks in:	0
+blocks out:	1456
+maxrss:		711
+Graph size: 293770
+Edge size: 633
+6501,26,39
+
+blocks in:	0
+blocks out:	1024
+maxrss:		708
+Graph size: 170573
+Edge size: 630
+6601,26,39
+
+blocks in:	0
+blocks out:	352
+maxrss:		706
+Graph size: 170431
+Edge size: 630
+6701,26,39
+
+blocks in:	0
+blocks out:	344
+maxrss:		709
+Graph size: 167138
+Edge size: 630
+6801,27,61
+
+blocks in:	0
+blocks out:	512
+maxrss:		744
+Graph size: 252894
+Edge size: 630
+6901,27,61
+
+blocks in:	0
+blocks out:	520
+maxrss:		743
+Graph size: 255809
+Edge size: 630
+7001,27,61
+
+blocks in:	0
+blocks out:	616
+maxrss:		738
+Graph size: 256328
+Edge size: 630
+7101,27,61
+
+blocks in:	0
+blocks out:	1896
+maxrss:		738
+Graph size: 256004
+Edge size: 630
+7201,27,61
+
+blocks in:	0
+blocks out:	520
+maxrss:		747
+Graph size: 255154
+Edge size: 630
+7301,27,61
+
+blocks in:	0
+blocks out:	520
+maxrss:		726
+Graph size: 256389
+Edge size: 630
+7401,27,61
+
+blocks in:	0
+blocks out:	512
+maxrss:		744
+Graph size: 252959
+Edge size: 630
+7501,28,104
+
+blocks in:	0
+blocks out:	808
+maxrss:		788
+Graph size: 404430
+Edge size: 633
+7601,28,109
+
+blocks in:	0
+blocks out:	2232
+maxrss:		803
+Graph size: 425991
+Edge size: 633
+7701,28,112
+
+blocks in:	0
+blocks out:	864
+maxrss:		794
+Graph size: 432039
+Edge size: 633
+7801,28,68
+
+blocks in:	0
+blocks out:	576
+maxrss:		770
+Graph size: 286302
+Edge size: 633
+7901,28,42
+
+blocks in:	0
+blocks out:	400
+maxrss:		757
+Graph size: 194802
+Edge size: 630
+8001,28,42
+
+blocks in:	0
+blocks out:	384
+maxrss:		743
+Graph size: 188351
+Edge size: 630
+8101,29,77
+
+blocks in:	0
+blocks out:	760
+maxrss:		803
+Graph size: 328685
+Edge size: 633
+8201,29,77
+
+blocks in:	0
+blocks out:	2040
+maxrss:		775
+Graph size: 329491
+Edge size: 633
+8301,29,77
+
+blocks in:	0
+blocks out:	664
+maxrss:		783
+Graph size: 329052
+Edge size: 633
+8401,29,77
+
+blocks in:	0
+blocks out:	664
+maxrss:		803
+Graph size: 328749
+Edge size: 633
+8501,29,77
+
+blocks in:	0
+blocks out:	664
+maxrss:		800
+Graph size: 330654
+Edge size: 633
+8601,29,77
+
+blocks in:	0
+blocks out:	664
+maxrss:		802
+Graph size: 329653
+Edge size: 633
+8701,29,77
+
+blocks in:	0
+blocks out:	760
+maxrss:		799
+Graph size: 331041
+Edge size: 633
+8801,29,77
+
+blocks in:	0
+blocks out:	2040
+maxrss:		799
+Graph size: 330215
+Edge size: 633
+8901,29,77
+
+blocks in:	0
+blocks out:	664
+maxrss:		800
+Graph size: 329750
+Edge size: 633
+9001,29,77
+
+blocks in:	0
+blocks out:	664
+maxrss:		800
+Graph size: 328988
+Edge size: 633
+9101,29,77
+
+blocks in:	0
+blocks out:	664
+maxrss:		800
+Graph size: 329889
+Edge size: 633
+9201,29,77
+
+blocks in:	0
+blocks out:	752
+maxrss:		803
+Graph size: 326726
+Edge size: 633
+9301,29,77
+
+blocks in:	0
+blocks out:	2032
+maxrss:		784
+Graph size: 327085
+Edge size: 633
+9401,29,77
+
+blocks in:	0
+blocks out:	664
+maxrss:		801
+Graph size: 329555
+Edge size: 633
+9501,30,86
+
+blocks in:	0
+blocks out:	744
+maxrss:		832
+Graph size: 371436
+Edge size: 633
+9601,30,86
+
+blocks in:	0
+blocks out:	752
+maxrss:		829
+Graph size: 374025
+Edge size: 633
+9701,30,86
+
+blocks in:	0
+blocks out:	744
+maxrss:		829
+Graph size: 371243
+Edge size: 633
+9801,30,86
+
+blocks in:	0
+blocks out:	1416
+maxrss:		832
+Graph size: 369922
+Edge size: 633
+9901,30,86
+
+blocks in:	0
+blocks out:	1608
+maxrss:		830
+Graph size: 370615
+Edge size: 633
+10001,30,86
+
+blocks in:	0
+blocks out:	752
+maxrss:		826
+Graph size: 373508
+Edge size: 633
+10101,30,86
+
+blocks in:	0
+blocks out:	832
+maxrss:		830
+Graph size: 368224
+Edge size: 633
+10201,30,86
+
+blocks in:	0
+blocks out:	2120
+maxrss:		830
+Graph size: 369674
+Edge size: 633
+10301,30,86
+
+blocks in:	0
+blocks out:	744
+maxrss:		831
+Graph size: 372130
+Edge size: 633
+10401,30,86
+
+blocks in:	0
+blocks out:	752
+maxrss:		835
+Graph size: 375190
+Edge size: 633
+10501,30,86
+
+blocks in:	0
+blocks out:	752
+maxrss:		828
+Graph size: 373128
+Edge size: 633
+10601,30,86
+
+blocks in:	0
+blocks out:	752
+maxrss:		826
+Graph size: 374563
+Edge size: 633
+10701,30,86
+
+blocks in:	0
+blocks out:	2120
+maxrss:		830
+Graph size: 372533
+Edge size: 633
+10801,30,86
+
+blocks in:	0
+blocks out:	752
+maxrss:		829
+Graph size: 373851
+Edge size: 633
+10901,30,86
+
+blocks in:	0
+blocks out:	744
+maxrss:		827
+Graph size: 369450
+Edge size: 633
+11001,30,86
+
+blocks in:	0
+blocks out:	752
+maxrss:		831
+Graph size: 372914
+Edge size: 633
+11101,30,86
+
+blocks in:	0
+blocks out:	752
+maxrss:		827
+Graph size: 375759
+Edge size: 633
+11201,30,86
+
+blocks in:	0
+blocks out:	1848
+maxrss:		827
+Graph size: 376914
+Edge size: 633
+11301,30,45
+
+blocks in:	0
+blocks out:	896
+maxrss:		813
+Graph size: 220462
+Edge size: 630
+11401,30,45
+
+blocks in:	0
+blocks out:	456
+maxrss:		805
+Graph size: 223189
+Edge size: 630
+11501,30,45
+
+blocks in:	0
+blocks out:	456
+maxrss:		808
+Graph size: 222604
+Edge size: 630
+11601,30,165
+
+blocks in:	0
+blocks out:	1288
+maxrss:		873
+Graph size: 649175
+Edge size: 636
+11701,31,95
+
+blocks in:	0
+blocks out:	832
+maxrss:		853
+Graph size: 415284
+Edge size: 633
+11801,31,95
+
+blocks in:	0
+blocks out:	2208
+maxrss:		867
+Graph size: 417640
+Edge size: 633
+11901,31,95
+
+blocks in:	0
+blocks out:	840
+maxrss:		868
+Graph size: 418114
+Edge size: 633
+12001,31,95
+
+blocks in:	0
+blocks out:	840
+maxrss:		870
+Graph size: 418434
+Edge size: 633
+12101,31,95
+
+blocks in:	0
+blocks out:	840
+maxrss:		874
+Graph size: 418928
+Edge size: 633
+12201,33,118
+
+blocks in:	0
+blocks out:	2432
+maxrss:		948
+Graph size: 529103
+Edge size: 633
+12301,32,48
+
+blocks in:	0
+blocks out:	504
+maxrss:		865
+Graph size: 246933
+Edge size: 630
+12401,32,48
+
+blocks in:	0
+blocks out:	504
+maxrss:		866
+Graph size: 246871
+Edge size: 630
+12501,32,48
+
+blocks in:	0
+blocks out:	512
+maxrss:		864
+Graph size: 250186
+Edge size: 630
+12601,32,48
+
+blocks in:	0
+blocks out:	608
+maxrss:		863
+Graph size: 250975
+Edge size: 630
+12701,32,48
+
+blocks in:	0
+blocks out:	1920
+maxrss:		859
+Graph size: 249894
+Edge size: 630
+12801,34,51
+
+blocks in:	0
+blocks out:	560
+maxrss:		930
+Graph size: 278036
+Edge size: 630
+12901,34,51
+
+blocks in:	0
+blocks out:	568
+maxrss:		937
+Graph size: 280469
+Edge size: 630
+13001,34,51
+
+blocks in:	0
+blocks out:	656
+maxrss:		899
+Graph size: 275865
+Edge size: 630
+13101,34,51
+
+blocks in:	0
+blocks out:	784
+maxrss:		924
+Graph size: 278393
+Edge size: 630
+13201,34,51
+
+blocks in:	0
+blocks out:	1944
+maxrss:		911
+Graph size: 278891
+Edge size: 630
+13301,34,51
+
+blocks in:	0
+blocks out:	1656
+maxrss:		928
+Graph size: 279470
+Edge size: 630
+13401,34,51
+
+blocks in:	0
+blocks out:	1936
+maxrss:		939
+Graph size: 277222
+Edge size: 630
+13501,34,51
+
+blocks in:	0
+blocks out:	568
+maxrss:		930
+Graph size: 279062
+Edge size: 630
+13601,34,51
+
+blocks in:	0
+blocks out:	568
+maxrss:		893
+Graph size: 279180
+Edge size: 630
+13701,36,54
+
+blocks in:	0
+blocks out:	624
+maxrss:		1006
+Graph size: 310123
+Edge size: 630
+13801,38,57
+
+blocks in:	0
+blocks out:	688
+maxrss:		1091
+Graph size: 341018
+Edge size: 630
+13901,38,57
+
+blocks in:	0
+blocks out:	2064
+maxrss:		1086
+Graph size: 341752
+Edge size: 630
+14001,38,57
+
+blocks in:	0
+blocks out:	688
+maxrss:		1074
+Graph size: 341859
+Edge size: 630
+14101,40,60
+
+blocks in:	0
+blocks out:	752
+maxrss:		1162
+Graph size: 375234
+Edge size: 630
+14201,40,213
+
+blocks in:	0
+blocks out:	3504
+maxrss:		1298
+Graph size: 1080762
+Edge size: 636
+14301,40,210
+
+blocks in:	0
+blocks out:	2104
+maxrss:		1322
+Graph size: 1065821
+Edge size: 636
+14401,42,69
+
+blocks in:	0
+blocks out:	984
+maxrss:		1248
+Graph size: 444577
+Edge size: 633
+14501,42,69
+
+blocks in:	0
+blocks out:	2264
+maxrss:		1279
+Graph size: 442641
+Edge size: 633
+14601,43,70
+
+blocks in:	0
+blocks out:	928
+maxrss:		1298
+Graph size: 463613
+Edge size: 633
+14701,42,69
+
+blocks in:	0
+blocks out:	984
+maxrss:		1267
+Graph size: 443708
+Edge size: 633
+14801,43,70
+
+blocks in:	0
+blocks out:	2304
+maxrss:		1293
+Graph size: 464416
+Edge size: 633
+14901,42,259
+
+blocks in:	0
+blocks out:	2624
+maxrss:		1395
+Graph size: 1331350
+Edge size: 643
+15001,43,70
+
+blocks in:	0
+blocks out:	1016
+maxrss:		1324
+Graph size: 460846
+Edge size: 633
+15101,46,69
+
+blocks in:	0
+blocks out:	2352
+maxrss:		1486
+Graph size: 490682
+Edge size: 633
+15201,46,69
+
+blocks in:	0
+blocks out:	968
+maxrss:		1453
+Graph size: 487239
+Edge size: 633
+15301,46,69
+
+blocks in:	0
+blocks out:	1968
+maxrss:		1482
+Graph size: 490310
+Edge size: 633
+15401,47,73
+
+blocks in:	0
+blocks out:	1600
+maxrss:		1475
+Graph size: 529323
+Edge size: 633
+15501,46,69
+
+blocks in:	0
+blocks out:	1008
+maxrss:		1453
+Graph size: 487654
+Edge size: 633
+15601,46,69
+
+blocks in:	0
+blocks out:	2352
+maxrss:		1437
+Graph size: 488333
+Edge size: 633
+15701,46,69
+
+blocks in:	0
+blocks out:	976
+maxrss:		1476
+Graph size: 490651
+Edge size: 633
+15801,82,123
+
+blocks in:	0
+blocks out:	2984
+maxrss:		4709
+Graph size: 1483963
+Edge size: 633
+15901,50,75
+
+blocks in:	0
+blocks out:	2520
+maxrss:		1702
+Graph size: 573696
+Edge size: 633
+16001,88,132
+
+blocks in:	0
+blocks out:	3376
+maxrss:		6003
+Graph size: 1700168
+Edge size: 636
+16101,98,147
+
+blocks in:	0
+blocks out:	5512
+maxrss:		7725
+Graph size: 2092216
+Edge size: 636
+16201,90,135
+
+blocks in:	0
+blocks out:	4920
+maxrss:		6493
+Graph size: 1772843
+Edge size: 636
+16301,96,144
+
+blocks in:	0
+blocks out:	5352
+maxrss:		7315
+Graph size: 2008188
+Edge size: 636
+16401,86,129
+
+blocks in:	0
+blocks out:	4656
+maxrss:		5590
+Graph size: 1619696
+Edge size: 636
+16501,100,150
+
+blocks in:	0
+blocks out:	5736
+maxrss:		8226
+Graph size: 2173394
+Edge size: 636
+16601,110,165
+
+blocks in:	0
+blocks out:	6544
+maxrss:		10447
+Graph size: 2620564
+Edge size: 636
+16701,130,195
+
+blocks in:	0
+blocks out:	8504
+maxrss:		15411
+Graph size: 3638566
+Edge size: 636
+16801,140,210
+
+blocks in:	0
+blocks out:	9736
+maxrss:		19821
+Graph size: 4204055
+Edge size: 636
+16901,118,177
+
+blocks in:	0
+blocks out:	7336
+maxrss:		12464
+Graph size: 3006572
+Edge size: 636
+17001,102,153
+
+blocks in:	0
+blocks out:	5880
+maxrss:		8551
+Graph size: 2261620
+Edge size: 636
