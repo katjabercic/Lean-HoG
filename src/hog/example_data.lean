@@ -1,8 +1,9 @@
 import .tactic
 import .graph
+import .planar
 
 namespace hog
-
+open hypermap
 def cycle3 : simple_irreflexive_graph :=
   { simple_irreflexive_graph .
     vertex_size := 3,
@@ -15,7 +16,60 @@ def cycle3 : simple_irreflexive_graph :=
         | _, _ := ff -- catch all case for false
         end : bool))     
   }
+def edge := 
+      (λ (i : fin 6), 
+        (match i.val with
+        | 0 := 1 | 1 := 0
+        | 2 := 3 | 3 := 2
+        | 4 := 5 | 5 := 4
+        | _ := 0
+        end : (fin 6)))
+def node := 
+      (λ (i : fin 6), 
+      (match i.val with 
+      | 0 := 5 | 5 := 0
+      | 1 := 2 | 2 := 1
+      | 3 := 4 | 4 := 3
+      | _ := 0
+      end : (fin 6)))
+def face :=
+      (λ (i : fin 6), 
+        (match i.val with
+        | 0 := 2 | 1 := 5
+        | 2 := 4 | 3 := 1
+        | 4 := 0 | 5 := 3
+        | _ := 0
+        end : (fin 6)))
 
+#reduce to_bool (function.left_inverse edge (λ dart, node (face dart)))
+def hypermap_of_cycle3 : hypermap := 
+  { hypermap.
+    dart_size := 6,
+    edge := 
+      (λ (i : fin 6), 
+        (match i.val with
+        | 0 := 1 | 1 := 0
+        | 2 := 3 | 3 := 2
+        | 4 := 5 | 5 := 4
+        | _ := 0
+        end : (fin 6))),
+    node := 
+      (λ (i : fin 6), 
+      (match i.val with 
+      | 0 := 5 | 5 := 0
+      | 1 := 2 | 2 := 1
+      | 3 := 4 | 4 := 3
+      | _ := 0
+      end : (fin 6))),
+    face :=
+      (λ (i : fin 6), 
+        (match i.val with
+        | 0 := 2 | 1 := 5
+        | 2 := 4 | 3 := 1
+        | 4 := 0 | 5 := 3
+        | _ := 0
+        end : (fin 6))),
+}
 instance: hog_edge_size cycle3 := ⟨ 3, rfl ⟩
 
 instance: hog_max_degree cycle3 := ⟨ 2, rfl ⟩
@@ -23,6 +77,7 @@ instance: hog_max_degree cycle3 := ⟨ 2, rfl ⟩
 instance: hog_min_degree cycle3 := ⟨ 2, rfl ⟩
 
 instance: hog_regular cycle3 := ⟨ rfl ⟩
+
 
 end hog
 
