@@ -1,0 +1,10 @@
+$import_graph_modules
+
+
+namespace hog
+
+def data := [
+$graph_lists
+]
+
+end hog
