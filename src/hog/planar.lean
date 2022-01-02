@@ -1,5 +1,7 @@
 import .tactic
 import data.fintype.basic
+import group_theory.group_action.basic
+import group_theory.perm.cycles
 namespace hypermap
 structure hypermap : Type :=
   (dart_size: ℕ)
@@ -48,6 +50,44 @@ begin
   rw ←fintype.injective_iff_surjective, 
   exact node_injective h
 end
- 
+
+def edge_perm : equiv.perm (fin h.dart_size) := 
+{ equiv.
+  to_fun := h.edge,
+  inv_fun := (λ dart, h.node (h.face dart)),
+  left_inv := 
+    function.left_inverse_of_surjective_of_right_inverse 
+      (function.surjective.comp (node_surjective h) (face_surjective h))
+      (edge_inv h),
+  right_inv := edge_inv h 
+}
+
+def node_perm : equiv.perm (fin h.dart_size) := 
+{ equiv.
+  to_fun := h.node,
+  inv_fun := (λ dart, h.face (h.edge dart)),
+  left_inv := node_inv h,
+  right_inv := 
+    function.right_inverse_of_injective_of_left_inverse 
+      (function.injective.comp (face_injective h) (edge_injective h))
+      (node_inv h) 
+}
+
+def face_perm : equiv.perm (fin h.dart_size) := 
+{ equiv.
+  to_fun := h.face,
+  inv_fun := (λ dart, h.edge (h.node dart)),
+  left_inv := face_inv h,
+  right_inv := 
+    function.right_inverse_of_injective_of_left_inverse 
+      (function.injective.comp (edge_injective h) (node_injective h))
+      (face_inv h) 
+}
+
 end hypermap
+
+namespace euler_characteristic
+def count_cycles {α : Type*} [fintype α] [linear_order α] (p : equiv.perm α) :=
+  list.length (equiv.perm.cycle_factors p).val  
+end euler_characteristic
 
