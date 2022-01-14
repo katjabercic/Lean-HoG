@@ -1,4 +1,5 @@
 import .tactic
+import .perm_cycles
 import data.fintype.basic
 import group_theory.group_action.basic
 import group_theory.perm.cycles
@@ -87,7 +88,16 @@ def face_perm : equiv.perm (fin h.dart_size) :=
 end hypermap
 
 namespace euler_characteristic
-def count_cycles {α : Type*} [fintype α] [linear_order α] (p : equiv.perm α) :=
-  list.length (equiv.perm.cycle_factors p).val  
+open hypermap
+def count_cycles {n : ℕ} {f : fin n → fin n} (l : cycles_of f)  : ℕ :=
+list.length l.val
+
+structure euler_char (h : hypermap) : Type :=
+  (n : ℕ)
+  (edge_cycles : cycles_of h.edge . gen_factorization)
+  (node_cycles : cycles_of h.node . gen_factorization)
+  (face_cycles : cycles_of h.face . gen_factorization)
+  (char_is_n : n = node_cycles.val.length - edge_cycles.val.length + face_cycles.val.length . bool_reflect)
+
 end euler_characteristic
 

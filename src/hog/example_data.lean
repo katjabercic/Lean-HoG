@@ -1,10 +1,10 @@
 import .tactic
 import .graph
 import .planar
-
+import .perm_cycles
 namespace hog
 open hypermap
-open euler
+open euler_characteristic
 def cycle3 : simple_irreflexive_graph :=
   { simple_irreflexive_graph .
     vertex_size := 3,
@@ -42,7 +42,6 @@ def face :=
         | _ := 0
         end : (fin 6)))
 
-#reduce to_bool (function.left_inverse edge (λ dart, node (face dart)))
 def hypermap_of_cycle3 : hypermap := 
   { hypermap.
     dart_size := 6,
@@ -71,7 +70,8 @@ def hypermap_of_cycle3 : hypermap :=
         | _ := 0
         end : (fin 6))),
 }
---#eval euler.count_cycles (hypermap.edge_perm hypermap_of_cycle3)
+def cycle3_euler : euler_char hypermap_of_cycle3 := {n := 2}
+
 instance: hog_edge_size cycle3 := ⟨ 3, rfl ⟩
 
 instance: hog_max_degree cycle3 := ⟨ 2, rfl ⟩
