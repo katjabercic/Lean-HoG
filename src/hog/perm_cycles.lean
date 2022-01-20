@@ -1,84 +1,34 @@
 import .python group_theory.perm.cycles .tactic
 open equiv expr
-
-meta def eval_match_fun_aux : expr → tactic string 
-| (expr.app e@(app (app (app _ (app _ x)) _) (app (app _ (app _ n_e)) y)) rest) := 
-  do
-    n ← tactic.eval_expr ℕ n_e,
-    x' ← tactic.eval_expr ℕ x,
-    y' ← tactic.eval_expr (fin n) y,
-    evs ← eval_match_fun_aux rest,
-    return $ (to_string x') ++ " " ++ (format.to_string y') ++ "\n" ++ evs 
-| (app (app _ (app _ n)) x) :=
-  do
-    n' ← tactic.eval_expr ℕ n,
-    x' ← tactic.eval_expr (fin n') x, 
-    pure $ "_ " ++ to_string x'
-| e := tactic.fail $ "unknown expression " ++ to_string e 
-
--- Evaluate a function of the form `ite (ite (...))`
-meta def eval_match_fun (e : expr) : tactic (expr × string) :=
+/-
+Generate the proof of `fact (0 < n)`
+-/
+meta def n_gt_0 (n : expr) : tactic expr :=
+let p := ``(fact (0 < %%n)) in 
+let q := ``(0 < %%n) in
 do
-  e' ← tactic.whnf e,
-  (match e' with
-  | (expr.lam nm _ (app _ m) (app (const n _) _)) := 
+  e ← tactic.i_to_expr p,
+  v ← tactic.i_to_expr q,
+  (_, s) ← tactic.solve_aux v bool_reflect,
+  (_, t) ← tactic.solve_aux e (tactic.exact `((@fact_iff %%v).mpr %%s)),
+  return t
+/-
+Given `n : ℕ` and a list `l : list ℕ`, generate `list (fin n)` where the
+i-th element of the new list is `l[i] % n : fin n`
+-/
+meta def nat_list_to_fin (n : ℕ) (l : list ℕ) : tactic (list (fin n)) :=
+let n' := `(n) in
+do
+  n_gt_0_prop ← n_gt_0 n',
+  ls ← list.mmap 
+    (λ x : ℕ, 
+    let x' := `(x) in
+    let e := `(@fin.of_nat' %%n' %%n_gt_0_prop %%x') in 
     do
-      m' ← tactic.eval_expr ℕ m,
-      f ← tactic.get_decl n,
-      (match f with
-      | (declaration.defn _ _ _ (expr.lam _ _ _ bod) _ _) := (
-        do
-          s ← eval_match_fun_aux bod,
-          return (m, s)
-        )
-      | _ := tactic.fail "wrong format 2"
-      end)
-  | _ := tactic.fail "wrong format"
-  end)
-
-def f  (i : fin 3) : (fin 3) :=
-(match i.val with
-| 0 := 1
-| 1 := 0
-| 2 := 2 
-| _ := 0
-end : (fin 3))
-
-def parse_int : parser ℕ :=
-do
-  n ← parser.nat,
-  parser.ch ' ' <|> parser.eps,
-  return n
-
-def parse_cycle : parser (list ℕ) :=
-do
-  ns ← parser.many1 parse_int,
-  parser.ch '\n',
-  return ns
-
-def parse_cycles : parser (list (list ℕ)) :=
-  do
-    parser.many1 parse_cycle
-
-def cycle_list_to_fun {n : ℕ} (cycle : list (fin n)) (x : fin n) : 
-fin n :=
-if (x ∈ cycle) then (
-  let i := ((list.index_of x cycle) + 1) % n in
-  (match (list.nth cycle i) with 
-  | none := x 
-  | some y := y
-  end))
-else x
-
-def cycle_list_to_inv_fun {n : ℕ} (cycle : list (fin n)) (x : fin n) : 
-fin n :=
-if (x ∈ cycle) then (
-  let i := ((list.index_of x cycle) - 1) % n in
-  (match (list.nth cycle i) with 
-  | none := x 
-  | some y := y
-  end))
-else x
+      v ← tactic.eval_expr (fin n) e,
+      return v
+  ) l,
+  return ls
 
 meta def list_to_fun_aux {n : ℕ} (start : fin n) : 
 list (fin n) → tactic pexpr
@@ -98,9 +48,10 @@ do
   pe ← list_to_fun_aux (y :: xs),
   return ```(ite (_x_1 = %%x') (%%y' : fin %%n) %%pe)
 
+-- Convert a list representing a cycle into a function
 meta def list_to_fun {n : ℕ} (l : list (fin n)) : tactic expr :=
 (match l with
-| [] := tactic.fail "empty list"
+| [] := tactic.fail "the cycle is empty"
 | ls@(x::xs) := (
 let start := x in
 do
@@ -110,31 +61,9 @@ do
 )
 end)
 
-meta def nat_to_fin (n : expr) : tactic expr :=
-let p := ``(fact (0 < %%n)) in 
-let q := ``(0 < %%n) in
-do
-  e ← tactic.i_to_expr p,
-  v ← tactic.i_to_expr q,
-  (_, s) ← tactic.solve_aux v bool_reflect,
-  (_, t) ← tactic.solve_aux e (tactic.exact `((@fact_iff %%v).mpr %%s)),
-  return t
-
-meta def nat_list_to_fin (n : ℕ) (l : list ℕ) : tactic (list (fin n)) :=
-let n' := `(n) in
-do
-  n_gt_0 ← nat_to_fin n',
-  ls ← list.mmap 
-    (λ x : ℕ, 
-    let x' := `(x) in
-    let e := `(@fin.of_nat' %%n' %%n_gt_0 %%x') in 
-    do
-      v ← tactic.eval_expr (fin n) e,
-      return v
-  ) l,
-  return ls
-
-meta def build_perms_expr {n : ℕ} (cycles : list (list (fin n))) : tactic (list expr) := --(equiv.perm (fin n)) :=--(list (equiv.perm (fin n))) :=
+-- convert a list of lists representing cycles to a cycle 
+meta def build_perms_expr {n : ℕ} (cycles : list (list (fin n))) : 
+tactic (list expr) := 
 list.mmap 
 (
   λ cycle : list (fin n),
@@ -156,26 +85,33 @@ list.mmap
     return e
 ) cycles
 
-meta def list_to_expr : list expr → tactic (option pexpr) 
-| [] := do return none
-| (x :: xs) :=
-  do
-    rest ← list_to_expr xs,
-    (match rest with
-    | none := 
-      do
-        x' ← return x,
-        let pl := ``(list.cons %%x list.nil),
-        return (some pl)
-    | (some es) :=
-      do
-        e ← return es,
-        x' ← return x,
-        let pl := ``(list.cons %%x' %%e),
-        return (some pl)
+def cycle_factors_prop {n : ℕ} (f : fin n → fin n) (g : list (perm (fin n))) :=  
+  -- the permutations represent the expected function
+  (list.prod g).to_fun = f ∧ 
+  -- the permutations are actually cycles
+  (list.all g 
+    (λ h : equiv.perm (fin n), 
+      ∃ x : fin n, h x ≠ x ∧ 
+        (∀ y : fin n, h y ≠ y →
+          ∃ j : fin n, ((h.to_fun^[j])) x = y)
+    )
+  ) ∧
+  -- the cycles are disjoint
+  (list.pairwise
+    (λ f g : equiv.perm (fin n), 
+          ∀ x : fin n, 
+            (f.to_fun x ≠ x → g.to_fun x = x) ∧ 
+            (g.to_fun x ≠ x → f.to_fun x = x)
+    )
+    g
+  )
+def cycles_of {n : ℕ} (f : fin n → fin n) := 
+  {g : list (perm (fin n)) // cycle_factors_prop f g}
 
-  end)
-
+/-
+Generates the proof that the permutations in `l` actually give
+a cycle factorization of `f`
+-/
 meta def cycles_give_f (n : expr) (f : expr) (l : list expr) :
 tactic (expr × expr) :=
 do
@@ -186,25 +122,55 @@ do
   | (some e) := return e
   end),
   ls ← tactic.i_to_expr l_e,
--- TODO add missing conditions
-let pe : pexpr := 
-  ```((list.prod %%ls).to_fun = %%f') in
-do
+  let pe : pexpr :=
+  ```((list.prod %%ls).to_fun = %%f' ∧
+      (list.all %%ls 
+        (λ f : equiv.perm (fin %%n), 
+          ∃ x : fin %%n, f.to_fun x ≠ x ∧ 
+          (∀ y : fin %%n, f.to_fun y ≠ y → 
+            (∃ j : fin %%n, (f.to_fun^[j]) x = y)
+          )
+        )
+      ) ∧
+      (list.pairwise 
+        (λ f g : equiv.perm (fin %%n), 
+          ∀ x : fin %%n, 
+            (f.to_fun x ≠ x → g.to_fun x = x) ∧ 
+            (g.to_fun x ≠ x → f.to_fun x = x)
+        )
+        %%ls
+      ) 
+  ),
   prop_e ← tactic.i_to_expr pe,
   (_, prop) ← tactic.solve_aux prop_e bool_reflect,
   return (ls, prop)
 
-def cycles_of {n : ℕ} (f : fin n → fin n) := {g : list (perm (fin n)) // (list.prod g).to_fun = f}
+/-
+Helper functions for parsing cycles from external output
+-/
+def parse_cycle : parser (list ℕ) :=
+do
+  ns ← parser.many1 python.parse_int,
+  parser.ch '\n',
+  return ns
 
+def parse_cycles : parser (list (list ℕ)) :=
+  do
+    parser.many1 parse_cycle
+
+/-
+Tactics for generating the cyclic factorizatin of the function `f`
+-/
 meta def cycle_factors (f : expr) : tactic expr :=
 do
-  (n, i) ← eval_match_fun f,
+  (n, i) ← python.eval_match_fun f,
   n' ← tactic.eval_expr ℕ n,
   let input := i,
   let cmd := "src/hog/scripts/cycle_factors.py",
   output ← python.run cmd $ string.to_char_buffer input,
   let parsed_cycles := parser.run parse_cycles output,
-  let cycles := (match parsed_cycles with
+  let cycles := 
+  (match parsed_cycles with
   | sum.inl _ := []
   | sum.inr cs := cs
   end), 
@@ -231,8 +197,9 @@ do
 
 end interactive
 end tactic
-
+/-
 structure cyclic_decomposition :=
   {n : ℕ}
   (f : fin n → fin n)
   (cycles : cycles_of f . gen_factorization)
+-/

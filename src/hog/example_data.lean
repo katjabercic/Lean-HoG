@@ -70,7 +70,7 @@ def hypermap_of_cycle3 : hypermap :=
         | _ := 0
         end : (fin 6))),
 }
-def cycle3_euler : euler_char hypermap_of_cycle3 := {n := 2}
+def cycle3_euler : euler_char hypermap_of_cycle3 2 := {}
 
 instance: hog_edge_size cycle3 := ⟨ 3, rfl ⟩
 
