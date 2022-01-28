@@ -128,7 +128,7 @@ class HoGGraph:
         }
 
 
-def hog_generator(datadir, file_prefix, limit=None):
+def hog_generator(datadir, file_prefix):
     """Generate HoG graphs from input files in the given data directory.
        Stop if the limit is given and reached."""
 
@@ -140,16 +140,11 @@ def hog_generator(datadir, file_prefix, limit=None):
         with open(os.path.join(datadir, input_file), 'r') as fh:
             # Iterate through all graphs in the file
             for txt in re.finditer(r'^1: .+?^Vertex Connectivity: .+?\n', fh.read(), flags=re.DOTALL+re.MULTILINE):
-                if limit is None or counter <= limit:
-                    yield HoGGraph("{0}{1:05d}".format(file_prefix, counter), txt.group(0))
-                    counter += 1
-                else:
-                    # Stop if the limit is reached
-                    print ("We reached the limit of {0} graphs, skipping the rest.".format(limit))
-                    return
+                yield HoGGraph("{0}{1:05d}".format(file_prefix, counter), txt.group(0))
+                counter += 1
 
 
-def write_lean_files(datadir, outdir, file_prefix, limit=None):
+def write_lean_files(datadir, outdir, file_prefix, limit=None, skip=0):
     """Convert HoG graphs in the datadir to Lean code and save them to destdir.
        If the limit is given, stop afer that many graphs.
        Use the file_prefix to generate the Lean output filename.
@@ -167,12 +162,18 @@ def write_lean_files(datadir, outdir, file_prefix, limit=None):
         os.mkdir(outdir)
 
     counter = 0
-    for graph in hog_generator(datadir, limit=limit, file_prefix=file_prefix):
-        print ("Writing graph {0}".format(graph.name), end='\r')
-        with open(os.path.join(outdir, "{0}.lean".format(graph.name)), 'w') as fh:
-            fh.write(template.substitute(graph.get_data()))
-            counter += 1
-    print ("Wrote {0} graphs to {1}".format(counter, outdir))
+    for graph in hog_generator(datadir, file_prefix=file_prefix):
+        if limit is not None and counter >= skip + limit:
+            print ("We reached the limit of {0} graphs, skipping the rest.".format(limit))
+            break
+        if counter < skip:
+            print ("Skipping graph {0}".format(graph.name), end='\r')
+        else:
+            print ("Writing graph {0}".format(graph.name), end='\r')
+            with open(os.path.join(outdir, "{0}.lean".format(graph.name)), 'w') as fh:
+                fh.write(template.substitute(graph.get_data()))
+        counter += 1
+    print ("Wrote {0} graphs to {1}".format(counter - skip, outdir))
 
 
 ########################################################
@@ -190,8 +191,10 @@ if __name__ == "__main__":
                         help="read HoG graph files from this directory")
     arg_parser.add_argument("--outdir", default=relative('..', 'src', 'hog', 'data'), dest="outdir",
                         help="output Lean files to this directory")
-    arg_parser.add_argument("--limit", type=int, required=False, dest="limit",
+    arg_parser.add_argument("--limit", type=int, default=0, dest="limit",
                         help="limit the number of graphs to process")
+    arg_parser.add_argument("--skip", type=int, required=False, dest="skip",
+                        help="skip this many graphs initially")
     args = arg_parser.parse_args()
 
     # hog.write_lean_structure()
@@ -200,4 +203,5 @@ if __name__ == "__main__":
         outdir=args.outdir,
         file_prefix='hog_',
         limit=args.limit,
+        skip=args.skip
     )
