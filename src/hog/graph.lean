@@ -10,9 +10,14 @@ structure simple_irreflexive_graph : Type :=
   (irreflexive : (∀ i, ¬ edge i i) . bool_reflect)
   (symmetric : (∀ i j, edge i j → edge j i) . bool_reflect)
 
--- The type of vertices of g
-@[simp, reducible]
-def vertex (g : simple_irreflexive_graph) := fin (g.vertex_size)
+
+@[reducible]
+def to_simple_graph (g : simple_irreflexive_graph) : simple_graph (fin g.vertex_size) :=
+{ simple_graph . 
+  adj := λ i j, g.edge i j = tt,
+  sym := g.symmetric,
+  loopless := g.irreflexive
+}
 
 def edge_size (g : simple_irreflexive_graph) : ℕ :=
 begin
@@ -24,22 +29,17 @@ class hog_edge_size (g : simple_irreflexive_graph) : Type :=
   (edge_size_val : ℕ)
   (edge_size_eq : edge_size g = edge_size_val . obviously)
 
--- add an edge to a graph
-@[reducible]
-def add_edge (g : simple_irreflexive_graph) (x y : vertex g) : simple_irreflexive_graph :=
-begin
-  haveI := g.edge_decidable,
-  exact
-  { vertex_size := g.vertex_size
-  , edge := λ i j, (x ≠ y ∧ ((i, j) = (x, y) ∨ (j, i) = (x, y))) ∨ g.edge i j
-  , irreflexive := begin simp [g.irreflexive]; assumption end
-  , symmetric := begin simp_intros i j p, have := g.symmetric i j, tauto end
-  }
-end
+def max_degree (g : simple_irreflexive_graph) : ℕ := simple_graph.max_degree (to_simple_graph g)
 
--- adding a loop does nothing
-def add_loop (g : simple_irreflexive_graph) (x y z : vertex g) :
-  g.edge x y ↔ (add_edge g z z ).edge x y :=
-begin
-  simp
-end
+class hog_max_degree (g : simple_irreflexive_graph) : Type :=
+  (val : ℕ)
+  (mag_degree_eq : max_degree g = val . obviously)
+
+def min_degree (g : simple_irreflexive_graph) : ℕ := simple_graph.min_degree (to_simple_graph g)
+
+class hog_min_degree (g : simple_irreflexive_graph) : Type :=
+  (val : ℕ)
+  (min_degree_eq : min_degree g = val . obviously)
+
+class hog_regular (g : simple_irreflexive_graph) [max : hog_max_degree g] [min : hog_min_degree g] : Type :=
+  (hog_regular : max.val = min.val . obviously)

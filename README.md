@@ -18,6 +18,13 @@ Assuming you have [installed Lean 3 and Mathlib](https://leanprover-community.gi
 * `make convert` - convert HoG data to Lean files
 * `make build` or `leanpkg build` - compile all the Lean files
 * `make clean` - delete the generated Lean files
+* `make` to convert and build
+
+Building all Lean files is currently not feasible. The default limit is set in the Makefile.
+It is possible to provide two optional parameters:
+
+* `LIMIT=n` processes only `n` graphs,
+* `SKIP=m` skips the first `m` graphs.
 
 ## Reading and references
 
