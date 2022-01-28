@@ -1,2 +1,8 @@
+import ..graph
+
+namespace hog
+
 def $name : simple_irreflexive_graph :=
   from_edge_list $vertex_size $edge_list
+
+end hog

@@ -1,7 +1,0 @@
-import ..graph
-
-namespace hog
-
-$graph
-
-end hog
