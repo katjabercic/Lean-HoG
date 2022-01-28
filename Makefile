@@ -5,11 +5,11 @@ LEANPKG=leanpkg
 LIMIT=100
 SKIP=0
 
-.PHONY: convert build
+.PHONY: convert build cleandata
 
 all: convert build
 
-convert:
+convert: cleandata
 	python3 $(CONVERT) --out $(OUTDIR) --skip $(SKIP) --limit $(LIMIT)
 
 src/hog/data: convert
@@ -17,5 +17,5 @@ src/hog/data: convert
 build:
 	$(LEANPKG) build
 
-clean:
+cleandata:
 	/bin/rm -rf $(OUTDIR)

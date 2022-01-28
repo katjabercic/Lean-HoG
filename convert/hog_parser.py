@@ -7,17 +7,17 @@ from string import Template
 # UTILITIES
 ############################################################################################
 
-def _get_template(name):
+def _get_raw_template(name):
     fh_template = open(os.path.join('convert', f'template_{name}.txt'), 'r')
     raw_template = fh_template.read()
     fh_template.close()
-    return Template(raw_template), raw_template
+    return raw_template
 
 # Returns two templates:
 # everything before the `split_on` string, the preamble template, and
 # everything after the `split_on` string, the epilog template, and
 def _get_split_template(name, split_on):
-    t_raw = _get_template(name)[1]
+    t_raw = _get_raw_template(name)
     splt_tmpl = t_raw.split(split_on)
     assert len(splt_tmpl) == 2
     return Template(splt_tmpl[0]), Template(splt_tmpl[1])
@@ -89,7 +89,7 @@ class HoGGraph:
         match = graph_pattern.search(txt)
         if not match:
             raise ValueError
-        self._size, self._adjacency = self._get_size_adjacency(match.group('adjacency'))
+        self._vertex_size, self._edge_list = self._get_size_edge_list(match.group('adjacency'))
         self._invariants = self._get_invariants(match.group('invariants'))
         
         # INSTANCES DICTIONARY
@@ -104,7 +104,7 @@ class HoGGraph:
             'edge_size': f'\ninstance: hog_edge_size {self.name} := ⟨ {self._invariants["Number of Edges"]["value"]} , rfl ⟩\n'
         }
         
-    def _get_size_adjacency(self, raw_adjacency):
+    def _get_size_edge_list(self, raw_adjacency):
         """Return the number of vertices and the list of edges (i, j), such that i < j."""
 
         adjacency_pattern = re.compile('(?P<vertex>[0-9]+):(?P<neighbors>[0-9 ]*)\n')
@@ -122,14 +122,14 @@ class HoGGraph:
             neighbors = sorted(filter(lambda x: vertex < x, map(to_int_minus1, match.group('neighbors').split())))
             return list(map(lambda x: (vertex, x), neighbors))
 
-        preadjacency = []
+        pre_edge_list = []
         count = 0
         for m in adjacency_pattern.finditer(raw_adjacency):
             count += 1
-            preadjacency += parse_vertex(m)
-        for p in preadjacency:
+            pre_edge_list += parse_vertex(m)
+        for p in pre_edge_list:
             assert p[0] >= 0 and p[1] >= 0
-        return count, preadjacency
+        return count, pre_edge_list
 
     def _get_invariants(self, invariants):
         """Convert an iterator of invariant strings into a list of tuples (name, type, value)"""
@@ -167,17 +167,19 @@ class HoGGraph:
     def lean_graph_def(self):
         """Output a single graph as a Lean structure."""
 
-        template, raw_template = _get_template('graph')
-        pad = len(re.search('(?P<indent> *)\$adjacency', raw_template).group('indent'))
         def arc(v1, v2):
             return f'| {v1}, {v2} := tt'
         def line(v1, v2):
-            return pad*' ' + arc(v1, v2) + ' ' + arc(v2, v1)
-        catch_all = pad*' ' + '| _, _ := ff -- catch all case for false'
+            return arc(v1, v2) + ' ' + arc(v2, v1)
+        catch_all = '| _, _ := ff -- catch all case for false'
 
-        adj = ('\n'.join(line(*e) for e in self._adjacency) + '\n' + catch_all).lstrip()
+        adj = ('\n'.join(line(*e) for e in self._edge_list) + '\n' + catch_all).lstrip()
 
-        return '\n\n' + template.substitute(name=self.name, size=self._size, adjacency=adj)
+        return '\n\n' + Template(_get_raw_template('graph')).substitute(
+            name=self.name,
+            vertex_size=self._vertex_size,
+            edge_list=self._edge_list,
+            adjacency=adj)
 
 
 ############################################################################################
@@ -367,7 +369,7 @@ class HoGParser:
             try:
                 count, g6, inv = next(self._iterator)
                 graph = HoGGraph(self._graph_name(count), g6, inv, self._s['write_floats'])
-                self._stats.append([count, graph._size, graph._invariants['Number of Edges']['value']])
+                self._stats.append([count, graph._vertex_size, graph._invariants['Number of Edges']['value']])
 
                 instances = graph.lean_instances
 
@@ -427,10 +429,10 @@ class HoGParser:
             module_imports = _join_templates('\n', lambda p: f'import .{self._lean_module_part("graph", p)}', 1, self._part)
             module_part_names = _join_templates(', ', lambda p: self._db_part(p), 1, self._part)
             if self._one_per_file:
-                template = _get_template('db_main_one_graph')[0]
+                template = Template(_get_raw_template('db_main_one_graph'))
                 fh_out.write(template.substitute(import_graph_modules=module_imports, graph_lists=self._names_list(self._first_graph, count)))
             else:
-                template = _get_template('db_main')[0]
+                template = Template(_get_raw_template('db_main'))
                 fh_out.write(template.substitute(import_graph_modules=module_imports, db_parts_list=module_part_names))
         
         with open(self._output_stats_file(), 'w+') as fhs_out:
