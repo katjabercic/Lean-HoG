@@ -1,8 +1,0 @@
-import ..tactic
-import ..graph
-
-namespace hog
-
-$graph
-
-end hog
