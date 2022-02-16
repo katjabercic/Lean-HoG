@@ -1,22 +1,25 @@
 import re
 
 lines = []
-with open ("test_log_21-12-24-15-08", 'r') as file:
+with open ("test_log_22-02-03-13-47", 'r') as file:
     for line in file:
         lines.append(line)
 
 
 graphs = []
-for i in range(170):
-    graph = lines[i*7:(i+1)*7]
-    id, vertices, edges = graph[0].split(',')
-    memory = graph[4][9:-1]
-    size = graph[5][12:-1]
-    graphs.append([id, vertices, edges[:-1], memory, size])
+for i in range(199):
+    graph = lines[i*8:(i+1)*8]
+    # id, vertices, edges = graph[0].split(',')
+    memory = graph[3][9:-1]
+    file_size = graph[6][12:-1]
+    vertices = graph[7][14:-1]
+    time = graph[4][0:4]
+    graphs.append([str(i), vertices, time, memory, file_size])
 
 
-with open('stats.csv', 'w') as stats:
-    stats.write('id,vertices,edges,memory,olean size\n')
+with open('stats_22-02-03-13-47.csv', 'w') as stats:
+    stats.write('id,vertices,time,memory,olean size\n')
     for graph in graphs:
+        print(graph)
         stats.write(','.join(graph))
         stats.write('\n')
