@@ -52,3 +52,7 @@ class hog_min_degree (g : simple_irreflexive_graph) : Type :=
 
 class hog_regular (g : simple_irreflexive_graph) [max : hog_max_degree g] [min : hog_min_degree g] : Type :=
   (hog_regular : max.val = min.val . obviously)
+
+structure edge (g : simple_irreflexive_graph) : Type :=
+  (i j : fin g.vertex_size)
+  (H : g.edge i j)
