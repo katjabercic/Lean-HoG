@@ -11,4 +11,6 @@ def ${name}_BST : BST (lex ℕ ℕ) :=
   is_bst := by bool_reflect
 }
 
+def ${name}_from_BST : simple_irreflexive_graph := from_BST $vertex_size ${name}_BST
+
 end hog
