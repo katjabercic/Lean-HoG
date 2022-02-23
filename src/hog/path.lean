@@ -5,29 +5,23 @@ variable g : simple_irreflexive_graph
 
 -- inductive definition of path in a graph
 -- a path is either just an edge or it is constructed from a path and a next edge that fits
-inductive path (last : edge g) : Type
-| trivial : path
-| cons (next : edge g) (p : path) : next.i = last.j → path
+inductive path : fin g.vertex_size → fin g.vertex_size → Type
+| trivial (s : fin g.vertex_size) : path s s
+| cons (s t : fin g.vertex_size) (next : edge g) (p : path s t) : next.i = t → path s next.j
 
 notation p ,, next  := path.cons next p
 -- notation `[` l:(foldr `, ` (h t, list.cons h t) list.nil `]`) := l
 
-@[reducible, simp]
-def path_start (last : edge g) : path g last → edge g
-| path.trivial := last
-| (path.cons next p cond) := path_start p
-
-def path_concat (last₁ last₂ : edge g) (p : path g last₁) : path g last₂ → path g last₂
-| path.trivial := path.cons last₂ p _
-| (path.cons next p cond) := _
+-- def concat_path (s1 s2 t1 t2 : fin g.vertex_size) : path g s1 t1 → path g s2 t2 → t1 = s2 → path g s1 t2
+-- | (path.trivial s t cond1) (path.trivial a b cond2) eq := _
+-- | (path.cons s t next p ᾰ) := _
 
 
-
-def symm_path (last : edge g) (p : path g last) : path g (path_start g last p) :=
-match p with
-| path.trivial := p
-| (path.cons next p cond) := path.cons (path_start g last p)
-end
+-- def symm_path (last : edge g) (p : path g last) : path g (path_start g last p) :=
+-- match p with
+-- | path.trivial := p
+-- | (path.cons next p cond) := path.cons (path_start g last p)
+-- end
 
 -- def path_is_path {g : simple_irreflexive_graph} : list (edge g) → Prop
 -- | [] := false
