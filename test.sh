@@ -2,7 +2,7 @@
 
 t=$(date "+%y-%m-%d-%H-%M")
 touch "test_log_$t"
-for i in {1..170}
+for i in {1..200}
 do
 	echo $i
 	# make clean

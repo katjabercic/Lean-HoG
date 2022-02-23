@@ -222,7 +222,9 @@ begin
     have ckx : connected g k x := begin simp [eq1], apply eqv_gen.refl end,
   rw (symm eq1) at ncix,
   rw (symm eq1) at ncjx,
-  sorry
+  sorry,
+  sorry,
+  sorry,
     -- simp [h',  h'', ncij] at h,
 end 
 
@@ -241,7 +243,8 @@ example {g : simple_irreflexive_graph} {i j x y : fin g.vertex_size} (cxyij : co
 begin
   intros hij h,
   cases h,
-  sorry
+  sorry,
+  sorry,
 end
 
 lemma connected_add_edge_options {g : simple_irreflexive_graph} {i j x y : fin g.vertex_size} (cxyij : connected (add_edge g x y) i j) : 
