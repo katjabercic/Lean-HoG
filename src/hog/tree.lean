@@ -73,3 +73,8 @@ def BT.edge_size : BT (lex ℕ ℕ) → ℕ
 | (BT.node a left right) := 2 + BT.edge_size left + BT.edge_size right
 
 def BST.edge_size : BST (lex ℕ ℕ) → ℕ := λ bst, BT.edge_size bst.tree
+
+def BT.neighborhoods : BT (lex ℕ ℕ) → ℕ → list (ℕ × list ℕ) :=
+λ tree nodes, list.map (λ (i : ℕ), (i, BT.neighbors tree i)) (list.range nodes)
+
+def BST.neighborhoods : BST (lex ℕ ℕ) → ℕ → list (ℕ × list ℕ) := λ bst n, BT.neighborhoods bst.tree n
