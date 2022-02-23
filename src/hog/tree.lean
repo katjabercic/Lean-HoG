@@ -25,31 +25,51 @@ def BT.is_bst {α : Type} [linear_order α] : BT α → bool
 | (BT.leaf a) := tt
 | (BT.node a left right) := list.all (BT.values left) (λ x, x < a) ∧ list.all (BT.values right) (λ x, x > a)
 
-def BT.contains {α : Type} [linear_order α] : α → BT α → bool
-| a (BT.empty) := ff
-| a (BT.leaf b) := a = b
-| a (BT.node b left right) := a = b ∨ if a < b then BT.contains a left else BT.contains a right
-
--- def BT.construct {α : Type} [linear_order α] : list α → BT α
--- | [] := BT.empty
--- | (a :: as) := sorry
+def BT.contains {α : Type} [linear_order α] : BT α → α → bool
+| (BT.empty) a := ff
+| (BT.leaf b) a := a = b
+| (BT.node b left right) a := a = b ∨ if a < b then BT.contains left a else BT.contains right a
 
 structure BST (α : Type) [linear_order α] : Type :=
   (tree : BT α)
   (is_bst : BT.is_bst tree = tt . bool_reflect)
 
--- instance lex_repr {α β: Type} [has_repr α] [has_repr β] : has_repr (lex α β) :=
--- ⟨ λ p, "(" ++ has_repr.repr p.fst ++ "," ++ has_repr.repr p.snd ++ ")" ⟩ 
-
--- def cycle3_tree : BT (lex ℕ ℕ) := BT.node (2,1) (BT.leaf (1,3)) (BT.leaf (3,4))
-
--- #eval BT.is_bst cycle3_tree
-
--- def G1 : BT (lex ℕ ℕ) := BT.node (1,4) (BT.node (1,3) (BT.leaf (1,2)) BT.empty) (BT.node (2,3) BT.empty (BT.leaf (3,4)))
--- def G2 : BT (lex ℕ ℕ) := BT.node (1, 4) (BT.node (1, 3) (BT.leaf (1, 2)) (BT.empty)) (BT.node (3, 4) (BT.leaf (2, 3)) (BT.empty))
+instance lex_repr {α β: Type} [has_repr α] [has_repr β] : has_repr (lex α β) :=
+⟨ λ p, "(" ++ has_repr.repr p.fst ++ "," ++ has_repr.repr p.snd ++ ")" ⟩
 
 
--- def G1_bst : BST (lex ℕ ℕ) :=
--- { tree := BT.node (1,4) (BT.node (1,3) (BT.leaf (1,2)) BT.empty) (BT.node (2,3) BT.empty (BT.leaf (3,4))),
---   is_bst := by bool_reflect
--- }
+def BT.edge : BT (lex ℕ ℕ) → ℕ → ℕ → bool
+| BT.empty s t := ff
+| (BT.leaf ⟨l, r⟩) s t := (l = s ∧ r = t) ∨ (l = t ∧ r = s)
+| (BT.node ⟨l, r⟩ left right) s t := (l = s ∧ r = t) ∨ (l = t ∧ r = s) ∨ let p := (min s t, max s t) in
+  if p < (l, r) then BT.edge left s t else BT.edge right s t
+
+lemma BT.edge_symm (bt : BT (lex ℕ ℕ)) (s : ℕ) (t : ℕ) : BT.edge bt s t → BT.edge bt t s :=
+begin
+  intro h,
+  cases bt,
+    contradiction,
+  sorry,
+  sorry
+end
+
+def BT.neighbors : BT (lex ℕ ℕ) → ℕ → list ℕ
+| BT.empty s := []
+| (BT.leaf ⟨l, r⟩) s := if l = s then [r] else if r = s then [l] else []
+| (BT.node ⟨l, r⟩ left right) s := let nbhds := BT.neighbors left s ++ BT.neighbors right s in
+                                    if l = s then r :: nbhds else if r = s then l :: nbhds else nbhds
+
+def BST.neighbors : BST (lex ℕ ℕ) → ℕ → list ℕ := λ bst s, BT.neighbors bst.tree s
+
+def BT.max {α : Type} [linear_order α] [inhabited α] : BT α → α
+| BT.empty := inhabited.default α
+| (BT.leaf a) := a
+| (BT.node a left right) := max a (BT.max right)
+
+
+def BT.edge_size : BT (lex ℕ ℕ) → ℕ
+| BT.empty := 0
+| (BT.leaf a) := 2
+| (BT.node a left right) := 2 + BT.edge_size left + BT.edge_size right
+
+def BST.edge_size : BST (lex ℕ ℕ) → ℕ := λ bst, BT.edge_size bst.tree
