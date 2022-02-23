@@ -4,6 +4,27 @@ import re
 from string import Template
 from argparse import ArgumentParser
 
+class BST:
+    def __init__(self, val, left, right):
+        self.val = val
+        self.left = left
+        self.right = right
+
+    def __str__(self):
+        if not self.val:
+            return "BT.empty"
+        if not self.left and not self.right:
+            return "BT.leaf " + str(self.val)
+        if not self.left:
+            left = "BT.empty"
+        else:
+            left = str(self.left)
+        if not self.right:
+            right = "BT.empty"
+        else:
+            right = str(self.right)
+        return "BT.node " + str(self.val) + " (" + left + ") (" + right + ")"
+
 class HoGGraph:
     """An object representing a single HoG graph"""
 
@@ -55,6 +76,7 @@ class HoGGraph:
         assert m, "Could not parse HoG data:\n{0}".format(txt)
         self.vertex_size, self.edge_list = self._get_size_edge_list(m.group('adjacency'))
         self.invariants = self._get_invariants(m.group('invariants'))
+        self.BST = self.list_to_bst(self.edge_list)
                 
     def _get_size_edge_list(self, raw_adjacency):
         """Return the number of vertices and the list of edges (i, j), such that i < j."""
@@ -125,7 +147,20 @@ class HoGGraph:
             'edge_list' : self.edge_list,
             'planar' : self.invariants['Planar']['value'],
             'chromatic_number' : self.invariants['Chromatic Number']['value'],
+            'BST' : self.BST
         }
+
+    def list_to_bst(self, list):
+        n = len(list)
+        if n == 0:
+            return None
+        if n == 1:
+            return BST(list[0], None, None)
+        mid = n // 2
+        root = list[mid]
+        left = self.list_to_bst(list[0:mid])
+        right = self.list_to_bst(list[mid+1:])
+        return BST(root, left, right)
 
 
 def hog_generator(datadir, file_prefix):
