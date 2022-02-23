@@ -11,6 +11,7 @@ structure simple_irreflexive_graph : Type :=
   (irreflexive : (∀ i, ¬ edge i i))
   (symmetric : (∀ i j, edge i j → edge j i))
   (edge_size : ℕ)
+  (neighborhoods : list (ℕ × list ℕ))
 
 
 def from_edge_list (n : ℕ) (edges : list (ℕ × ℕ)) : simple_irreflexive_graph :=
@@ -20,7 +21,8 @@ def from_edge_list (n : ℕ) (edges : list (ℕ × ℕ)) : simple_irreflexive_gr
   edge_decidable := begin intros i j, apply_instance end,
   irreflexive := begin intro i, tautology end,
   symmetric := begin intros i j, tautology end,
-  edge_size := edges.length
+  edge_size := edges.length,
+  neighborhoods := []
 }
 
 def from_BST (n : ℕ) (tree : BST (lex ℕ ℕ)) : simple_irreflexive_graph :=
@@ -30,7 +32,8 @@ def from_BST (n : ℕ) (tree : BST (lex ℕ ℕ)) : simple_irreflexive_graph :=
   edge_decidable := begin intros i j, apply_instance end,
   irreflexive := begin intro i, tautology end,
   symmetric := begin intros i j h, tautology end,
-  edge_size := tree.edge_size
+  edge_size := tree.edge_size,
+  neighborhoods := BST.neighborhoods tree n
 }
 
 @[reducible]
