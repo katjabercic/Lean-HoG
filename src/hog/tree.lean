@@ -1,4 +1,5 @@
 import order.lexicographic
+import data.fintype.basic
 import .tactic
 
 universe u
@@ -25,10 +26,32 @@ def BT.is_bst {α : Type} [linear_order α] : BT α → bool
 | (BT.leaf a) := tt
 | (BT.node a left right) := list.all (BT.values left) (λ x, x < a) ∧ list.all (BT.values right) (λ x, x > a)
 
+@[reducible]
 def BT.contains {α : Type} [linear_order α] : BT α → α → bool
 | (BT.empty) a := ff
 | (BT.leaf b) a := a = b
 | (BT.node b left right) a := a = b ∨ if a < b then BT.contains left a else BT.contains right a
+
+lemma BT.contains_leaf {α : Type} [linear_order α] (t : α) (x : α) : BT.contains (BT.leaf t) x → x = t :=
+  sorry
+
+lemma BT.contains_node {α : Type} [linear_order α] (u v : BT α) (x y : α) :
+  BT.contains (BT.node y u v) x → (BT.contains u x) ∨ x = y ∨ (BT.contains v x) :=
+  sorry
+
+def BT.extension {α : Type} [linear_order α] (t : BT α) : set α := { x : α | BT.contains t x }
+
+#check has_mem
+
+theorem BT.finite {α : Type} [linear_order α] (t : BT α) : set.finite (BT.extension t) :=
+begin
+  induction t with t x l r IHl IHr,
+  { fconstructor, fconstructor, exact ∅, intro x, cases x, contradiction },
+  { fconstructor, fconstructor, exact {t}, intro x, cases x with x xp,
+    simp, apply BT.contains_leaf, assumption
+  }, 
+  { sorry  }
+end
 
 structure BST (α : Type) [linear_order α] : Type :=
   (tree : BT α)
@@ -37,20 +60,31 @@ structure BST (α : Type) [linear_order α] : Type :=
 instance lex_repr {α β: Type} [has_repr α] [has_repr β] : has_repr (lex α β) :=
 ⟨ λ p, "(" ++ has_repr.repr p.fst ++ "," ++ has_repr.repr p.snd ++ ")" ⟩
 
+-- The type of edges
+structure Edge : Type :=
+  (edge : lex ℕ ℕ)
+  (src_lt_trg : edge.fst < edge.snd . obviously)
 
-def BT.edge : BT (lex ℕ ℕ) → ℕ → ℕ → bool
-| BT.empty s t := ff
-| (BT.leaf ⟨l, r⟩) s t := (l = s ∧ r = t) ∨ (l = t ∧ r = s)
-| (BT.node ⟨l, r⟩ left right) s t := (l = s ∧ r = t) ∨ (l = t ∧ r = s) ∨ let p := (min s t, max s t) in
-  if p < (l, r) then BT.edge left s t else BT.edge right s t
+instance Edge_linear_order : linear_order Edge :=
+  linear_order.lift (λ (u : Edge), u.edge) (λ u v H, begin cases u, cases v, simp, assumption end)
 
-lemma BT.edge_symm (bt : BT (lex ℕ ℕ)) (s : ℕ) (t : ℕ) : BT.edge bt s t → BT.edge bt t s :=
+@[reducible]
+def BT.edge (t : BT Edge) (a : ℕ) (b : ℕ) : Prop :=
+  decidable.lt_by_cases a b
+    (λ _, BT.contains t { edge := (a, b)})
+    (λ _, ff)
+    (λ _, BT.contains t { edge := (b, a)})
+
+lemma BT.edge_symm (bt : BT Edge) (s : ℕ) (t : ℕ) : BT.edge bt s t → BT.edge bt t s :=
 begin
-  intro h,
-  cases bt,
-    contradiction,
-  sorry,
-  sorry
+  unfold BT.edge,
+  unfold decidable.lt_by_cases,
+  cases (lt_trichotomy s t) with p p,
+  { simp [p, asymm p] },
+  { cases p with p p,
+    { simp [p] },
+    { simp [p, asymm p] }
+  }
 end
 
 def BT.neighbors : BT (lex ℕ ℕ) → ℕ → list ℕ
