@@ -6,4 +6,4 @@ path = "src"
 
 [dependencies]
 mathlib = {git = "https://github.com/leanprover-community/mathlib", rev = "7da83031115ee14e9079895ed17903f7c934e022"}
-mathematica = {git = "https://github.com/robertylewis/mathematica", rev = "6026ce8c36ce8fade81382fa86314cf5a5306d6f"}
+mathematica = {git = "https://github.com/robertylewis/mathematica", rev = "11f48a2d62ec659d3c2d00206646f1c8ab6c9abd"}

@@ -7,7 +7,7 @@ variable g : simple_irreflexive_graph
 -- a path is either just an edge or it is constructed from a path and a next edge that fits
 inductive path : fin g.vertex_size → fin g.vertex_size → Type
 | trivial (s : fin g.vertex_size) : path s s
-| cons (s t : fin g.vertex_size) (next : edge g) (p : path s t) : next.i = t → path s next.j
+| cons (s t u : fin g.vertex_size) : g.edge s t → path t u →  path s u
 
 notation p ,, next  := path.cons next p
 -- notation `[` l:(foldr `, ` (h t, list.cons h t) list.nil `]`) := l
