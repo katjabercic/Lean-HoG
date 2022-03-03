@@ -7,69 +7,79 @@ variable g : simple_irreflexive_graph
 -- a path is either just an edge or it is constructed from a path and a next edge that fits
 inductive path : fin g.vertex_size → fin g.vertex_size → Type
 | trivial (s : fin g.vertex_size) : path s s
-| cons (s t u : fin g.vertex_size) : g.edge s t → path t u →  path s u
+| left (s t u : fin g.vertex_size) : g.edge s t → path t u →  path s u
+| right (s t u : fin g.vertex_size) : g.edge t u → path s t → path s u
 
-notation p ,, next  := path.cons next p
--- notation `[` l:(foldr `, ` (h t, list.cons h t) list.nil `]`) := l
+-- We probably want some kind of list-like notation for defining paths, i.e. < v₁, v₂, …, vₙ > or something
+notation p ,, next  := path.right next p
+notation next ,, p := path.left next p
 
--- def concat_path (s1 s2 t1 t2 : fin g.vertex_size) : path g s1 t1 → path g s2 t2 → t1 = s2 → path g s1 t2
--- | (path.trivial s t cond1) (path.trivial a b cond2) eq := _
--- | (path.cons s t next p ᾰ) := _
+def symm_path (s t : fin g.vertex_size) :  path g s t → path g t s :=
+begin
+  intro p,
+  induction p with p s t n e p p',
+    constructor,
+  { 
+    apply path.right,
+    apply g.symmetric,
+    exact e,
+    exact p'
+  },
+  {
+    apply path.left,
+    apply g.symmetric,
+    exact p_ᾰ,
+    exact p_ih
+  }
+end
+
+def concat_path (s t u : fin g.vertex_size) : path g s t → path g t u → path g s u :=
+begin
+  intros p q,
+  induction p with s' t' n u' e p',
+    exact q,
+  {
+    apply path.left,
+    exact e,
+    apply p_ih,
+    exact q
+  },
+  {
+    apply p_ih,
+    apply path.left,
+    exact p_ᾰ,
+    exact q
+  }
+end
+
+def vertices (s t : fin g.vertex_size) : path g s t → set (fin g.vertex_size) :=
+begin
+  intro p,
+  induction p,
+  exact {p},
+  apply set.insert p_s p_ih,
+  apply set.insert p_t p_ih
+end
 
 
--- def symm_path (last : edge g) (p : path g last) : path g (path_start g last p) :=
--- match p with
--- | path.trivial := p
--- | (path.cons next p cond) := path.cons (path_start g last p)
--- end
+def inner_vertices (s t : fin g.vertex_size) : path g s t → set (fin g.vertex_size) :=
+λ p, set.inter (vertices g s t p) {s, t}
 
--- def path_is_path {g : simple_irreflexive_graph} : list (edge g) → Prop
--- | [] := false
--- | (e :: es) :=
---   match list.nth es 1 with
---   | option.none := true
---   | option.some e' := e.j = e'.i ∧ path_is_path es
---   end
+def edges (s t : fin g.vertex_size) : path g s t → set (edge g) :=
+begin
+  intro p,
+  induction p,
+  exact ∅,
+  let u : edge g := { i := p_s, j := p_t, H := p_ᾰ },
+  apply set.insert u p_ih,
+  let v : edge g := { i := p_t, j := p_u, H := p_ᾰ },
+  apply set.insert v p_ih
+end
 
--- trying to get a nice path definition
--- structure path (g : simple_irreflexive_graph) : Type :=
---   (s t : fin g.vertex_size)
---   (edges : list (edge g))
---   [nonempty : inhabited (edge g)]
---   (is_path : path_is_path edges)
---   (correct_ends : edges.head.i = s ∧ edges.ilast.j = t)
+-- With the current definition of the function to compute edges and vertices, these two functions are noncomputable if they map into bool
+-- Here we probably want to use BST's again to make everything computable and decidable
+def vertex_independent (s t : fin g.vertex_size) : path g s t → path g s t → Prop :=
+λ p q, (inner_vertices g s t p) ∩ (inner_vertices g s t q) = ∅
 
--- very very ugly definition of a path between two vertices
--- structure path (g : simple_irreflexive_graph) : Type :=
---   (i j : fin g.vertex_size)
---   (path_len : ℕ)
---   (pos_length : 0 < path_len)
---   [non_zero : has_zero (fin path_len)]
---   (path : fin path_len → (fin g.vertex_size × fin g.vertex_size))
---   (path_is_edges : ∀ i : fin path_len, g.edge (path i).fst (path i).snd)
---   (is_path : Π (i < path_len-1), (path (fin.mk i (nat.lt_of_lt_pred H))).snd = (path (fin.mk (i+1) (nat.add_lt_of_lt_sub_right H))).fst)
---   (correct_ends : (path 0).fst = i ∧ (path (fin.mk (path_len-1) (buffer.lt_aux_2 pos_length))).snd = j)
-
-
--- def symm_path {g : simple_irreflexive_graph} (p : path g) : path g :=
--- { i := p.j,
---   j := p.i,
---   path_len := p.path_len,
---   pos_length := p.pos_length,
---   non_zero := p.non_zero,
---   path := λ i, let e := p.path ((fin.mk (p.path_len-1) (buffer.lt_aux_2 p.pos_length)) - i) in ⟨e.snd, e.fst⟩,
---   path_is_edges := λ v, g.symmetric _ _ (p.path_is_edges ((fin.mk (p.path_len-1) (buffer.lt_aux_2 p.pos_length)) - v)),
---   is_path :=
---     let path : fin p.path_len → (fin g.vertex_size × fin g.vertex_size) := (λ i, let e := p.path ((fin.mk (p.path_len-1) (buffer.lt_aux_2 p.pos_length)) - i) in ⟨e.snd, e.fst⟩) in
---     begin
---       intros i H,
---       simp,
---       let k := ((fin.mk (p.path_len-1) (buffer.lt_aux_2 p.pos_length)) - ⟨i, nat.lt_of_lt_pred H⟩),
---       have H' : (p.path (⟨p.path_len - 1, _⟩ - ⟨i, _⟩)).fst = (p.path (⟨p.path_len - 1, _⟩ - ⟨i + 1, _⟩)).snd :=
---         begin
---           symmetry,
---           apply p.is_path,
-
---         end 
---     end,
---   correct_ends := _ }
+def edge_independent (s t : fin g.vertex_size) : path g s t → path g s t → Prop :=
+λ p q, (edges g s t p) ∩ (edges g s t q) = ∅ 
