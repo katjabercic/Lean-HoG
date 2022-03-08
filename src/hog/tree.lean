@@ -68,8 +68,9 @@ structure Edge : Type :=
 instance Edge_linear_order : linear_order Edge :=
   linear_order.lift (λ (u : Edge), u.edge) (λ u v H, begin cases u, cases v, simp, assumption end)
 
+
 @[reducible]
-def BT.edge (t : BT Edge) (a : ℕ) (b : ℕ) : Prop :=
+def BT.edge (t : BT Edge) (a : ℕ) (b : ℕ) : bool :=
   decidable.lt_by_cases a b
     (λ _, BT.contains t { edge := (a, b)})
     (λ _, ff)
@@ -87,13 +88,13 @@ begin
   }
 end
 
-def BT.neighbors : BT (lex ℕ ℕ) → ℕ → list ℕ
+def BT.neighbors : BT Edge → ℕ → list ℕ
 | BT.empty s := []
-| (BT.leaf ⟨l, r⟩) s := if l = s then [r] else if r = s then [l] else []
-| (BT.node ⟨l, r⟩ left right) s := let nbhds := BT.neighbors left s ++ BT.neighbors right s in
+| (BT.leaf ⟨⟨l, r⟩, _⟩) s := if l = s then [l] else if r = s then [r] else []
+| (BT.node ⟨⟨l, r⟩, _⟩ left right) s := let nbhds := BT.neighbors left s ++ BT.neighbors right s in
                                     if l = s then r :: nbhds else if r = s then l :: nbhds else nbhds
 
-def BST.neighbors : BST (lex ℕ ℕ) → ℕ → list ℕ := λ bst s, BT.neighbors bst.tree s
+def BST.neighbors : BST Edge → ℕ → list ℕ := λ bst s, BT.neighbors bst.tree s
 
 def BT.max {α : Type} [linear_order α] [inhabited α] : BT α → α
 | BT.empty := inhabited.default α
@@ -101,14 +102,14 @@ def BT.max {α : Type} [linear_order α] [inhabited α] : BT α → α
 | (BT.node a left right) := max a (BT.max right)
 
 
-def BT.edge_size : BT (lex ℕ ℕ) → ℕ
+def BT.edge_size : BT Edge → ℕ
 | BT.empty := 0
 | (BT.leaf a) := 2
 | (BT.node a left right) := 2 + BT.edge_size left + BT.edge_size right
 
-def BST.edge_size : BST (lex ℕ ℕ) → ℕ := λ bst, BT.edge_size bst.tree
+def BST.edge_size : BST Edge → ℕ := λ bst, BT.edge_size bst.tree
 
-def BT.neighborhoods : BT (lex ℕ ℕ) → ℕ → list (ℕ × list ℕ) :=
+def BT.neighborhoods : BT Edge → ℕ → list (ℕ × list ℕ) :=
 λ tree nodes, list.map (λ (i : ℕ), (i, BT.neighbors tree i)) (list.range nodes)
 
-def BST.neighborhoods : BST (lex ℕ ℕ) → ℕ → list (ℕ × list ℕ) := λ bst n, BT.neighborhoods bst.tree n
+def BST.neighborhoods : BST Edge → ℕ → list (ℕ × list ℕ) := λ bst n, BT.neighborhoods bst.tree n

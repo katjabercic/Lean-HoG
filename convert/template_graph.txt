@@ -6,7 +6,7 @@ namespace hog
 def $name : simple_irreflexive_graph :=
   from_edge_list $vertex_size $edge_list
 
-def ${name}_BST : BST (lex ℕ ℕ) :=
+def ${name}_BST : BST Edge :=
 { tree := ${BST},
   is_bst := by bool_reflect
 }

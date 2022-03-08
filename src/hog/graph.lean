@@ -25,13 +25,13 @@ def from_edge_list (n : ℕ) (edges : list (ℕ × ℕ)) : simple_irreflexive_gr
   neighborhoods := []
 }
 
-def from_BST (n : ℕ) (tree : BST (lex ℕ ℕ)) : simple_irreflexive_graph :=
+def from_BST (n : ℕ) (tree : BST Edge) : simple_irreflexive_graph :=
 { vertex_size := n,
   edge :=
-    (λ (i : fin n) (j : fin n), ¬ i = j ∧ ((BT.edge tree.tree i.val j.val) ∨ (BT.edge tree.tree j.val i.val))),
+    (λ (i : fin n) (j : fin n), ¬ i = j ∧ (BT.edge tree.tree i.val j.val)),
   edge_decidable := begin intros i j, apply_instance end,
   irreflexive := begin intro i, tautology end,
-  symmetric := begin intros i j h, tautology end,
+  symmetric := begin intros i j h, split, tautology, cases h, apply BT.edge_symm, assumption end,
   edge_size := tree.edge_size,
   neighborhoods := BST.neighborhoods tree n
 }
