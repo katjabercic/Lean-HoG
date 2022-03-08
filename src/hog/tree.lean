@@ -39,19 +39,37 @@ lemma BT.contains_node {α : Type} [linear_order α] (u v : BT α) (x y : α) :
   BT.contains (BT.node y u v) x → (BT.contains u x) ∨ x = y ∨ (BT.contains v x) :=
   sorry
 
-def BT.extension {α : Type} [linear_order α] (t : BT α) : set α := { x : α | BT.contains t x }
+def BT.merge {α : Type} [linear_order α] : BT α → BT α → BT α
+| BT.empty t := t
+| t BT.empty := t
+| (BT.leaf a) (BT.leaf b) := if a < b then BT.node a BT.empty (BT.leaf b) else BT.node a (BT.leaf b) BT.empty
+| (BT.leaf a) (BT.node b left right) := if a < b then BT.node b (BT.merge (BT.leaf a) left) right else BT.node b left (BT.merge (BT.leaf a) right)
+| (BT.node a left right) (BT.leaf b) := if a < b then BT.node a left (BT.merge right (BT.leaf b)) else BT.node a (BT.merge left (BT.leaf a)) right
+| (BT.node a left right) t := BT.node a (BT.merge left right) t
 
-#check has_mem
+def BT.filter {α : Type} [linear_order α] (p : α → Prop) [decidable_pred p] : BT α → BT α
+| (BT.empty) := BT.empty
+| (BT.leaf a) := if p a then BT.leaf a else BT.empty
+| (BT.node a left right) := if p a then BT.node a (BT.filter left) (BT.filter right) else BT.merge (BT.filter left) (BT.filter right)
 
-theorem BT.finite {α : Type} [linear_order α] (t : BT α) : set.finite (BT.extension t) :=
-begin
-  induction t with t x l r IHl IHr,
-  { fconstructor, fconstructor, exact ∅, intro x, cases x, contradiction },
-  { fconstructor, fconstructor, exact {t}, intro x, cases x with x xp,
-    simp, apply BT.contains_leaf, assumption
-  }, 
-  { sorry  }
-end
+instance BT.has_sep {α : Type} [linear_order α] : has_sep α (BT α) := ⟨ λ p t, BT.filter p t ⟩ 
+
+-- Maybe we should change the order of params in BT.contains
+instance BT.has_mem {α : Type} [linear_order α] : has_mem α (BT α) := ⟨ λ a t, BT.contains t a ⟩
+
+-- def BT.extension {α : Type} [linear_order α] (t : BT α) : set α := { x : α | BT.contains t x }
+
+-- #check has_mem
+
+-- theorem BT.finite {α : Type} [linear_order α] (t : BT α) : set.finite (BT.extension t) :=
+-- begin
+--   induction t with t x l r IHl IHr,
+--   { fconstructor, fconstructor, exact ∅, intro x, cases x, contradiction },
+--   { fconstructor, fconstructor, exact {t}, intro x, cases x with x xp,
+--     simp, apply BT.contains_leaf, assumption
+--   }, 
+--   { sorry  }
+-- end
 
 structure BST (α : Type) [linear_order α] : Type :=
   (tree : BT α)
@@ -64,6 +82,7 @@ instance lex_repr {α β: Type} [has_repr α] [has_repr β] : has_repr (lex α �
 structure Edge : Type :=
   (edge : lex ℕ ℕ)
   (src_lt_trg : edge.fst < edge.snd . obviously)
+
 
 instance Edge_linear_order : linear_order Edge :=
   linear_order.lift (λ (u : Edge), u.edge) (λ u v H, begin cases u, cases v, simp, assumption end)
