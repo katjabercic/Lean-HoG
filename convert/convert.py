@@ -14,7 +14,7 @@ class BST:
         if not self.val:
             return "BT.empty"
         if not self.left and not self.right:
-            return "BT.leaf " + str(self.val)
+            return "BT.leaf " + "{edge := " + str(self.val) + "}"
         if not self.left:
             left = "BT.empty"
         else:
@@ -23,7 +23,7 @@ class BST:
             right = "BT.empty"
         else:
             right = str(self.right)
-        return "BT.node " + str(self.val) + " (" + left + ") (" + right + ")"
+        return "BT.node " + "{edge := " + str(self.val) + "}" + " (" + left + ") (" + right + ")"
 
 class HoGGraph:
     """An object representing a single HoG graph"""
