@@ -2,7 +2,7 @@
 -- graphs defined in mathlib.
 
 import .tactic
-import .tree
+import .tree_representation
 
 structure simple_irreflexive_graph : Type :=
   (vertex_size : ℕ)

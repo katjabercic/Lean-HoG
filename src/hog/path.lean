@@ -3,6 +3,8 @@ import .component
 
 variable g : simple_irreflexive_graph
 
+-- [ ] Be able to define the functions on paths my pattern matching instead of having to use induction
+
 -- inductive definition of path in a graph
 -- a path is either just an edge or it is constructed from a path and a next edge that fits
 inductive path : fin g.vertex_size → fin g.vertex_size → Type
@@ -52,6 +54,15 @@ begin
   }
 end
 
+def length (s t : fin g.vertex_size) : path g s t → ℕ :=
+begin
+  intro p,
+  induction p with p s t n e p l _ _ _ _ _ l,
+  exact 0,
+  exact l + 1,
+  exact l + 1
+end
+
 def vertices (s t : fin g.vertex_size) : path g s t → set (fin g.vertex_size) :=
 begin
   intro p,
@@ -60,7 +71,6 @@ begin
   apply set.insert p_s p_ih,
   apply set.insert p_t p_ih
 end
-
 
 def inner_vertices (s t : fin g.vertex_size) : path g s t → set (fin g.vertex_size) :=
 λ p, set.inter (vertices g s t p) {s, t}
