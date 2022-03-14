@@ -16,15 +16,23 @@ def BT.to_string {α : Type} [linear_order α] [has_repr α] : BT α → string
 
 instance BT_repr {α : Type} [linear_order α] [has_repr α] : has_repr (BT α) := ⟨ BT.to_string ⟩ 
 
+@[reducible]
 def BT.values {α : Type} [linear_order α] : BT α → list α
 | BT.empty := []
 | (BT.leaf a) := [a]
 | (BT.node a left right) := BT.values left ++ [a] ++ BT.values right
 
-def BT.is_bst {α : Type} [linear_order α] : BT α → bool
+@[reducible]
+def BT.is_bst {α : Type} [linear_order α] : BT α → Prop
 | BT.empty := tt
 | (BT.leaf a) := tt
-| (BT.node a left right) := list.all (BT.values left) (λ x, x < a) ∧ list.all (BT.values right) (λ x, x > a)
+| (BT.node a left right) := list.all (BT.values left) (λ x, x < a) ∧ list.all (BT.values right) (λ x, x > a) ∧ (BT.is_bst left) ∧ (BT.is_bst right)
+
+
+-- inductive bst (α : Type) [linear_order α] (lower upper : α) : Type
+-- | empty : bst
+-- | leaf (a : α) : lower < a → a < upper → bst
+-- | node (a : α) (left right : bst) : 
 
 @[reducible]
 def BT.contains {α : Type} [linear_order α] : BT α → α → bool
@@ -39,6 +47,11 @@ lemma BT.contains_node {α : Type} [linear_order α] (u v : BT α) (x y : α) :
   BT.contains (BT.node y u v) x → (BT.contains u x) ∨ x = y ∨ (BT.contains v x) :=
   sorry
 
+def BT.insert {α : Type} [linear_order α] (a : α) : BT α → BT α
+| BT.empty := BT.leaf a
+| (BT.leaf b) := if a < b then BT.node b (BT.leaf a) BT.empty else if b < a then BT.node b BT.empty (BT.leaf a) else BT.leaf b
+| (BT.node b left right) := if a < b then BT.node b (BT.insert left) right else if b < a then BT.node b left (BT.insert right) else BT.node b left right
+
 def BT.merge {α : Type} [linear_order α] : BT α → BT α → BT α
 | BT.empty t := t
 | t BT.empty := t
@@ -52,14 +65,12 @@ def BT.filter {α : Type} [linear_order α] (p : α → Prop) [decidable_pred p]
 | (BT.leaf a) := if p a then BT.leaf a else BT.empty
 | (BT.node a left right) := if p a then BT.node a (BT.filter left) (BT.filter right) else BT.merge (BT.filter left) (BT.filter right)
 
-instance BT.has_sep {α : Type} [linear_order α] : has_sep α (BT α) := ⟨ λ p t, BT.filter p t ⟩ 
+instance BT.has_sep {α : Type} [linear_order α] : has_sep α (BT α) := ⟨ BT.filter ⟩
 
 -- Maybe we should change the order of params in BT.contains
 instance BT.has_mem {α : Type} [linear_order α] : has_mem α (BT α) := ⟨ λ a t, BT.contains t a ⟩
 
 -- def BT.extension {α : Type} [linear_order α] (t : BT α) : set α := { x : α | BT.contains t x }
-
--- #check has_mem
 
 -- theorem BT.finite {α : Type} [linear_order α] (t : BT α) : set.finite (BT.extension t) :=
 -- begin
@@ -123,8 +134,8 @@ def BT.max {α : Type} [linear_order α] [inhabited α] : BT α → α
 
 def BT.edge_size : BT Edge → ℕ
 | BT.empty := 0
-| (BT.leaf a) := 2
-| (BT.node a left right) := 2 + BT.edge_size left + BT.edge_size right
+| (BT.leaf a) := 1
+| (BT.node a left right) := 1 + BT.edge_size left + BT.edge_size right
 
 def BST.edge_size : BST Edge → ℕ := λ bst, BT.edge_size bst.tree
 
@@ -132,3 +143,34 @@ def BT.neighborhoods : BT Edge → ℕ → list (ℕ × list ℕ) :=
 λ tree nodes, list.map (λ (i : ℕ), (i, BT.neighbors tree i)) (list.range nodes)
 
 def BST.neighborhoods : BST Edge → ℕ → list (ℕ × list ℕ) := λ bst n, BT.neighborhoods bst.tree n
+
+
+-- lemma small_tree_bst {α : Type} [linear_order α] (a b c : α) : BT.is_bst (BT.node a (BT.leaf b) (BT.leaf c)) ↔ (b < a ∧ a < c) :=
+-- begin
+--   split,
+--   sorry,
+--   sorry
+-- end
+
+-- lemma temp {α : Type} [linear_order α] (a b : α) : BT.is_bst (BT.node a (BT.leaf b) BT.empty) ↔ b < a :=
+-- begin
+--   split,
+--   {
+--     intro h,
+--     induction h,
+    
+--   }
+-- end
+
+-- lemma insert_maintains_bst {α : Type} [linear_order α] (t : BT α) (is_bst : BT.is_bst t) (a : α) : BT.is_bst (BT.insert a t) :=
+-- begin
+--   induction t,
+--   { obviously },
+--   { unfold BT.insert, 
+--     by_cases a < t,
+--     simp [h],
+    
+--   }
+-- end
+
+-- def BST.insert {α : Type} [linear_order α] : α → BST α → BST α := λ a bst, ⟨ BT.insert a bst.tree ⟩ 

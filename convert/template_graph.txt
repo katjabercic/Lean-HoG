@@ -6,9 +6,11 @@ namespace hog
 def $name : simple_irreflexive_graph :=
   from_edge_list $vertex_size $edge_list
 
+set_option class.instance_max_depth 1000
+
 def ${name}_BST : BST Edge :=
 { tree := ${BST},
-  is_bst := by bool_reflect
+  is_bst := begin simp, bool_reflect end
 }
 
 def ${name}_from_BST : simple_irreflexive_graph := from_BST $vertex_size ${name}_BST

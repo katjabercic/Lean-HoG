@@ -1,7 +1,7 @@
 import .tactic
 import .graph
 import .path
-import .tree
+import .tree_representation
 
 namespace hog
 
