@@ -65,7 +65,7 @@ def BT.filter {α : Type} [linear_order α] (p : α → Prop) [decidable_pred p]
 | (BT.leaf a) := if p a then BT.leaf a else BT.empty
 | (BT.node a left right) := if p a then BT.node a (BT.filter left) (BT.filter right) else BT.merge (BT.filter left) (BT.filter right)
 
-instance BT.has_sep {α : Type} [linear_order α] : has_sep α (BT α) := ⟨ BT.filter ⟩
+-- instance BT.has_sep {α : Type} [linear_order α] : has_sep α (BT α) := ⟨ BT.filter ⟩
 
 -- Maybe we should change the order of params in BT.contains
 instance BT.has_mem {α : Type} [linear_order α] : has_mem α (BT α) := ⟨ λ a t, BT.contains t a ⟩
