@@ -48,7 +48,8 @@ begin
 end
 
 -- I don't particularly like this formulation because it doesn't give us an edge we can work with, it just pushes things to induction without giving a good induction hypothesis
-lemma connected_induction {g : simple_irreflexive_graph} {v u : fin g.vertex_size} : v ≈ u → (v = u) ∨ g.edge v u ∨ ∃ w, v ≈ w ∧ w ≈ u :=
+lemma connected_induction {g : simple_irreflexive_graph} {v u : fin g.vertex_size} : 
+  v ≈ u → (v = u) ∨ g.edge v u ∨ ∃ w, v ≈ w ∧ w ≈ u :=
 begin
   intro cvu,
   induction cvu with x y h x x y exy h x y z exy eyz h₁ h₂,
@@ -144,10 +145,79 @@ structure num_components_witness : Type :=
   (uniqueness_of_roots : ∀ v : fin G.vertex_size, h v = 0 → v = root (c v)) -- can we get rid of this condition?
   (height_cond : ∀ v, 0 < h v → ∃ u, (G.edge u v) ∧ (h u < h v))
 
-lemma connected_to_root (w : num_components_witness) : Π v : fin w.G.vertex_size, v ≈ w.root (w.c v) :=
+-- I can't apply these lemmas directly becasue I have the pesky (w : num_components_witness) in the signature
+-- which causes some problems when trying to apply foo to it
+lemma ind_height (w : num_components_witness) (v: fin w.G.vertex_size) : 
+  (∀ u, w.h u < w.h v ∧ w.G.edge u v → u ≈ w.root (w.c u)) → v ≈ w.root (w.c v) :=
 begin
-  intro v,
-  sorry
+  intro h,
+  by_cases H : (0 < w.h v),
+  { have exists_u := w.height_cond v H,
+    cases exists_u with u hyp,
+    have H' := begin apply h u, apply and.symm, assumption end,
+    have same_c : w.c u = w.c v := begin apply w.connect_edges, cases hyp, assumption end,
+    rw ← same_c,
+    have cvu : v ≈ u := begin apply edge_connected, cases hyp, apply w.G.symmetric, assumption end,
+    exact cvu ⊕ H',
+  },
+  { simp at H,
+    have h := w.uniqueness_of_roots v H,
+    rw ← h,
+    apply connected_refl
+  }
+end
+
+lemma base_height (w : num_components_witness) (v: fin w.G.vertex_size) :
+  w.h v = 0 → v ≈ w.root (w.c v) :=
+begin
+  intro h,
+  have h := w.uniqueness_of_roots v h,
+  rw ← h,
+  apply connected_refl
+end
+
+theorem foo (α : Type) (f : α → ℕ) (P : α → Prop)
+  (base : ∀ a, f a = 0 → P a)
+  (ind : ∀ a, (∀ b, f b < f a → P b) → P a) :
+  ∀ a, P a
+:=
+begin
+  intro a,
+  let Q := λ n, ∀ a, f a = n → P a,
+  have Qstep : ∀ (n : ℕ), (∀ (m : ℕ), m < n → Q m) → Q n,
+  { intros n h a ξ,
+    apply (ind a),
+    intros b fb_lt_fa,
+    rewrite ξ at fb_lt_fa,
+    apply (h (f b)) fb_lt_fa, refl 
+  },
+  exact @well_founded.fix _ Q nat.lt nat.lt_wf Qstep (f a) a rfl,
+end
+
+theorem connected_to_root (w : num_components_witness) : Π v : fin w.G.vertex_size, v ≈ w.root (w.c v) :=
+begin
+  fapply @foo (fin w.G.vertex_size) (w.h) (λ u, u ≈ w.root (w.c u)),
+  { intros v h,
+    have h := w.uniqueness_of_roots v h,
+    rw ← h,
+    apply connected_refl
+  },
+  { intros v h,
+    by_cases H : (0 < w.h v),
+    { have exists_u := w.height_cond v H,
+      cases exists_u with u hyp,
+      have H' := begin apply h u, cases hyp, assumption end,
+      have same_c : w.c u = w.c v := begin apply w.connect_edges, cases hyp, assumption end,
+      rw ← same_c,
+      have cvu : v ≈ u := begin apply edge_connected, cases hyp, apply w.G.symmetric, assumption end,
+      exact cvu ⊕ H'
+    },
+    { simp at H,
+      have h := w.uniqueness_of_roots v H,
+      rw ← h,
+      apply connected_refl
+    }
+  }
 end
 
 def witness_components : num_components_witness → number_of_connected_components :=
