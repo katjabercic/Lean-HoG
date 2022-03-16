@@ -4,6 +4,8 @@ import re
 from string import Template
 from argparse import ArgumentParser
 
+from connected_components import compute_components
+
 class BST:
     def __init__(self, val, left, right):
         self.val = val
@@ -76,7 +78,9 @@ class HoGGraph:
         assert m, "Could not parse HoG data:\n{0}".format(txt)
         self.vertex_size, self.edge_list = self._get_size_edge_list(m.group('adjacency'))
         self.invariants = self._get_invariants(m.group('invariants'))
-        self.BST = self.list_to_bst(self.edge_list)
+        self.BST = self.edge_list_to_bst(self.edge_list)
+        self.neighborhoods = self.edge_list_to_neighborhoods(self.edge_list)
+        self.components = compute_components(self.neighborhoods)
                 
     def _get_size_edge_list(self, raw_adjacency):
         """Return the number of vertices and the list of edges (i, j), such that i < j."""
@@ -150,7 +154,7 @@ class HoGGraph:
             'BST' : self.BST
         }
 
-    def list_to_bst(self, list):
+    def edge_list_to_bst(self, list):
         n = len(list)
         if n == 0:
             return None
@@ -158,9 +162,19 @@ class HoGGraph:
             return BST(list[0], None, None)
         mid = n // 2
         root = list[mid]
-        left = self.list_to_bst(list[0:mid])
-        right = self.list_to_bst(list[mid+1:])
+        left = self.edge_list_to_bst(list[0:mid])
+        right = self.edge_list_to_bst(list[mid+1:])
         return BST(root, left, right)
+
+
+    def edge_list_to_neighborhoods(self, list):
+        if not self.vertex_size:
+            raise RuntimeError("You have to compute vertex_size before computing neighborhoods!")
+        nbhds = [(i, []) for i in range(self.vertex_size)]
+        for u, v in list:
+            nbhds[u][1].append(v)
+            nbhds[v][1].append(u)
+        return nbhds
 
 
 def hog_generator(datadir, file_prefix):
