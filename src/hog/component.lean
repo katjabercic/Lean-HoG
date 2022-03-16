@@ -138,7 +138,6 @@ structure num_components_witness : Type :=
   (num_components : ℕ)
   (c : fin G.vertex_size → fin num_components)
   (h : fin G.vertex_size → ℕ)
-  (has_enough : ∀ i, ∃ u, c u = i)
   (connect_edges : ∀ u v, G.edge u v → c u = c v)
   (root : fin num_components → fin G.vertex_size)
   (is_root :  ∀ i, c (root i) = i ∧ h (root i) = 0)
@@ -180,8 +179,7 @@ end
 theorem foo (α : Type) (f : α → ℕ) (P : α → Prop)
   (base : ∀ a, f a = 0 → P a)
   (ind : ∀ a, (∀ b, f b < f a → P b) → P a) :
-  ∀ a, P a
-:=
+  ∀ a, P a :=
 begin
   intro a,
   let Q := λ n, ∀ a, f a = n → P a,
@@ -227,7 +225,21 @@ def witness_components : num_components_witness → number_of_connected_componen
   G := w.G,
   num_components := w.num_components,
   c := w.c,
-  has_enough := w.has_enough,
+  has_enough := -- Proof is too long, we can make this a lot shorter
+    begin
+      have h : function.has_right_inverse w.c,
+      unfold function.has_right_inverse,
+      fsplit,
+      exact w.root,
+      unfold function.right_inverse,
+      unfold function.left_inverse,
+      intro v,
+      have := w.is_root v,
+      cases this,
+      assumption,
+      apply iff.mpr function.surjective_iff_has_right_inverse,
+      assumption
+    end,
   conn :=
     begin
       intros u v,
