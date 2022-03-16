@@ -64,22 +64,23 @@ let H : hog2.vertex_size = 5 := by bool_reflect in
     end,
   has_enough := sorry,
   connect_edges := λ u v h, begin bool_reflect end,
-  root := λ i : fin 1, match i with 
-                      | ⟨ 0, _ ⟩ := ⟨ 0, by bool_reflect ⟩
-                      | _ := ⟨ 0, by bool_reflect ⟩ 
-                      end,
+  root := λ i : fin 1, 
+    match i with 
+    | ⟨ 0, _ ⟩ := ⟨ 0, by bool_reflect ⟩
+    | _ := ⟨ 0, by bool_reflect ⟩ 
+    end,
   is_root := λ i,
     match i with
-    | ⟨ 0, _ ⟩ := ⟨ begin bool_reflect end, begin bool_reflect end ⟩
+    | ⟨ 0, _ ⟩ := ⟨ by bool_reflect, by bool_reflect ⟩
     | _ := ⟨ sorry, sorry ⟩
     end,
   uniqueness_of_roots := λ v : fin hog2.vertex_size, 
     match v with
-    | ⟨ 0, _ ⟩ := λ h, begin bool_reflect end
-    | ⟨ 1, _ ⟩ := λ h, begin contradiction end
-    | ⟨ 2, _ ⟩ := λ h, begin contradiction end
-    | ⟨ 3, _ ⟩ := λ h, begin contradiction end
-    | ⟨ 4, _ ⟩ := λ h, begin contradiction end
+    | ⟨ 0, _ ⟩ := λ h, by bool_reflect
+    | ⟨ 1, _ ⟩ := λ h, by contradiction
+    | ⟨ 2, _ ⟩ := λ h, by contradiction
+    | ⟨ 3, _ ⟩ := λ h, by contradiction
+    | ⟨ 4, _ ⟩ := λ h, by contradiction
     | ⟨ _ , cond ⟩ := sorry
     end,
   next := λ v : fin hog2.vertex_size,
