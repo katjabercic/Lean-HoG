@@ -51,7 +51,7 @@ def compute_components(neighborhoods):
             
     return vertices
 
-nbhds = [(0, [1,2]), (1, [0,2]), (2,[0,1,5]), (3,[4,5]), (4,[3]), (5,[2,3])]
+nbhds = [(0, [4]), (1, [4]), (2,[3]), (3,[2,4]), (4,[0,1,3])]
 
 vertices = compute_components(nbhds)
 print(vertices)
