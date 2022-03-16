@@ -81,7 +81,7 @@ class HoGGraph:
         self.BST = self.edge_list_to_bst(self.edge_list)
         self.neighborhoods = self.edge_list_to_neighborhoods(self.edge_list)
         self.components = compute_components(self.neighborhoods)
-        # print(lean_representation(self.name, self.components[0], self.components[1]))
+        self.connected_components_witness = lean_representation(self.name, self.components[0], self.components[1])
                 
     def _get_size_edge_list(self, raw_adjacency):
         """Return the number of vertices and the list of edges (i, j), such that i < j."""
@@ -152,7 +152,8 @@ class HoGGraph:
             'edge_list' : self.edge_list,
             'planar' : self.invariants['Planar']['value'],
             'chromatic_number' : self.invariants['Chromatic Number']['value'],
-            'BST' : self.BST
+            'BST' : self.BST,
+            'connected_components_witness' : self.connected_components_witness
         }
 
     def edge_list_to_bst(self, list):

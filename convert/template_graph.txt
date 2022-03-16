@@ -1,5 +1,6 @@
 import ..graph
 import ..tree
+import ..component
 
 namespace hog
 
@@ -14,5 +15,10 @@ def ${name}_BST : BST Edge :=
 }
 
 def ${name}_from_BST : simple_irreflexive_graph := from_BST $vertex_size ${name}_BST
+
+${connected_components_witness}
+
+def ${name}_components_witness : number_of_connected_components := witness_components ${name}_witness
+
 
 end hog
