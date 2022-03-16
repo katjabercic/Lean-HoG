@@ -143,7 +143,8 @@ structure num_components_witness : Type :=
   (root : fin num_components → fin G.vertex_size)
   (is_root :  ∀ i, c (root i) = i ∧ h (root i) = 0)
   (uniqueness_of_roots : ∀ v : fin G.vertex_size, h v = 0 → v = root (c v)) -- can we get rid of this condition?
-  (height_cond : ∀ v, 0 < h v → ∃ u, (G.edge u v) ∧ (h u < h v))
+  (next : fin G.vertex_size → fin G.vertex_size)
+  (height_cond : ∀ v, (0 < h v) → G.edge (next v) v ∧ h (next v) < h v)
 
 -- I can't apply these lemmas directly becasue I have the pesky (w : num_components_witness) in the signature
 -- which causes some problems when trying to apply foo to it
@@ -152,9 +153,9 @@ lemma ind_height (w : num_components_witness) (v: fin w.G.vertex_size) :
 begin
   intro h,
   by_cases H : (0 < w.h v),
-  { have exists_u := w.height_cond v H,
-    cases exists_u with u hyp,
-    have H' := begin apply h u, apply and.symm, assumption end,
+  { let u := w.next v,
+    have hyp := w.height_cond v H,
+    have H' : u ≈ w.root (w.c u) := begin apply h, apply and.symm, exact hyp end,
     have same_c : w.c u = w.c v := begin apply w.connect_edges, cases hyp, assumption end,
     rw ← same_c,
     have cvu : v ≈ u := begin apply edge_connected, cases hyp, apply w.G.symmetric, assumption end,
@@ -204,13 +205,13 @@ begin
   },
   { intros v h,
     by_cases H : (0 < w.h v),
-    { have exists_u := w.height_cond v H,
-      cases exists_u with u hyp,
-      have H' := begin apply h u, cases hyp, assumption end,
+    { let u := w.next v,
+      have hyp := w.height_cond v H,
+      have H' : u ≈ w.root (w.c u) := begin apply h, cases hyp, assumption end,
       have same_c : w.c u = w.c v := begin apply w.connect_edges, cases hyp, assumption end,
       rw ← same_c,
       have cvu : v ≈ u := begin apply edge_connected, cases hyp, apply w.G.symmetric, assumption end,
-      exact cvu ⊕ H'
+      exact cvu ⊕ H',
     },
     { simp at H,
       have h := w.uniqueness_of_roots v H,
