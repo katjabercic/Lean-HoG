@@ -62,7 +62,6 @@ let H : hog2.vertex_size = 5 := by bool_reflect in
     | ⟨ 4, _ ⟩ := 1
     | ⟨ _ , cond ⟩ := 0
     end,
-  has_enough := sorry,
   connect_edges := λ u v h, begin bool_reflect end,
   root := λ i : fin 1, 
     match i with 
