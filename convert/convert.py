@@ -4,7 +4,7 @@ import re
 from string import Template
 from argparse import ArgumentParser
 
-from connected_components import compute_components
+from connected_components import compute_components, h_representation, connect_edges_representation, root_representation, is_root_representation, uniqueness_of_roots_representation, next_representation, height_cond_representation, lean_representation
 
 class BST:
     def __init__(self, val, left, right):
@@ -81,6 +81,8 @@ class HoGGraph:
         self.BST = self.edge_list_to_bst(self.edge_list)
         self.neighborhoods = self.edge_list_to_neighborhoods(self.edge_list)
         self.components = compute_components(self.neighborhoods)
+        # print(h_representation(self.name, self.components[0]))
+        print(lean_representation(self.name, self.components[0], self.components[1]))
                 
     def _get_size_edge_list(self, raw_adjacency):
         """Return the number of vertices and the list of edges (i, j), such that i < j."""
