@@ -1,5 +1,5 @@
 import ..graph
-import ..tree
+import ..tree_representation
 import ..component
 
 namespace hog
