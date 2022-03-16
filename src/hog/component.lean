@@ -195,7 +195,7 @@ begin
   exact @well_founded.fix _ Q nat.lt nat.lt_wf Qstep (f a) a rfl,
 end
 
-theorem connected_to_root (w : num_components_witness) : Π v : fin w.G.vertex_size, v ≈ w.root (w.c v) :=
+lemma connected_to_root (w : num_components_witness) : Π v : fin w.G.vertex_size, v ≈ w.root (w.c v) :=
 begin
   fapply @foo (fin w.G.vertex_size) (w.h) (λ u, u ≈ w.root (w.c u)),
   { intros v h,
