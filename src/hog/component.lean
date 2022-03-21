@@ -145,36 +145,6 @@ structure num_components_witness : Type :=
   (next : fin G.vertex_size → fin G.vertex_size)
   (height_cond : ∀ v, (0 < h v) → G.edge (next v) v ∧ h (next v) < h v)
 
--- I can't apply these lemmas directly becasue I have the pesky (w : num_components_witness) in the signature
--- which causes some problems when trying to apply foo to it
-lemma ind_height (w : num_components_witness) (v: fin w.G.vertex_size) : 
-  (∀ u, w.h u < w.h v ∧ w.G.edge u v → u ≈ w.root (w.c u)) → v ≈ w.root (w.c v) :=
-begin
-  intro h,
-  by_cases H : (0 < w.h v),
-  { let u := w.next v,
-    have hyp := w.height_cond v H,
-    have H' : u ≈ w.root (w.c u) := begin apply h, apply and.symm, exact hyp end,
-    have same_c : w.c u = w.c v := begin apply w.connect_edges, cases hyp, assumption end,
-    rw ← same_c,
-    have cvu : v ≈ u := begin apply edge_connected, cases hyp, apply w.G.symmetric, assumption end,
-    exact cvu ⊕ H',
-  },
-  { simp at H,
-    have h := w.uniqueness_of_roots v H,
-    rw ← h,
-    apply connected_refl
-  }
-end
-
-lemma base_height (w : num_components_witness) (v: fin w.G.vertex_size) :
-  w.h v = 0 → v ≈ w.root (w.c v) :=
-begin
-  intro h,
-  have h := w.uniqueness_of_roots v h,
-  rw ← h,
-  apply connected_refl
-end
 
 theorem foo (α : Type) (f : α → ℕ) (P : α → Prop)
   (base : ∀ a, f a = 0 → P a)
@@ -191,6 +161,18 @@ begin
     apply (h (f b)) fb_lt_fa, refl 
   },
   exact @well_founded.fix _ Q nat.lt nat.lt_wf Qstep (f a) a rfl,
+end
+
+theorem bar (α : Type) (f : α → ℕ) (P : α → Prop)
+  (ind : ∀ a, (∀ b, f b < f a → P b) → P a) :
+  ∀ a, P a :=
+begin
+  intro a,
+  induction hn : f a using nat.strong_induction_on with n ih generalizing a,
+  apply ind,
+  intros b fb_lt_fa,
+  rw hn at fb_lt_fa,
+  exact ih _ fb_lt_fa _ rfl,
 end
 
 lemma connected_to_root (w : num_components_witness) : Π v : fin w.G.vertex_size, v ≈ w.root (w.c v) :=
@@ -219,7 +201,7 @@ begin
   }
 end
 
-def witness_components : num_components_witness → number_of_connected_components :=
+theorem witness_components : num_components_witness → number_of_connected_components :=
 λ w,
 {
   G := w.G,
@@ -265,3 +247,4 @@ def witness_components : num_components_witness → number_of_connected_componen
       }
     end
 }
+
