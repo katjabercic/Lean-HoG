@@ -1,22 +1,44 @@
 import re
+import os
 
-lines = []
-with open ("test_log_21-12-24-15-08", 'r') as file:
+filename = "test_log_22-03-17-10-21"
+
+tests = []
+with open ("tests/" + filename, 'r') as file:
+    test = []
     for line in file:
-        lines.append(line)
+        if line.isspace():
+            tests.append(test)
+            test = []
+        else:    
+            test.append(line)
 
 
 graphs = []
-for i in range(170):
-    graph = lines[i*7:(i+1)*7]
-    id, vertices, edges = graph[0].split(',')
-    memory = graph[4][9:-1]
-    size = graph[5][12:-1]
-    graphs.append([id, vertices, edges[:-1], memory, size])
 
+for test in tests:
+    test_id = int(test[0])
+    match = re.search("^(\d+\.\d+)user", test[1])
+    if not match:
+        print("Unable to parse time of test")
+        continue
+    time = float(match.group(1))
+    match_memory = re.search("maxrss:.*?(\d+)", test[5])
+    if not match_memory:
+        print("Unable to parse memory usage of test")
+        continue
+    memory = int(match_memory.group(1))
+    match_olean = re.search("olean size:.*?(\d+)", test[6])
+    if not match_olean:
+        print("Unable to parse olean size of test")
+        continue
+    olean_size = int(match_olean.group(1))
+    graphs.append([str(test_id), str(time), str(memory), str(olean_size)])
+    
+# print(graphs)
 
-with open('stats.csv', 'w') as stats:
-    stats.write('id,vertices,edges,memory,olean size\n')
+with open('tests/' + filename + '.csv', 'w') as stats:
+    stats.write('id,time,memory,olean size\n')
     for graph in graphs:
         stats.write(','.join(graph))
         stats.write('\n')

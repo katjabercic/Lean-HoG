@@ -4,10 +4,12 @@ import ..component
 
 namespace hog
 
+set_option class.instance_max_depth 5000
+set_option eqn_compiler.max_steps 100000
+
 def $name : simple_irreflexive_graph :=
   from_edge_list $vertex_size $edge_list
 
-set_option class.instance_max_depth 1000
 
 def ${name}_BST : BST Edge :=
 { tree := ${BST},

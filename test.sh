@@ -8,8 +8,9 @@ do
 	echo $i
 	num=$(printf "%05d" $(( $i * 100 + 1)))
 	make convert LIMIT=1 SKIP=$(($i * 100))
+	echo $num >> $test_log
 	/usr/bin/time -o $test_log -a lean --make --memory=25000 src/hog/data
+	/home/jure/Documents/process_io/bin/proccess_io "lean --make --memory=25000 src/hog/data" >> $test_log
 	stat --printf="olean size: %s\n" "/home/jure/OneDrive/faks/lean/Lean-HoG/src/hog/data/hog_$num.olean" >> $test_log
 	echo "" >> $test_log
-	# stat --printf="Edge size: %s\n" /home/jure/OneDrive/faks/lean/Lean-HoG/src/hog/data/hog_edge_size_00001.olean >> "test_log_$t"
 done
