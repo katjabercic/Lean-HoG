@@ -48,7 +48,7 @@ begin
 end
 
 -- I don't particularly like this formulation because it doesn't give us an edge we can work with, it just pushes things to induction without giving a good induction hypothesis
-lemma connected_induction {g : simple_irreflexive_graph} {v u : fin g.vertex_size} : 
+lemma connected_induction {g : simple_irreflexive_graph} {v u : fin g.vertex_size} :
   v ≈ u → (v = u) ∨ g.edge v u ∨ ∃ w, v ≈ w ∧ w ≈ u :=
 begin
   intro cvu,
@@ -123,7 +123,6 @@ end
 
 lemma better_induction {g : simple_irreflexive_graph} {v u : fin g.vertex_size} : v ≈ u → Prop := sorry
 
-
 def connected_graph : simple_irreflexive_graph → Prop := λ G, Π (u v : fin G.vertex_size), u ≈ v
 
 structure number_of_connected_components : Type :=
@@ -136,18 +135,18 @@ structure number_of_connected_components : Type :=
 structure num_components_witness : Type :=
   (G : simple_irreflexive_graph)
   (num_components : ℕ)
-  (c : fin G.vertex_size → fin num_components)
-  (h : fin G.vertex_size → ℕ)
-  (connect_edges : ∀ u v, G.edge u v → c u = c v)
-  (root : fin num_components → fin G.vertex_size)
-  (is_root :  ∀ i, c (root i) = i ∧ h (root i) = 0)
+  (c : ℕ → fin num_components)
+  (h : ℕ → ℕ)
+  (connect_edges : all_edges G (λ u v, c u = c v))
+  (root : ℕ → fin G.vertex_size)
+  (is_root :  ∀ (i : fin num_components), c (root i) = i ∧ h (root i) = 0)
   (uniqueness_of_roots : ∀ v : fin G.vertex_size, h v = 0 → v = root (c v)) -- can we get rid of this condition?
-  (next : fin G.vertex_size → fin G.vertex_size)
-  (height_cond : ∀ v, (0 < h v) → G.edge (next v) v ∧ h (next v) < h v)
+  (next : ℕ → fin G.vertex_size)
+  (height_cond : ∀ (v : fin G.vertex_size), bnot (0 < h v) || (edge G v (next v) && (h (next v) < h v)))
 
 -- I can't apply these lemmas directly becasue I have the pesky (w : num_components_witness) in the signature
 -- which causes some problems when trying to apply foo to it
-lemma ind_height (w : num_components_witness) (v: fin w.G.vertex_size) : 
+lemma ind_height (w : num_components_witness) (v: fin w.G.vertex_size) :
   (∀ u, w.h u < w.h v ∧ w.G.edge u v → u ≈ w.root (w.c u)) → v ≈ w.root (w.c v) :=
 begin
   intro h,
@@ -188,7 +187,7 @@ begin
     apply (ind a),
     intros b fb_lt_fa,
     rewrite ξ at fb_lt_fa,
-    apply (h (f b)) fb_lt_fa, refl 
+    apply (h (f b)) fb_lt_fa, refl
   },
   exact @well_founded.fix _ Q nat.lt nat.lt_wf Qstep (f a) a rfl,
 end

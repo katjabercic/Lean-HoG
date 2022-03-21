@@ -14,7 +14,13 @@ def BT.to_string {α : Type} [linear_order α] [has_repr α] : BT α → string
 | (BT.leaf a) := has_repr.repr a
 | (BT.node a left right) := has_repr.repr a ++ "--" ++ BT.to_string right ++ "\n   \\--" ++ BT.to_string left
 
-instance BT_repr {α : Type} [linear_order α] [has_repr α] : has_repr (BT α) := ⟨ BT.to_string ⟩ 
+instance BT_repr {α : Type} [linear_order α] [has_repr α] : has_repr (BT α) := ⟨ BT.to_string ⟩
+
+@[reducible]
+def BT.forall {α : Type} [linear_order α] (p : α -> bool) : BT α → bool
+| BT.empty := tt
+| (BT.leaf x) := p x
+| (BT.node x left right) := p x && BT.forall left && BT.forall right
 
 @[reducible]
 def BT.values {α : Type} [linear_order α] : BT α → list α
@@ -23,22 +29,31 @@ def BT.values {α : Type} [linear_order α] : BT α → list α
 | (BT.node a left right) := BT.values left ++ [a] ++ BT.values right
 
 @[reducible]
-def BT.is_bst {α : Type} [linear_order α] : BT α → Prop
+def BT.is_bst {α : Type} [linear_order α] : BT α → bool
 | BT.empty := tt
 | (BT.leaf a) := tt
-| (BT.node a left right) := list.all (BT.values left) (λ x, x < a) ∧ list.all (BT.values right) (λ x, x > a) ∧ (BT.is_bst left) ∧ (BT.is_bst right)
+| (BT.node a left right) :=
+   -- TODO: improve to a linear algorithm by carrying bounds in accumualtors
+   BT.forall (λ x, x < a) left && BT.forall (λ x, a < x) right &&
+   BT.is_bst left && BT.is_bst right
 
 
 -- inductive bst (α : Type) [linear_order α] (lower upper : α) : Type
 -- | empty : bst
 -- | leaf (a : α) : lower < a → a < upper → bst
--- | node (a : α) (left right : bst) : 
+-- | node (a : α) (left right : bst) :
 
 @[reducible]
 def BT.contains {α : Type} [linear_order α] : BT α → α → bool
 | (BT.empty) a := ff
 | (BT.leaf b) a := a = b
 | (BT.node b left right) a := a = b ∨ if a < b then BT.contains left a else BT.contains right a
+
+lemma BT.forall_is_forall {α : Type} [linear_order α] (p : α → bool) (t : BT α) :
+  BT.forall p t = tt → ∀ x, BT.contains t x -> p x :=
+begin
+  sorry
+end
 
 lemma BT.contains_leaf {α : Type} [linear_order α] (t : α) (x : α) : BT.contains (BT.leaf t) x → x = t :=
   sorry
@@ -78,7 +93,7 @@ instance BT.has_mem {α : Type} [linear_order α] : has_mem α (BT α) := ⟨ λ
 --   { fconstructor, fconstructor, exact ∅, intro x, cases x, contradiction },
 --   { fconstructor, fconstructor, exact {t}, intro x, cases x with x xp,
 --     simp, apply BT.contains_leaf, assumption
---   }, 
+--   },
 --   { sorry  }
 -- end
 
@@ -158,7 +173,7 @@ def BST.neighborhoods : BST Edge → ℕ → list (ℕ × list ℕ) := λ bst n,
 --   {
 --     intro h,
 --     induction h,
-    
+
 --   }
 -- end
 
@@ -166,11 +181,11 @@ def BST.neighborhoods : BST Edge → ℕ → list (ℕ × list ℕ) := λ bst n,
 -- begin
 --   induction t,
 --   { obviously },
---   { unfold BT.insert, 
+--   { unfold BT.insert,
 --     by_cases a < t,
 --     simp [h],
-    
+
 --   }
 -- end
 
--- def BST.insert {α : Type} [linear_order α] : α → BST α → BST α := λ a bst, ⟨ BT.insert a bst.tree ⟩ 
+-- def BST.insert {α : Type} [linear_order α] : α → BST α → BST α := λ a bst, ⟨ BT.insert a bst.tree ⟩
