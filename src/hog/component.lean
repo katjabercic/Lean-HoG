@@ -201,6 +201,31 @@ begin
   }
 end
 
+lemma witness_connected_condition (w : num_components_witness) : ∀ u v, w.c(u) = w.c(v) ↔ u ≈ v :=
+begin
+  intros u v,
+  split,
+  { intro H,
+    have connected_to_root : ∀ x : fin w.G.vertex_size, x ≈ w.root (w.c x),
+    { intro x,
+      apply connected_to_root
+    },
+    { have h : u ≈ w.root (w.c u) := connected_to_root u,
+      have h' : v ≈ w.root (w.c v) := connected_to_root v,
+      have h'' : w.root (w.c u) = w.root (w.c v) := by rw H,
+      rw h'' at h,
+      exact h ⊕ (h' ↑)
+    }
+  },
+  { intro h,
+    induction h,
+    { apply w.connect_edges, assumption }, -- The path u ~> v is just an edge
+    { refl }, -- reflexivity
+    { symmetry, assumption }, -- symmetry
+    { transitivity; assumption } --transitivity
+  }
+end
+
 theorem witness_components : num_components_witness → number_of_connected_components :=
 λ w,
 {
@@ -222,29 +247,6 @@ theorem witness_components : num_components_witness → number_of_connected_comp
       apply iff.mpr function.surjective_iff_has_right_inverse,
       assumption
     end,
-  conn :=
-    begin
-      intros u v,
-      split,
-      { intro H,
-        have connected_to_root : ∀ x : fin w.G.vertex_size, x ≈ w.root (w.c x),
-        { intro x,
-          apply connected_to_root
-        },
-        { have h : u ≈ w.root (w.c u) := connected_to_root u,
-          have h' : v ≈ w.root (w.c v) := connected_to_root v,
-          have h'' : w.root (w.c u) = w.root (w.c v) := by rw H,
-          rw h'' at h,
-          exact h ⊕ (h' ↑)
-        }
-      },
-      { intro h,
-        induction h,
-        { apply w.connect_edges, assumption }, -- The path u ~> v is just an edge
-        { refl }, -- reflexivity
-        { symmetry, assumption }, -- symmetry
-        { transitivity; assumption } --transitivity
-      }
-    end
+  conn := by apply witness_connected_condition
 }
 

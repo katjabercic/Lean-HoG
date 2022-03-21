@@ -34,6 +34,8 @@ begin
   }
 end
 
+notation p ↑ := symm_path p
+
 def concat_path {g : simple_irreflexive_graph} {s t u : fin g.vertex_size} : path s t → path t u → path s u :=
 begin
   intros p q,
@@ -118,13 +120,11 @@ begin
   }
 end
 
-#check eqv_gen.drec_on
-
 -- The harder direction, we need to find a path for connected vertices
 -- Again we're going to use induction on the structure of the connected relation and try to construct a path inductively
 -- The problem is that eqv_gen only has a recursor into Prop
 -- !!! USES CLASSICAL REASONING !!!
-lemma connected_implies_path {g : simple_irreflexive_graph} (s t : fin g.vertex_size) : s ≈ t → ∃ p : path s t, p = p :=
+lemma classical_connected_implies_path {g : simple_irreflexive_graph} (s t : fin g.vertex_size) : s ≈ t → ∃ p : path s t, p = p :=
 begin
   intro h,
   induction hn : h with x y exy x x y exy ih x y z exy eyz ih ih',
@@ -171,82 +171,55 @@ begin
   }
 end
 
-lemma ind_conn_path (w : num_components_witness) (v: fin w.G.vertex_size) : 
-  (∀ u, (w.h u < w.h v ∧ w.G.edge v u → path u (w.root (w.c u)))) → path v (w.root (w.c v)) :=
+theorem moo (α : Type) (f : α → ℕ) (P : α → Type)
+  (base : ∀ a, f a = 0 → P a)
+  (ind : ∀ a, (∀ b, f b < f a → P b) → P a) :
+  ∀ a, P a :=
 begin
-  intro h,
-  by_cases H : (0 < w.h v),
-  { let u := w.next v,
-    have hyp := w.height_cond v H,
-    have p : path u (w.root (w.c u)) :=
-      begin 
-        apply h,
-        split,
-        cases hyp,
-        exact hyp_right,
-        cases hyp,
-        apply w.G.symmetric,
-        exact hyp_left
-      end,
-    have same_c : w.c u = w.c v := begin apply w.connect_edges, cases hyp, assumption end,
-    rw ← same_c,
-    have q : path v u := begin apply edge_path, cases hyp, apply w.G.symmetric, exact hyp_left end,
-    exact q + p
+  intro a,
+  let Q := λ n, ∀ a, f a = n → P a,
+  have Qstep : ∀ (n : ℕ), (∀ (m : ℕ), m < n → Q m) → Q n,
+  { intros n h a ξ,
+    apply (ind a),
+    intros b fb_lt_fa,
+    rewrite ξ at fb_lt_fa,
+    apply (h (f b)) fb_lt_fa, refl 
   },
-  {
-    simp at H,
-    have h := w.uniqueness_of_roots v H,
-    rw ← h,
-    apply path.trivial
-  }
+  exact @well_founded.fix _ Q nat.lt nat.lt_wf Qstep (f a) a rfl,
 end
 
-lemma witness_path_to_root (w : num_components_witness) (s : fin w.G.vertex_size) : ∃ p : path s (w.root (w.c s)), p = p :=
+lemma witness_path_to_root (w : num_components_witness) (s : fin w.G.vertex_size) : path s (w.root (w.c s)) :=
 begin
-  apply @bar (fin w.G.vertex_size) (w.h) (λ v, ∃ p : path v (w.root (w.c v)), p = p),
-  intro v,
-  by_cases H : (0 < w.h v),
-  { let u := w.next v,
-    have hyp := w.height_cond v H,
-    intro h,
-    have H' : ∃ p : path u (w.root (w.c u)), p = p :=
-      begin
-        apply h,
-        cases hyp,
-        exact hyp_right
-      end,
-    have same_c : w.c u = w.c v := begin apply w.connect_edges, cases hyp, assumption end,
-    rw ← same_c,
-    have q : path v u := begin apply edge_path, cases hyp, apply w.G.symmetric, exact hyp_left end,
-    sorry
-  },
-  {
-    simp at H,
+  apply @moo (fin w.G.vertex_size) (w.h) (λ v, path v (w.root (w.c v))),
+  { intros v H,
     have h := w.uniqueness_of_roots v H,
     rw ← h,
     apply path.trivial
+  },
+  { intros v h,
+    by_cases H : (0 < w.h v),
+    { let u := w.next v,
+      have hyp := w.height_cond v H,
+      have p : path u (w.root (w.c u)) := begin apply h, cases hyp, exact hyp_right end,
+      have same_c : w.c u = w.c v := begin apply w.connect_edges, cases hyp, assumption end,
+      rw ← same_c,
+      have q : path u v := begin apply edge_path, cases hyp, exact hyp_left end,
+      exact (q ↑) + p
+    },
+    { simp at H,
+      have h := w.uniqueness_of_roots v H,
+      rw ← h,
+      apply path.trivial
+    }
   }
 end
 
 
-def recursive_path (w : num_components_witness) : Π v : fin w.G.vertex_size, path v (w.root (w.c v)) :=
-begin
-  intro v,
-  by_cases H : (0 < w.h v),
-  { 
-    let u := w.next v,
-    have p := recursive_path u,
-  },
-  {
-    simp at H,
-    have h := w.uniqueness_of_roots v H,
-    rw ← h,
-    apply path.trivial
-  }
-end 
-
-lemma witness_to_path (w : num_components_witness) (s t : fin g.vertex_size) : s ≈ t → path s t :=
+lemma witness_to_path (w : num_components_witness) (s t : fin w.G.vertex_size) : s ≈ t → path s t :=
 begin
   intro cst,
-  sorry
+  have equal_c : w.c s = w.c t := begin apply iff.mpr, apply witness_connected_condition, exact cst end,
+  have path_s_root : path s (w.root (w.c s)) := witness_path_to_root w s,
+  rw equal_c at path_s_root,
+  exact path_s_root + (witness_path_to_root w t ↑)
 end
