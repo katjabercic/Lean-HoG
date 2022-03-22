@@ -174,3 +174,4 @@ def hog2_components_witness : number_of_connected_components := witness_componen
 #check hog2_components_witness
 
 end hog
+
