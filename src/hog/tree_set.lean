@@ -121,6 +121,104 @@ begin
   } 
 end
 
+@[reducible]
+def stree.forall {α : Type} [linear_order α] :
+  ∀ {low high : bounded α} {b : low < high} (t : stree α b) (p : α → bool), bool
+| _ _ _ (stree.empty _) _ := tt
+| _ _ _ (stree.leaf x _ _) p := p x
+| _ _ _ (stree.node x left right) p := p x && stree.forall left p && stree.forall right p
+
+def stree.elem_lt_high {α : Type} [lo : linear_order α] (x : α) :
+  ∀ {low high : bounded α} {p : low < high} (t : stree α p),
+  stree.elem x t → element x < high
+| low high p (stree.empty _) x_el_t := by contradiction
+| low high p (stree.leaf y lowy yhigh) x_el_t := 
+  begin 
+    have xy : x = y,
+    simp [stree.elem] at x_el_t, assumption,
+    rw xy, exact yhigh
+  end
+| low high _ (@stree.node α lo _ _ y q r left right) x_el_t := 
+  begin
+    apply decidable.lt_by_cases x y,
+    {
+      intro xy,
+      simp [stree.elem, decidable.lt_by_cases, xy] at x_el_t,
+      have exey : element x < element y := by exact xy,
+      apply lt_trans exey r
+    },
+    {
+      intro xy,
+      simp [stree.elem, decidable.lt_by_cases, xy] at x_el_t,
+      rw ← xy at r, assumption
+    },
+    {
+      intro yx,
+      simp [stree.elem, decidable.lt_by_cases, yx] at x_el_t,
+      apply stree.elem_lt_high right,
+      simp [stree.elem, lt_asymm, yx] at x_el_t,
+      exact x_el_t
+    }
+  end
+
+lemma stree.elem_left_implies_lt_root {α : Type} [linear_order α] (y : α) :
+   ∀ {low high} (x : α) {q : low < element x} {r : element x < high} (left : stree α q) (right : stree α r),
+   stree.elem y left → y < x :=
+begin
+  intros _ _ x _ _ left right y_left,
+  have nxy : ¬ x = y := begin by_contra, sorry end,
+  sorry
+end
+
+lemma stree.elem_left_implies_elem {α : Type} [linear_order α] (y : α) :
+   ∀ {low high} (x : α) {q : low < element x} {r : element x < high} (left : stree α q) (right : stree α r),
+   stree.elem y left → stree.elem y (stree.node x left right) :=
+begin
+  intros _ _ x _ _ left right h,
+  apply decidable.lt_by_cases x y,
+  { intro xy,
+    simp [stree.elem],
+    sorry
+  },
+  sorry,
+  sorry
+end
+  
+
+lemma stree.forall_is_forall {α : Type} [linear_order α] (p : α → bool) :
+  ∀ {low high : bounded α} {b : low < high} (t : stree α b), 
+  stree.forall t p = tt ↔ ∀ (x : α), stree.elem x t → p x :=  
+begin
+  intros low high b t,
+  split,
+  induction t with A B C D E F G H I J y L M left right ih_left ih_right,
+  { simp },
+  { simp [stree.forall] },
+  { intros h x,
+    simp [stree.forall, stree.elem],
+    apply decidable.lt_by_cases x y,
+    { intro xy, simp [decidable.lt_by_cases, xy], apply ih_left, simp [stree.forall] at h, simp [h] },
+    { intro xy, simp [decidable.lt_by_cases, xy], simp [stree.forall] at h, simp [h] },
+    { intro yx, simp [decidable.lt_by_cases, lt_asymm yx, yx], apply ih_right, simp [stree.forall] at h, simp [h],  }
+  },
+  { intro h,
+    induction t with A B C D E x left right I J x L M left right ih_left ih_right R,
+    { simp },
+    { apply h x, simp [stree.elem] },
+    { have px := begin apply h x, simp [stree.elem, decidable.lt_by_cases] end,
+      simp [stree.forall],
+      split,
+      { exact px },
+      {
+        split,
+        apply ih_left,
+        intro y,
+        intro y_left,
+      }
+    },
+  }
+end
+
 def tset (α : Type) [lo : linear_order α] := @stree α lo bottom top true.intro
 
 def tset.mem {α : Type} [linear_order α] (x : α) (t : tset α) := stree.elem x t
@@ -132,5 +230,7 @@ instance tset.has_insert {α : Type} [linear_order α]: has_insert α (tset α) 
   { insert := λ x t, stree.insert x t true.intro true.intro }
 
 def tset.add {α : Type} [linear_order α] (x : α) (t : tset α) := stree.insert x t true.intro true.intro
+
+
 
 end tree_set
