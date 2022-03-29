@@ -1,6 +1,8 @@
 -- -- Graph components
 import logic.relation
 import .graph
+import .tree_representation
+import .tree_set
 open relation
 
 -- We need the following induction on connectedness
@@ -121,9 +123,6 @@ begin
   }
 end
 
-lemma better_induction {g : simple_irreflexive_graph} {v u : fin g.vertex_size} : v ≈ u → Prop := sorry
-
-
 def connected_graph : simple_irreflexive_graph → Prop := λ G, Π (u v : fin G.vertex_size), u ≈ v
 
 structure number_of_connected_components : Type :=
@@ -133,15 +132,17 @@ structure number_of_connected_components : Type :=
   (has_enough : ∀ (i : fin num_components), ∃ u, c(u) = i)
   (conn : ∀ u v, c(u) = c(v) ↔ u ≈ v)
 
+set_option trace.class_instances true
+
 structure num_components_witness : Type :=
   (G : simple_irreflexive_graph)
   (num_components : ℕ)
-  (c : fin G.vertex_size → fin num_components)
-  (h : fin G.vertex_size → ℕ)
-  (connect_edges : ∀ u v, G.edge u v → c u = c v)
-  (root : fin num_components → fin G.vertex_size)
+  (c : ℕ → fin num_components)
+  (h : ℕ → ℕ)
+  (connect_edges : ∀ (u : Edge), tree_set.stree.elem u (G.edge) → c (u.edge.fst) = c (u.edge.snd))
+  (root : fin num_components → ℕ)
   (is_root :  ∀ i, c (root i) = i ∧ h (root i) = 0)
-  (uniqueness_of_roots : ∀ v : fin G.vertex_size, h v = 0 → v = root (c v)) -- can we get rid of this condition?
+  (uniqueness_of_roots : ∀ v, h v = 0 → v = root (c v)) -- can we get rid of this condition?
   (next : fin G.vertex_size → fin G.vertex_size)
   (height_cond : ∀ v, (0 < h v) → G.edge (next v) v ∧ h (next v) < h v)
 

@@ -1,4 +1,5 @@
 import tactic
+import .tree_representation
 
 -- Extension of an order with a new bottom and top elements. 
 namespace tree_set
@@ -87,6 +88,11 @@ def stree.elem {α : Type} [linear_order α] (x : α) :
       (λ _, stree.elem left)
       (λ _, tt)
       (λ _, stree.elem right)
+
+def stree.size {α : Type} [linear_order α] : ∀ {low high : bounded α} {p : low < high}, stree α p → ℕ
+| low high p (stree.empty _) := 0
+| low high p (stree.leaf x _ _) := 1
+| low high p (stree.node x left right) := 1 + stree.size left + stree.size right
 
 theorem stree.elem_low {α : Type} [linear_order α] (x : α)
   {low high : bounded α} {p : low < high} (t : stree α p) :

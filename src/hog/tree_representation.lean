@@ -94,10 +94,8 @@ structure Edge : Type :=
   (edge : lex ℕ ℕ)
   (src_lt_trg : edge.fst < edge.snd . obviously)
 
-
 instance Edge_linear_order : linear_order Edge :=
   linear_order.lift (λ (u : Edge), u.edge) (λ u v H, begin cases u, cases v, simp, assumption end)
-
 
 @[reducible]
 def BT.edge (t : BT Edge) (a : ℕ) (b : ℕ) : bool :=
@@ -143,34 +141,3 @@ def BT.neighborhoods : BT Edge → ℕ → list (ℕ × list ℕ) :=
 λ tree nodes, list.map (λ (i : ℕ), (i, BT.neighbors tree i)) (list.range nodes)
 
 def BST.neighborhoods : BST Edge → ℕ → list (ℕ × list ℕ) := λ bst n, BT.neighborhoods bst.tree n
-
-
--- lemma small_tree_bst {α : Type} [linear_order α] (a b c : α) : BT.is_bst (BT.node a (BT.leaf b) (BT.leaf c)) ↔ (b < a ∧ a < c) :=
--- begin
---   split,
---   sorry,
---   sorry
--- end
-
--- lemma temp {α : Type} [linear_order α] (a b : α) : BT.is_bst (BT.node a (BT.leaf b) BT.empty) ↔ b < a :=
--- begin
---   split,
---   {
---     intro h,
---     induction h,
-    
---   }
--- end
-
--- lemma insert_maintains_bst {α : Type} [linear_order α] (t : BT α) (is_bst : BT.is_bst t) (a : α) : BT.is_bst (BT.insert a t) :=
--- begin
---   induction t,
---   { obviously },
---   { unfold BT.insert, 
---     by_cases a < t,
---     simp [h],
-    
---   }
--- end
-
--- def BST.insert {α : Type} [linear_order α] : α → BST α → BST α := λ a bst, ⟨ BT.insert a bst.tree ⟩ 
