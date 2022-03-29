@@ -31,15 +31,25 @@ end
 
 lemma edge_relation_symmetric {g : simple_irreflexive_graph} : ∀ u v, edge_relation g u v → edge_relation g v u :=
 begin
-  intros u v h,
+  intros u v edge_uv,
   apply decidable.lt_by_cases u v,
   { intro h,
-    unfold edge_relation,
-    simp [h, decidable.lt_by_cases],
-    sorry,
+    simp [edge_relation, h, decidable.lt_by_cases, asymm h],
+    simp [edge_relation, h, decidable.lt_by_cases] at edge_uv,
+    exact edge_uv
   },
-  sorry,
-  sorry,
+  {
+    intro h,
+    rw h at edge_uv,
+    have irreflexivity := edge_relation_irreflexive v,
+    contradiction
+  },
+  {
+    intro h,
+    simp [edge_relation, h, decidable.lt_by_cases],
+    simp [edge_relation, h, decidable.lt_by_cases, asymm h] at edge_uv,
+    exact edge_uv
+  }
 end
 
 -- def from_edge_list (n : ℕ) (edges : list (ℕ × ℕ)) : simple_irreflexive_graph :=
@@ -64,13 +74,13 @@ end
 --   neighborhoods := BST.neighborhoods tree n
 -- }
 
--- @[reducible]
--- def to_simple_graph (g : simple_irreflexive_graph) : simple_graph (fin g.vertex_size) :=
--- { simple_graph . 
---   adj := λ i j, g.edge i j = tt,
---   sym := begin intros i j, simp, apply g.symmetric end,
---   loopless := begin intro i, simp, apply g.irreflexive end
--- }
+@[reducible]
+def to_simple_graph (g : simple_irreflexive_graph) : simple_graph (fin g.vertex_size) :=
+{ simple_graph . 
+  adj := edge_relation g,
+  loopless := edge_relation_irreflexive,
+  sym := edge_relation_symmetric
+}
 
 -- def edge_size (g : simple_irreflexive_graph) : ℕ :=
 -- begin
