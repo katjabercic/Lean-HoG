@@ -221,4 +221,8 @@ instance tset.has_insert {α : Type} [linear_order α]: has_insert α (tset α) 
 
 def tset.add {α : Type} [linear_order α] (x : α) (t : tset α) := stree.insert x t true.intro true.intro
 
+lemma tset.forall_is_forall {α : Type} [linear_order α] (p : α → bool) :
+  ∀ (t : tset α), stree.forall t p = tt → ∀ (x : α), x ∈ t → p x :=
+  by apply stree.forall_is_forall
+
 end tree_set

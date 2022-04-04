@@ -15,7 +15,7 @@
 -- [ ] prove that the size of the tree set of a spanning forest is in bijection with the set of connected components of G
 
 import .graph
-import .component
+import .connected_component
 
 structure abstract_tree : Type :=
   (G : simple_irreflexive_graph)

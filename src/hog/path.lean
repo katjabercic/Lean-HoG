@@ -1,5 +1,5 @@
 import .graph
-import .component
+import .connected_component
 
 
 -- [ ] Be able to define the functions on paths my pattern matching instead of having to use induction

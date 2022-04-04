@@ -16,20 +16,21 @@ structure simple_irreflexive_graph : Type :=
   (edge_size_correct : edge_size = edges.size)
   -- (neighborhoods : list (ℕ × list ℕ))
 
-def edge_relation (g : simple_irreflexive_graph) : fin g.vertex_size → fin g.vertex_size → Prop :=
+def edge_relation (G : simple_irreflexive_graph) : ℕ → ℕ → Prop :=
 λ u v, decidable.lt_by_cases u v
-  (λ _, {Edge . edge := (u.val, v.val)} ∈ g.edges)
+  (λ _, {Edge . edge := (u, v)} ∈ G.edges)
   (λ _, false)
-  (λ _, {Edge . edge := (v.val, u.val)} ∈ g.edges)
+  (λ _, {Edge . edge := (v, u)} ∈ G.edges)
 
-lemma edge_relation_irreflexive {g : simple_irreflexive_graph} : ∀ v, ¬ edge_relation g v v :=
+lemma edge_relation_irreflexive {G : simple_irreflexive_graph} : ∀ v, ¬ edge_relation G v v :=
 begin 
   intros v,
   unfold edge_relation,
   simp [decidable.lt_by_cases]
 end
 
-lemma edge_relation_symmetric {g : simple_irreflexive_graph} : ∀ u v, edge_relation g u v → edge_relation g v u :=
+lemma edge_relation_symmetric {G : simple_irreflexive_graph} :
+  ∀ u v, edge_relation G u v → edge_relation G v u :=
 begin
   intros u v edge_uv,
   apply decidable.lt_by_cases u v,
@@ -50,6 +51,14 @@ begin
     simp [edge_relation, h, decidable.lt_by_cases, asymm h] at edge_uv,
     exact edge_uv
   }
+end
+
+lemma edge_relation_is_mem {G : simple_irreflexive_graph} : 
+  Π u v (uv : u < v), edge_relation G u v → { Edge . edge := (u, v), src_lt_trg := uv } ∈ G.edges :=
+begin
+  intros u v uv euv,
+  simp [edge_relation, decidable.lt_by_cases, uv] at euv,
+  exact euv,
 end
 
 -- def from_edge_list (n : ℕ) (edges : list (ℕ × ℕ)) : simple_irreflexive_graph :=
@@ -75,9 +84,9 @@ end
 -- }
 
 @[reducible]
-def to_simple_graph (g : simple_irreflexive_graph) : simple_graph (fin g.vertex_size) :=
+def to_simple_graph (G : simple_irreflexive_graph) : simple_graph ℕ :=
 { simple_graph . 
-  adj := edge_relation g,
+  adj := edge_relation G,
   loopless := edge_relation_irreflexive,
   sym := edge_relation_symmetric
 }
