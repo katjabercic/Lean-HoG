@@ -5,16 +5,6 @@ import .tree_representation
 import .tree_set
 open relation
 
--- We need the following induction on connectedness
--- If u ≈ v then there is a path of length k connecting them.
--- Then either :
----- u = v, or
----- (u,v) ∈ E(G), or
----- ∃ w ∈ V(G) s.t. (u,w) ∈ E(G) ∧ w ≈ v with a path of length (k-1)
-
--- So again we find ourselves in the situation where we want to have paths between vertices to express connectedness
-
-
 
 @[simp, reducible]
 def connected (G : simple_irreflexive_graph) : ℕ → ℕ → Prop := eqv_gen (edge_relation G)
@@ -70,8 +60,7 @@ structure num_components_witness : Type :=
   (root : fin num_components → ℕ)
   (is_root :  ∀ i, c (root i) = i ∧ h (root i) = 0)
   (uniqueness_of_roots : ∀ v, h v = 0 → v = root (c v)) -- can we get rid of this condition?
-  -- for each vertex with height > 0, give a neighbor with lower height
-  (next : ℕ → ℕ)
+  (next : ℕ → ℕ) -- for each vertex with height > 0, give a neighbor with lower height
   (height_cond : ∀ v, (0 < h v) → (edge_relation G) (next v) v ∧ h (next v) < h v)
 
 theorem foo (α : Type) (f : α → ℕ) (P : α → Prop)

@@ -1,5 +1,6 @@
 import .graph
 import .connected_component
+import .tree_set
 
 
 -- [ ] Be able to define the functions on paths my pattern matching instead of having to use induction
@@ -8,8 +9,8 @@ import .connected_component
 -- a path is either just an edge or it is constructed from a path and a next edge that fits
 inductive path {g : simple_irreflexive_graph} : fin g.vertex_size → fin g.vertex_size → Type
 | trivial (s : fin g.vertex_size) : path s s
-| left (s t u : fin g.vertex_size) : g.edge s t → path t u →  path s u
-| right (s t u : fin g.vertex_size) : g.edge t u → path s t → path s u
+| left (s t u : fin g.vertex_size) : (edge_relation g) s t → path t u →  path s u
+| right (s t u : fin g.vertex_size) : (edge_relation g) t u → path s t → path s u
 
 -- We probably want some kind of list-like notation for defining paths, i.e. < v₁, v₂, …, vₙ > or something
 -- notation p ,, next  := path.right next p
@@ -20,15 +21,13 @@ begin
   intro p,
   induction p with p s t n e p p',
     constructor,
-  { 
-    apply path.right,
-    apply g.symmetric,
+  { apply path.right,
+    apply edge_relation_symmetric,
     exact e,
     exact p'
   },
-  {
-    apply path.left,
-    apply g.symmetric,
+  { apply path.left,
+    apply edge_relation_symmetric,
     exact p_ᾰ,
     exact p_ih
   }
@@ -41,14 +40,12 @@ begin
   intros p q,
   induction p with s' t' n u' e p',
     exact q,
-  {
-    apply path.left,
+  { apply path.left,
     exact e,
     apply p_ih,
     exact q
   },
-  {
-    apply p_ih,
+  { apply p_ih,
     apply path.left,
     exact p_ᾰ,
     exact q
@@ -57,7 +54,7 @@ end
 
 notation p + q := concat_path p q
 
-def edge_path {g : simple_irreflexive_graph} {s t : fin g.vertex_size} : g.edge s t → path s t :=
+def edge_path {g : simple_irreflexive_graph} {s t : fin g.vertex_size} : (edge_relation g) s t → path s t :=
 begin
   intro est,
   apply path.left s t t est (path.trivial t)
@@ -84,15 +81,37 @@ end
 def inner_vertices {g : simple_irreflexive_graph} (s t : fin g.vertex_size) : path s t → set (fin g.vertex_size) :=
 λ p, set.inter (vertices p) {s, t}
 
-def edges {g : simple_irreflexive_graph} (s t : fin g.vertex_size) : path s t → set (edge g) :=
+def edges {g : simple_irreflexive_graph} (s t : fin g.vertex_size) : path s t → tree_set.tset Edge :=
 begin
   intro p,
   induction p,
-  exact ∅,
-  let u : edge g := { i := p_s, j := p_t, H := p_ᾰ },
-  apply set.insert u p_ih,
-  let v : edge g := { i := p_t, j := p_u, H := p_ᾰ },
-  apply set.insert v p_ih
+  { exact tree_set.stree.empty trivial },
+  { apply decidable.lt_by_cases p_s p_t,
+    { intro st,
+      apply p_ih.insert { Edge . edge := (p_s, p_t), src_lt_trg := st },
+      trivial,
+      trivial,
+    },
+    { intro _, exact p_ih },
+    { intro ts,
+      apply p_ih.insert { Edge . edge := (p_t, p_s), src_lt_trg := ts },
+      trivial,
+      trivial
+    }
+  },
+  { apply decidable.lt_by_cases p_t p_u,
+    { intro tu,
+      apply p_ih.insert { Edge . edge := (p_t, p_u), src_lt_trg := tu },
+      trivial,
+      trivial
+    },
+    { intro _, exact p_ih },
+    { intro ut,
+      apply p_ih.insert { Edge . edge := (p_u, p_t), src_lt_trg := ut },
+      trivial,
+      trivial
+    }
+  }
 end
 
 -- With the current definition of the function to compute edges and vertices, these two functions are noncomputable if they map into bool

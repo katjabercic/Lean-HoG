@@ -2,7 +2,6 @@
 -- graphs defined in mathlib.
 import tactic
 import .tactic
-import .tree_representation
 import .tree_set
 
 open tree_set
@@ -14,7 +13,27 @@ structure simple_irreflexive_graph : Type :=
   (edges : tset Edge)
   (edge_size : ℕ)
   (edge_size_correct : edge_size = edges.size)
-  -- (neighborhoods : list (ℕ × list ℕ))
+  (neighborhoods : tmap ℕ (tset ℕ))
+
+
+def neighborhoods_condition (nbhds : tmap ℕ (tset ℕ)) : Prop :=
+  ∀ i : ℕ, smap.contains_key i nbhds → (∀ j : ℕ, j ∈ nbhds.to_map i → i ∈ nbhds.to_map j)
+
+-- def decidable_nbhds_condition (nbhds : tmap ℕ (tset ℕ)) : bool :=
+--   smap.forall (λ t, stree.forall  ) nbhds
+
+def nbhds_describe_edges (g : simple_irreflexive_graph) : Prop := 
+  ∀ i : ℕ, ∀ j : ℕ, j ∈ g.neighborhoods.to_map i
+  → decidable.lt_by_cases i j
+    (λ _, {Edge . edge := (i, j)} ∈ g.edges)
+    (λ _, false)
+    (λ _, {Edge . edge := (j, i)} ∈ g.edges)
+
+def edges_describe_nbhds (g : simple_irreflexive_graph) : Prop :=
+  ∀ e : Edge, e ∈ g.edges → e.edge.snd ∈ g.neighborhoods.to_map e.edge.fst
+
+def describes_neighborhoods (g : simple_irreflexive_graph) : Prop := nbhds_describe_edges g ∧ edges_describe_nbhds g
+
 
 def edge_relation (G : simple_irreflexive_graph) : ℕ → ℕ → Prop :=
 λ u v, decidable.lt_by_cases u v
@@ -61,28 +80,6 @@ begin
   exact euv,
 end
 
--- def from_edge_list (n : ℕ) (edges : list (ℕ × ℕ)) : simple_irreflexive_graph :=
--- { vertex_size := n,
---   edge :=
---     (λ (i : fin n) (j : fin n), ¬ i = j ∧ (list.mem (i.val, j.val) edges ∨ list.mem (j.val, i.val) edges)),
---   edge_decidable := begin intros i j, apply_instance end,
---   irreflexive := begin intro i, tautology end,
---   symmetric := begin intros i j, tautology end,
---   edge_size := edges.length,
---   neighborhoods := []
--- }
-
--- def from_BST (n : ℕ) (tree : BST Edge) : simple_irreflexive_graph :=
--- { vertex_size := n,
---   edge :=
---     (λ (i : fin n) (j : fin n), ¬ i = j ∧ (BT.edge tree.tree i.val j.val)),
---   edge_decidable := begin intros i j, apply_instance end,
---   irreflexive := begin intro i, tautology end,
---   symmetric := begin intros i j h, split, tautology, cases h, apply BT.edge_symm, assumption end,
---   edge_size := tree.edge_size,
---   neighborhoods := BST.neighborhoods tree n
--- }
-
 @[reducible]
 def to_simple_graph (G : simple_irreflexive_graph) : simple_graph ℕ :=
 { simple_graph . 
@@ -90,28 +87,3 @@ def to_simple_graph (G : simple_irreflexive_graph) : simple_graph ℕ :=
   loopless := edge_relation_irreflexive,
   sym := edge_relation_symmetric
 }
-
--- def edge_size (g : simple_irreflexive_graph) : ℕ :=
--- begin
---   haveI := g.edge_decidable,
---   exact fintype.card { e : fin g.vertex_size × fin g.vertex_size | e.fst < e.snd  ∧ g.edge e.fst e.snd }
--- end
-
--- class hog_edge_size (g : simple_irreflexive_graph) : Type :=
---   (edge_size_val : ℕ)
---   (edge_size_eq : edge_size g = edge_size_val . obviously)
-
--- noncomputable def max_degree (g : simple_irreflexive_graph) : ℕ := simple_graph.max_degree (to_simple_graph g)
-
--- class hog_max_degree (g : simple_irreflexive_graph) : Type :=
---   (val : ℕ)
---   (mag_degree_eq : max_degree g = val . obviously)
-
--- noncomputable def min_degree (g : simple_irreflexive_graph) : ℕ := simple_graph.min_degree (to_simple_graph g)
-
--- class hog_min_degree (g : simple_irreflexive_graph) : Type :=
---   (val : ℕ)
---   (min_degree_eq : min_degree g = val . obviously)
-
--- class hog_regular (g : simple_irreflexive_graph) [max : hog_max_degree g] [min : hog_min_degree g] : Type :=
---   (hog_regular : max.val = min.val . obviously)

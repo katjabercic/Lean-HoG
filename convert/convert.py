@@ -12,20 +12,23 @@ class BST:
         self.left = left
         self.right = right
 
-    def __str__(self):
+    def __str__(self, subtree = None):
         if not self.val:
-            return "BT.empty"
+            return "stree.empty"
         if not self.left and not self.right:
-            return "BT.leaf " + "{edge := " + str(self.val) + "}"
+            if subtree == "left":
+                return "stree.leaf " + "{edge := " + str(self.val) + "}" + " (by bool_reflect) (by bool_reflect)"
+            elif subtree == "right":
+                return "stree.leaf " + "{edge := " + str(self.val) + "}" + " (by bool_reflect) (by bool_reflect)"
         if not self.left:
-            left = "BT.empty"
+            left = "stree.empty"
         else:
-            left = str(self.left)
+            left = self.left.__str__("left")
         if not self.right:
-            right = "BT.empty"
+            right = "stree.empty" + " (by bool_reflect)"
         else:
-            right = str(self.right)
-        return "BT.node " + "{edge := " + str(self.val) + "}" + " (" + left + ") (" + right + ")"
+            right = self.right.__str__("right")
+        return "stree.node " + "{edge := " + str(self.val) + "}" + "\n(" + left + ")\n(" + right + ")"
 
 class HoGGraph:
     """An object representing a single HoG graph"""
@@ -79,10 +82,11 @@ class HoGGraph:
         self.vertex_size, self.edge_list = self._get_size_edge_list(m.group('adjacency'))
         self.invariants = self._get_invariants(m.group('invariants'))
         self.BST = self.edge_list_to_bst(self.edge_list)
+        self.edge_size = len(self.edge_list)
         self.neighborhoods = self.edge_list_to_neighborhoods(self.edge_list)
         self.components = compute_components(self.neighborhoods)
         self.connected_components_witness = lean_representation(self.name, self.components[0], self.components[1])
-                
+
     def _get_size_edge_list(self, raw_adjacency):
         """Return the number of vertices and the list of edges (i, j), such that i < j."""
 
@@ -153,6 +157,7 @@ class HoGGraph:
             'planar' : self.invariants['Planar']['value'],
             'chromatic_number' : self.invariants['Chromatic Number']['value'],
             'BST' : self.BST,
+            'edge_size' : self.edge_size,
             'connected_components_witness' : self.connected_components_witness
         }
 

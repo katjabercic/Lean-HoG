@@ -1,6 +1,6 @@
+import order.lexicographic
+import data.fintype.basic
 import tactic
-import .tree_representation
-
 -- Extension of an order with a new bottom and top elements. 
 namespace tree_set
 
@@ -137,7 +137,7 @@ def stree.insert {α : Type} [linear_order α] (x : α) :
       (λ _, stree.node y left right)
       (λ yx, stree.node y left (@stree.insert y _ _ right yx xhigh))
 
-def elem_insert (α : Type) [linear_order α] (x : α) {low high : bounded α}
+lemma elem_insert (α : Type) [linear_order α] (x : α) {low high : bounded α}
   {lowx : low < element x} {xhigh : element x < high} (t : stree α (lt_trans lowx xhigh)) :
   stree.elem x (stree.insert x t lowx xhigh) :=
 begin
@@ -156,15 +156,16 @@ begin
 end
 
 @[reducible]
-def stree.forall {α : Type} [linear_order α] :
-  ∀ {low high : bounded α} {b : low < high} (t : stree α b) (p : α → bool), bool
-| _ _ _ (stree.empty _) _ := tt
-| _ _ _ (stree.leaf x _ _) p := p x
-| _ _ _ (stree.node x left right) p := p x && stree.forall left p && stree.forall right p
+def stree.forall {α : Type} [linear_order α] (p : α → Prop) [decidable_pred p] :
+  ∀ {low high : bounded α} {b : low < high} (t : stree α b) , bool
+| _ _ _ (stree.empty _) := tt
+| _ _ _ (stree.leaf x _ _):= decidable.to_bool (p x)
+| _ _ _ (stree.node x left right) := 
+  decidable.to_bool (p x) && stree.forall left && stree.forall right
 
-lemma stree.forall_is_forall {α : Type} [linear_order α] (p : α → bool) :
+lemma stree.forall_is_forall {α : Type} [linear_order α] (p : α → Prop) [decidable_pred p]:
   ∀ {low high : bounded α} {b : low < high} (t : stree α b), 
-  stree.forall t p = tt → ∀ (x : α), stree.elem x t → p x :=  
+  stree.forall p t = tt → ∀ (x : α), stree.elem x t → p x :=  
 begin
   intros low high b t,
   induction t with _ _ _ _ _ _ _ _ _ _  y,
@@ -209,20 +210,152 @@ begin
   }
 end
 
+-- def stree.intersection {α : Type} [linear_order α] :
+--   ∀ {low high : bounded α} {b : low < high},
+--   stree α b → stree α b → stree α b
+-- | _ _ b (stree.empty _) t := stree.empty b
+-- | _ _ b t (stree.empty _) := stree.empty b
+-- | _ _ b (stree.leaf x _ _) (stree.leaf y _ _) := if x = y then (stree.leaf x _ _) else stree.empty b
+-- | _ _ b (stree.node x left right) (stree.leaf y _ _) := 
+--     if x = y then (stree.leaf x _ _) 
+--     else if stree.elem y left then (stree.leaf y _ _)
+--     else if stree.elem y right then (stree.leaf y _ _)
+--     else stree.empty b
+-- | _ _ b (stree.leaf x _ _) (stree.node y left right) :=
+--     if x = y then (stree.leaf x _ _) 
+--     else if stree.elem x left then (stree.leaf x _ _)
+--     else if stree.elem x right then (stree.leaf x _ _)
+--     else stree.empty b
+-- | _ _ b (stree.node x left right) t :=  sorry
+
 def tset (α : Type) [lo : linear_order α] := @stree α lo bottom top true.intro
 
 def tset.mem {α : Type} [linear_order α] (x : α) (t : tset α) := stree.elem x t
 
+def tset.option_mem {α : Type} [linear_order α] (x : α) : option (tset α) → bool
+| none := ff
+| (some t) := tset.mem x t
+
+
 instance tset.has_mem {α : Type} [linear_order α]: has_mem α (tset α) :=
   { mem := λ x t, tset.mem x t }
+
+instance tset.option_has_mem {α : Type} [linear_order α] : has_mem α (option (tset α)) :=
+  { mem := λ x t, tset.option_mem x t }
 
 instance tset.has_insert {α : Type} [linear_order α]: has_insert α (tset α) :=
   { insert := λ x t, stree.insert x t true.intro true.intro }
 
 def tset.add {α : Type} [linear_order α] (x : α) (t : tset α) := stree.insert x t true.intro true.intro
 
-lemma tset.forall_is_forall {α : Type} [linear_order α] (p : α → bool) :
-  ∀ (t : tset α), stree.forall t p = tt → ∀ (x : α), x ∈ t → p x :=
+lemma tset.forall_is_forall {α : Type} [linear_order α] (p : α → Prop) [decidable_pred p]:
+  ∀ (t : tset α), stree.forall p t = tt → ∀ (x : α), x ∈ t → p x :=
   by apply stree.forall_is_forall
+
+def tset.intersection {α : Type} [linear_order α] : tset α → tset α → tset α := sorry
+
+-- The type of edges
+structure Edge : Type :=
+  (edge : lex ℕ ℕ)
+  (src_lt_trg : edge.fst < edge.snd . obviously)
+
+instance Edge_linear_order : linear_order Edge :=
+  linear_order.lift (λ (u : Edge), u.edge) (λ u v H, begin cases u, cases v, simp, assumption end)
+
+inductive smap (α β: Type) [linear_order α] : ∀ {low high : bounded α}, low < high → Type
+| empty : ∀ {low high} (p : low < high), smap p
+| leaf : ∀ {low high} (key : α) (val : β) (lowx : low < element key) (xhigh : element key < high), smap (lt_trans lowx xhigh)
+| node : ∀ {low high} (key : α) (val : β) {q : low < element key} {r : element key < high}
+           (left : smap q) (right : smap r), smap (lt_trans q r)
+
+example : smap ℕ ℕ (by { trivial } : bottom < top) :=
+  smap.node 1 10
+    (smap.leaf 0 666 (by trivial) (by obviously))
+    (smap.leaf 2 20 (by obviously) (by trivial))
+
+@[reducible]
+def smap.contains_key {α β: Type} [linear_order α] (key : α) :
+    ∀ {low high : bounded α} {p : low < high}, smap α β p → bool
+| low high p (smap.empty _) := ff
+| low high p (smap.leaf x _ _ _) := (key = x)
+| low high p (smap.node x _ left right) :=
+    decidable.lt_by_cases key x
+      (λ _, smap.contains_key left)
+      (λ _, tt)
+      (λ _, smap.contains_key right)
+
+
+@[reducible]
+def smap.contains_val {α β: Type} [linear_order α] [decidable_eq β] (val : β) :
+    ∀ {low high : bounded α} {p : low < high}, smap α β p → bool
+| low high p (smap.empty _) := ff
+| low high p (smap.leaf _ x _ _) := (val = x)
+| low high p (smap.node _ x left right) := (val = x) || smap.contains_val left || smap.contains_val right
+
+@[reducible]
+def smap.val_at {α β : Type} [linear_order α] (key: α) :
+    ∀ {low high : bounded α} {p : low < high}, smap α β p → option β
+| low high p (smap.empty _) := none
+| low high p (smap.leaf x val _ _) :=     
+    decidable.lt_by_cases key x
+      (λ _, none)
+      (λ _, some val)
+      (λ _, none)
+| low high p (smap.node x val left right) :=     
+    decidable.lt_by_cases key x
+      (λ _, smap.val_at left)
+      (λ _, some val)
+      (λ _, smap.val_at right)
+
+def smap.size {α β: Type} [linear_order α] : ∀ {low high : bounded α} {p : low < high}, smap α β p → ℕ
+| low high p (smap.empty _) := 0
+| low high p (smap.leaf x _ _ _) := 1
+| low high p (smap.node x _ left right) := 1 + smap.size left + smap.size right
+
+def smap.to_map {α β : Type} [linear_order α] :
+  ∀ {low high : bounded α} {p : low < high}, 
+  smap α β p → (α → option β) 
+:=
+λ low high p t x, smap.val_at x t
+
+@[reducible]
+def smap.forall {α β : Type} [linear_order α] (p : β → Prop) [decidable_pred p] :
+  ∀ {low high : bounded α} {b : low < high} (t : smap α β b) , bool
+| _ _ _ (smap.empty _) := tt
+| _ _ _ (smap.leaf _ val _ _):= decidable.to_bool (p val)
+| _ _ _ (smap.node _ val left right) := 
+  decidable.to_bool (p val) && smap.forall left && smap.forall right
+
+@[reducible]
+def extend_prop {β : Type} (p : β → Prop) : option β → Prop
+| none := false
+| (some b) := p b
+
+
+lemma smap.forall_is_forall {α β : Type} [linear_order α] (p : β → Prop) [decidable_pred p]:
+  ∀ {low high : bounded α} {b : low < high} (t : smap α β b), 
+  smap.forall p t = tt → ∀ (x : α), smap.contains_key x t → (extend_prop p) (smap.val_at x t) :=  
+begin
+  intros low high b t,
+  induction t with _ _ _ _ _ _ _ _ _ _  _ y B ,
+  { simp },
+  { simp [smap.forall, smap.val_at, decidable.lt_by_cases] },
+  { simp [smap.forall, smap.val_at], intros py lall rall x,
+    apply (decidable.lt_by_cases x y),
+    { intro xy, simp [ smap.contains_key, decidable.lt_by_cases, xy], obviously }, -- can we find a better proof that obviously?
+    { intro xy, simp [ smap.contains_key, decidable.lt_by_cases, xy], assumption },
+    { intro yx, simp [ smap.contains_key, decidable.lt_by_cases, yx, lt_asymm yx], tautology },
+  }
+end
+
+def tmap (α β : Type) [lo : linear_order α] := @smap α β lo bottom top true.intro
+
+def tmap.contains_key {α β : Type} [linear_order α] (key : α) : tmap α β → bool := smap.contains_key key
+
+def tmap.contains_val {α β : Type} [linear_order α] [decidable_eq β] (val : β) : tmap α β → bool := smap.contains_val val
+
+def tmap.val_at {α β : Type} [linear_order α] (key : α) : tmap α β → option β := smap.val_at key
+
+def tmap.to_map {α β : Type} [linear_order α] : tmap α β → (α → option β) := smap.to_map
 
 end tree_set

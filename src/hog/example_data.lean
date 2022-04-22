@@ -1,45 +1,60 @@
 import .tactic
 import .graph
-import .path
 import .connected_component
-import .tree_representation
 import .tree_set
 
 namespace hog
 
 open tree_set
 
-def example_1: stree Edge (by { trivial } : bounded.bottom < bounded.top) :=
+def example_1: tset tree_set.Edge :=
   stree.node { edge := (0,2) }
     (stree.leaf { edge := (0,1) } true.intro (by bool_reflect))
     (stree.leaf { edge := (1,2) } (by bool_reflect) true.intro)
 
+def temp0 : tset ℕ :=
+  stree.node 1
+    (stree.empty (by bool_reflect))
+    (stree.leaf 2 (by bool_reflect) (by bool_reflect))
 
-def example_2 : tset Edge := example_1
-#eval example_2.size
-#eval stree.size (tset.add {Edge . edge := (1,3)} example_2)
-#eval (tset.add {Edge . edge := (1,3)} example_2).elem { Edge . edge := (1,3)}
+def temp1 : tset ℕ :=
+  stree.node 0
+    (stree.empty (by bool_reflect))
+    (stree.leaf 2 (by bool_reflect) (by bool_reflect))
+
+def temp2 : tset ℕ :=
+  stree.node 0
+    (stree.empty (by bool_reflect))
+    (stree.leaf 1 (by bool_reflect) (by bool_reflect))
+
+def N₁ : tmap ℕ (tset ℕ) :=
+  smap.node 1 temp1
+    (smap.leaf 0 temp0 (by trivial) (by obviously))
+    (smap.leaf 2 temp2 (by obviously) (by trivial))
+
+def two : fin 3 := ⟨ 2, by norm_num ⟩
+
+#eval decidable.to_bool (2 ∈ (N₁.to_map 1))
+
+#eval neighborhoods_condition N₁
 
 def g : simple_irreflexive_graph := 
 { vertex_size := 3,
-  edges := example_2,
+  edges := example_1,
   edge_size := 3,
-  edge_size_correct := by refl 
+  edge_size_correct := by refl
 }
 
-def cc : ℕ → fin 1 := λ (v : ℕ), 
-  match v with
-  | 0 := 0
-  | 1 := 0
-  | 2 := 0
-  | _ := 0
-  end
-
-
-def gccw : num_components_witness := { 
+def w : num_components_witness := { 
   G := g,
   num_components := 1,
-  c := cc,
+  c := λ v : ℕ, 
+    match v with
+    | 0 := 0
+    | 1 := 0
+    | 2 := 0
+    | _ := 0
+    end,
   h := λ v, 
     match v with
     | 0 := 0
@@ -49,18 +64,59 @@ def gccw : num_components_witness := {
     end,
   connect_edges := 
     begin 
-      let p : Edge → Prop := λ e, cc e.edge.fst = cc e.edge.snd,
-      have dp : decidable_pred p := begin apply_instance end,
-      intros e h,
-      apply iff.mp,
-      apply to_bool_iff,
-      sorry -- we tried
+      apply tset.forall_is_forall,
+      bool_reflect
     end,
-  root := _,
-  is_root := _,
-  uniqueness_of_roots := _,
-  next := _,
-  height_cond := _ }
+  root := λ (v : fin 1),
+    match v with
+    | ⟨ 0, _ ⟩ := 0
+    | _ := 0
+    end,
+  is_root := λ i,
+    match i with
+    | ⟨ 0, _ ⟩ := by bool_reflect
+    | i := sorry
+    end,
+  uniqueness_of_roots := λ v,
+    match v with
+    | 0 := by bool_reflect
+    | 1 := by contradiction
+    | 2 := by contradiction
+    | _ := sorry
+    end,
+  next := λ v,
+    match v with
+    | 0 := 0
+    | 1 := 0
+    | 2 := 1
+    | _ := 0
+    end,
+  height_cond := λ v,
+    match v with
+    | 0 := 
+      begin
+        have nh : ¬ 0 < 0 := irrefl 0,
+        contradiction
+      end
+    | 1 := 
+      begin 
+        intro h,
+        simp [edge_relation, decidable.lt_by_cases],
+        bool_reflect
+      end
+    | 2 :=
+      begin 
+        intro h,
+        simp [edge_relation, decidable.lt_by_cases],
+        bool_reflect
+      end
+    | _ := sorry
+    end
+}
+
+def wc : number_of_connected_components := witness_components w
+
+
 
 end hog
 
