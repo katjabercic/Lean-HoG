@@ -1,9 +1,10 @@
 -- -- Graph components
 import logic.relation
 import .graph
-import .tree_representation
 import .tree_set
 open relation
+
+open tree_set
 
 
 @[simp, reducible]

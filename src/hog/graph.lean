@@ -13,26 +13,26 @@ structure simple_irreflexive_graph : Type :=
   (edges : tset Edge)
   (edge_size : ℕ)
   (edge_size_correct : edge_size = edges.size)
-  (neighborhoods : tmap ℕ (tset ℕ))
+  -- (neighborhoods : tmap ℕ (tset ℕ))
 
 
-def neighborhoods_condition (nbhds : tmap ℕ (tset ℕ)) : Prop :=
-  ∀ i : ℕ, smap.contains_key i nbhds → (∀ j : ℕ, j ∈ nbhds.to_map i → i ∈ nbhds.to_map j)
+-- def neighborhoods_condition (nbhds : tmap ℕ (tset ℕ)) : Prop :=
+--   ∀ i : ℕ, smap.contains_key i nbhds → (∀ j : ℕ, j ∈ nbhds.to_map i → i ∈ nbhds.to_map j)
 
--- def decidable_nbhds_condition (nbhds : tmap ℕ (tset ℕ)) : bool :=
---   smap.forall (λ t, stree.forall  ) nbhds
+-- -- def decidable_nbhds_condition (nbhds : tmap ℕ (tset ℕ)) : bool :=
+-- --   smap.forall (λ t, stree.forall  ) nbhds
 
-def nbhds_describe_edges (g : simple_irreflexive_graph) : Prop := 
-  ∀ i : ℕ, ∀ j : ℕ, j ∈ g.neighborhoods.to_map i
-  → decidable.lt_by_cases i j
-    (λ _, {Edge . edge := (i, j)} ∈ g.edges)
-    (λ _, false)
-    (λ _, {Edge . edge := (j, i)} ∈ g.edges)
+-- def nbhds_describe_edges (g : simple_irreflexive_graph) : Prop := 
+--   ∀ i : ℕ, ∀ j : ℕ, j ∈ g.neighborhoods.to_map i
+--   → decidable.lt_by_cases i j
+--     (λ _, {Edge . edge := (i, j)} ∈ g.edges)
+--     (λ _, false)
+--     (λ _, {Edge . edge := (j, i)} ∈ g.edges)
 
-def edges_describe_nbhds (g : simple_irreflexive_graph) : Prop :=
-  ∀ e : Edge, e ∈ g.edges → e.edge.snd ∈ g.neighborhoods.to_map e.edge.fst
+-- def edges_describe_nbhds (g : simple_irreflexive_graph) : Prop :=
+--   ∀ e : Edge, e ∈ g.edges → e.edge.snd ∈ g.neighborhoods.to_map e.edge.fst
 
-def describes_neighborhoods (g : simple_irreflexive_graph) : Prop := nbhds_describe_edges g ∧ edges_describe_nbhds g
+-- def describes_neighborhoods (g : simple_irreflexive_graph) : Prop := nbhds_describe_edges g ∧ edges_describe_nbhds g
 
 
 def edge_relation (G : simple_irreflexive_graph) : ℕ → ℕ → Prop :=
