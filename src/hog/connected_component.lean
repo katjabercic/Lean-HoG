@@ -4,6 +4,7 @@ import .graph
 import .tree_set
 
 open relation
+open tree_set
 
 @[simp, reducible]
 def connected (G : simple_irreflexive_graph) : ℕ → ℕ → Prop := eqv_gen (edge_relation G)

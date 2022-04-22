@@ -117,4 +117,3 @@ def wc : number_of_connected_components := witness_components w
 
 
 end hog
-
