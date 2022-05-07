@@ -21,18 +21,18 @@ class stree:
 
     def __str__(self, subtree = None):
         if not self.val:
-            return "stree.empty"
+            return "stree.empty (by bool_reflect)"
         if not self.left and not self.right:
             if subtree == "left":
                 return "stree.leaf " + str(self.val) + " (by bool_reflect) (by bool_reflect)"
             elif subtree == "right":
                 return "stree.leaf " + str(self.val) + " (by bool_reflect) (by bool_reflect)"
         if not self.left:
-            left = "stree.empty"
+            left = "stree.empty (by bool_reflect)"
         else:
             left = self.left.__str__("left")
         if not self.right:
-            right = "stree.empty" + " (by bool_reflect)"
+            right = "stree.empty (by bool_reflect)"
         else:
             right = self.right.__str__("right")
         return "stree.node " + str(self.val) + "\n(" + left + ")\n(" + right + ")"
@@ -119,8 +119,6 @@ class HoGGraph:
         self.connected_components_witness = lean_representation(self.name, self.components[0], self.components[1])
         self.nbhds_smap = self.neighborhoods_to_smap(self.neighborhoods)
 
-        print(self.nbhds_smap)
-
     def _get_size_edge_list(self, raw_adjacency):
         """Return the number of vertices and the list of edges (i, j), such that i < j."""
 
@@ -192,27 +190,40 @@ class HoGGraph:
             'chromatic_number' : self.invariants['Chromatic Number']['value'],
             'stree' : self.stree,
             'edge_size' : self.edge_size,
-            'connected_components_witness' : self.connected_components_witness
+            'connected_components_witness' : self.connected_components_witness,
+            'nbhds_smap' : self.nbhds_smap
         }
 
-    def edge_list_to_stree(self, list):
-        n = len(list)
+    def edge_list_to_stree(self, edge_list):
+        n = len(edge_list)
         if n == 0:
             return None
         if n == 1:
-            return stree(Edge(list[0]), None, None)
+            return stree(Edge(edge_list[0]), None, None)
         mid = n // 2
-        root = Edge(list[mid])
-        left = self.edge_list_to_stree(list[0:mid])
-        right = self.edge_list_to_stree(list[mid+1:])
+        root = Edge(edge_list[mid])
+        left = self.edge_list_to_stree(edge_list[0:mid])
+        right = self.edge_list_to_stree(edge_list[mid+1:])
+        return stree(root, left, right)
+
+    def list_to_stree(self, l):
+        n = len(l)
+        if n == 0:
+            return None
+        if n == 1:
+            return stree(l[0], None, None)
+        mid = n // 2
+        root = l[mid]
+        left = self.list_to_stree(l[0:mid])
+        right = self.list_to_stree(l[mid+1:])
         return stree(root, left, right)
 
 
-    def edge_list_to_neighborhoods(self, list):
+    def edge_list_to_neighborhoods(self, edge_list):
         if not self.vertex_size:
             raise RuntimeError("You have to compute vertex_size before computing neighborhoods!")
         nbhds = [(i, []) for i in range(self.vertex_size)]
-        for u, v in list:
+        for u, v in edge_list:
             nbhds[u][1].append(v)
             nbhds[v][1].append(u)
         return nbhds
@@ -224,12 +235,13 @@ class HoGGraph:
         if n == 0:
             return None
         if n == 1:
-            return smap(nbhds[0], self.edge_list_to_stree(nbhds[1]), None, None)
+            vals = self.list_to_stree(nbhds[0][1])
+            return smap(nbhds[0][0], vals, None, None)
         mid = n // 2
         root_key = nbhds[mid][0]
-        root_val = self.edge_list_to_stree(nbhds[mid][1])
-        left = self.neighborhoods_to_smap(list[0:mid])
-        right = self.neighborhoods_to_smap(list[mid+1:])
+        root_val = self.list_to_stree(nbhds[mid][1])
+        left = self.neighborhoods_to_smap(nbhds[0:mid])
+        right = self.neighborhoods_to_smap(nbhds[mid+1:])
         return smap(root_key, root_val, left, right)
 
 def hog_generator(datadir, file_prefix):

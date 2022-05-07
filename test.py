@@ -6,7 +6,7 @@ from datetime import datetime
 
 timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M")
 test_log=f'tests/test_log_{timestamp}.csv'
-subprocess_io_location = "/home/jure/Documents/process_io/bin/proccess_io"
+subprocess_io_location = "/home/jure/Documents/process_io/bin/process_io"
 
 print(timestamp)
 

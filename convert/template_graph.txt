@@ -16,12 +16,15 @@ ${stree}
 
 def ${name}_tset : tset Edge := ${name}_stree
 
+def nbhds : tmap ℕ (tset ℕ) :=
+${nbhds_smap}
+
 def ${name} : simple_irreflexive_graph := 
 { vertex_size := $vertex_size,
   edges := ${name}_tset,
   edge_size := $edge_size,
   edge_size_correct := by refl,
-  neighborhoods := sorry
+  neighborhoods := nbhds
 }
 
 ${connected_components_witness}
