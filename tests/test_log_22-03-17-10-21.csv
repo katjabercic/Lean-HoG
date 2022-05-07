@@ -1,4 +1,4 @@
-id,time (s),memory (MB),olean size (kB)
+id,time(s),memory(MB),olean size(kB)
 101,4.01,394,63741
 201,4.96,395,95802
 301,4.98,395,96256
