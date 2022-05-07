@@ -1,5 +1,8 @@
 import combinatorics.simple_graph.basic
 import tactic
+
+import .tree_set
+
 open tactic
 open interactive (parse)
 open interactive.types (texpr)
@@ -27,3 +30,4 @@ do { p ← target,
      r ← i_to_expr_strict ``((to_bool_iff %%(p)).mp rfl),
      exact r
     }
+

@@ -119,22 +119,22 @@ end
 def vertex_independent {g : simple_irreflexive_graph} (s t : fin g.vertex_size) : path s t → path s t → Prop :=
 λ p q, (inner_vertices s t p) ∩ (inner_vertices s t q) = ∅
 
-def edge_independent {g : simple_irreflexive_graph} (s t : fin g.vertex_size) : path s t → path s t → Prop :=
-λ p q, (edges s t p) ∩ (edges s t q) = ∅
+-- def edge_independent {g : simple_irreflexive_graph} (s t : fin g.vertex_size) : path s t → path s t → Prop :=
+-- λ p q, (edges s t p) ∩ (edges s t q) = ∅
 
 
 -- The easy direction, just apply induction on the structure of path
-lemma path_implies_connected {g : simple_irreflexive_graph} (s t : fin g.vertex_size) : path s t → s ≈ t :=
+lemma path_implies_connected {g : simple_irreflexive_graph} (s t : fin g.vertex_size) : path s t → connected g s t :=
 begin
   intro h,
   induction hn : h with s s t u est p ih s t u etu p ih,
   { apply connected_refl },
-  { have ctu : t ≈ u, apply ih p, refl,
-    have cst : s ≈ t, apply edge_connected est,
+  { have ctu : connected g t u, apply ih p, refl,
+    have cst : connected g s t, apply edge_connected est,
     exact cst ⊕ ctu
   },
-  { have cst : s ≈ t, apply ih p, refl,
-    have ctu : t ≈ u, apply edge_connected etu,
+  { have cst : connected g s t, apply ih p, refl,
+    have ctu : connected g t u, apply edge_connected etu,
     exact cst ⊕ ctu
   }
 end
@@ -143,7 +143,7 @@ end
 -- Again we're going to use induction on the structure of the connected relation and try to construct a path inductively
 -- The problem is that eqv_gen only has a recursor into Prop
 -- !!! USES CLASSICAL REASONING !!!
-lemma classical_connected_implies_path {g : simple_irreflexive_graph} (s t : fin g.vertex_size) : s ≈ t → ∃ p : path s t, p = p :=
+lemma classical_connected_implies_path {g : simple_irreflexive_graph} (s t : fin g.vertex_size) : connected g s t → ∃ p : path s t, p = p :=
 begin
   intro h,
   induction hn : h with x y exy x x y exy ih x y z exy eyz ih ih',
@@ -234,7 +234,7 @@ begin
 end
 
 
-lemma witness_to_path (w : num_components_witness) (s t : fin w.G.vertex_size) : s ≈ t → path s t :=
+lemma witness_to_path (w : num_components_witness) (s t : fin w.G.vertex_size) : connected w.G s t → path s t :=
 begin
   intro cst,
   have equal_c : w.c s = w.c t := begin apply iff.mpr, apply witness_connected_condition, exact cst end,

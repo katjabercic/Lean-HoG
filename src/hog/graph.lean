@@ -1,10 +1,21 @@
 -- Custom definitions of graphs to work around some idiosyncracies of
 -- graphs defined in mathlib.
 import tactic
+import tactic.cache
 import .tactic
 import .tree_set
+import .tree_map
 
 open tree_set
+open tree_map
+
+-- The type of edges
+structure Edge : Type :=
+  (edge : lex ℕ ℕ)
+  (src_lt_trg : edge.fst < edge.snd . obviously)
+
+instance Edge_linear_order : linear_order Edge :=
+  linear_order.lift (λ (u : Edge), u.edge) (λ u v H, begin cases u, cases v, simp, assumption end)
 
 -- set_option trace.class_instances true
 
@@ -16,21 +27,44 @@ structure simple_irreflexive_graph : Type :=
   (neighborhoods : tmap ℕ (tset ℕ))
 
 
-def neighborhoods_condition (nbhds : tmap ℕ (tset ℕ)) : Prop :=
+def nbhds_condition (nbhds : tmap ℕ (tset ℕ)) : Prop :=
   ∀ i : ℕ, smap.contains_key i nbhds → (∀ j : ℕ, j ∈ nbhds.to_map i → i ∈ nbhds.to_map j)
 
--- def decidable_nbhds_condition (nbhds : tmap ℕ (tset ℕ)) : bool :=
---   smap.forall (λ t, stree.forall  ) nbhds
+def decidable_nbhds_condition (nbhds : tmap ℕ (tset ℕ)) : bool :=
+  smap.forall_keys (λ i, stree.option_forall (λ j, i ∈ nbhds.to_map j) (nbhds.to_map i)) nbhds
+
+-- def decidable_implies_nbhds_condition (nbhds : tmap ℕ (tset ℕ)) : 
+--   (decidable_nbhds_condition nbhds = tt) → nbhds_condition nbhds :=
+-- begin
+--   simp [nbhds_condition, decidable_nbhds_condition],
+--   sorry
+-- end
 
 def nbhds_describe_edges (g : simple_irreflexive_graph) : Prop := 
-  ∀ i : ℕ, ∀ j : ℕ, j ∈ g.neighborhoods.to_map i
-  → decidable.lt_by_cases i j
+  ∀ i : ℕ, smap.contains_key i g.neighborhoods → (∀ j : ℕ, j ∈ g.neighborhoods.to_map i → decidable.lt_by_cases i j
     (λ _, {Edge . edge := (i, j)} ∈ g.edges)
     (λ _, false)
-    (λ _, {Edge . edge := (j, i)} ∈ g.edges)
+    (λ _, {Edge . edge := (j, i)} ∈ g.edges))
+
+example (i : ℕ) : decidable_pred (λ j, (decidable.lt_by_cases i j (λ _, ff) (λ _, ff) (λ _, ff))) :=
+begin
+  simp [decidable.lt_by_cases],
+  apply_instance
+end
+
+def decidable_nbhds_describe_edges (g : simple_irreflexive_graph) : bool := 
+  smap.forall_keys (λ i, (@stree.option_forall ℕ (_) (λ j, 
+    decidable.lt_by_cases i j
+      (λ _, {Edge . edge := (i, j)} ∈ g.edges)
+      (λ _, false)
+      (λ _, {Edge . edge := (j, i)} ∈ g.edges))
+    ) (begin simp [decidable.lt_by_cases], apply_instance end) (_) (_) (_) (g.neighborhoods.to_map i)) g.neighborhoods
 
 def edges_describe_nbhds (g : simple_irreflexive_graph) : Prop :=
   ∀ e : Edge, e ∈ g.edges → e.edge.snd ∈ g.neighborhoods.to_map e.edge.fst
+
+def decidable_edges_describe_nbhds (g : simple_irreflexive_graph) : bool :=
+  stree.forall (λ e : Edge, e.edge.snd ∈ g.neighborhoods.to_map e.edge.fst) g.edges
 
 def describes_neighborhoods (g : simple_irreflexive_graph) : Prop := nbhds_describe_edges g ∧ edges_describe_nbhds g
 

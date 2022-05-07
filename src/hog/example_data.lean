@@ -2,15 +2,17 @@ import .tactic
 import .graph
 import .connected_component
 import .tree_set
+import .tree_map
 
 namespace hog
 
 open tree_set
+open tree_map
 
-def example_1: tset tree_set.Edge :=
+def example_1: tset Edge :=
   stree.node { edge := (0,2) }
-    (stree.leaf { edge := (0,1) } true.intro (by bool_reflect))
-    (stree.leaf { edge := (1,2) } (by bool_reflect) true.intro)
+    (stree.leaf { edge := (0,1) } (by bool_reflect) (by bool_reflect))
+    (stree.leaf { edge := (1,2) } (by bool_reflect) (by bool_reflect))
 
 def temp0 : tset ℕ :=
   stree.node 1
@@ -29,21 +31,22 @@ def temp2 : tset ℕ :=
 
 def N₁ : tmap ℕ (tset ℕ) :=
   smap.node 1 temp1
-    (smap.leaf 0 temp0 (by trivial) (by obviously))
-    (smap.leaf 2 temp2 (by obviously) (by trivial))
-
-def two : fin 3 := ⟨ 2, by norm_num ⟩
-
-#eval decidable.to_bool (2 ∈ (N₁.to_map 1))
-
-#eval neighborhoods_condition N₁
+    (smap.leaf 0 temp0 (by bool_reflect) (by bool_reflect))
+    (smap.leaf 2 temp2 (by bool_reflect) (by bool_reflect))
 
 def g : simple_irreflexive_graph := 
 { vertex_size := 3,
   edges := example_1,
   edge_size := 3,
-  edge_size_correct := by refl
+  edge_size_correct := by refl,
+  neighborhoods := N₁
 }
+
+#eval decidable_nbhds_condition g.neighborhoods
+
+#eval decidable_nbhds_describe_edges g
+
+#eval decidable_edges_describe_nbhds g
 
 def w : num_components_witness := { 
   G := g,
@@ -115,7 +118,6 @@ def w : num_components_witness := {
 }
 
 def wc : number_of_connected_components := witness_components w
-
 
 
 end hog

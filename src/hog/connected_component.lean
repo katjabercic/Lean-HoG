@@ -1,10 +1,9 @@
 -- -- Graph components
 import logic.relation
 import .graph
-import .tree_representation
 import .tree_set
-open relation
 
+open relation
 
 @[simp, reducible]
 def connected (G : simple_irreflexive_graph) : ℕ → ℕ → Prop := eqv_gen (edge_relation G)

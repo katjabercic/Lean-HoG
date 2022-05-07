@@ -1,5 +1,4 @@
 class Vertex:
-
     def __init__(self, id):
         self.id = id
         self.c = -1

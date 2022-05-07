@@ -6,7 +6,14 @@ from argparse import ArgumentParser
 
 from connected_components import compute_components, h_representation, connect_edges_representation, root_representation, is_root_representation, uniqueness_of_roots_representation, next_representation, height_cond_representation, lean_representation
 
-class BST:
+class Edge:
+    def __init__(self, val):
+        self.val = val
+
+    def __str__(self):
+        return "{edge := " + str(self.val) + "}"
+
+class stree:
     def __init__(self, val, left, right):
         self.val = val
         self.left = left
@@ -17,9 +24,9 @@ class BST:
             return "stree.empty"
         if not self.left and not self.right:
             if subtree == "left":
-                return "stree.leaf " + "{edge := " + str(self.val) + "}" + " (by bool_reflect) (by bool_reflect)"
+                return "stree.leaf " + str(self.val) + " (by bool_reflect) (by bool_reflect)"
             elif subtree == "right":
-                return "stree.leaf " + "{edge := " + str(self.val) + "}" + " (by bool_reflect) (by bool_reflect)"
+                return "stree.leaf " + str(self.val) + " (by bool_reflect) (by bool_reflect)"
         if not self.left:
             left = "stree.empty"
         else:
@@ -28,8 +35,32 @@ class BST:
             right = "stree.empty" + " (by bool_reflect)"
         else:
             right = self.right.__str__("right")
-        return "stree.node " + "{edge := " + str(self.val) + "}" + "\n(" + left + ")\n(" + right + ")"
+        return "stree.node " + str(self.val) + "\n(" + left + ")\n(" + right + ")"
 
+class smap:
+    def __init__(self, key, val, left, right):
+        self.key = key
+        self.val = val
+        self.left = left
+        self.right = right
+
+    def __str__(self, subtree = None):
+        if not self.val:
+            return "smap.empty"
+        if not self.left and not self.right:
+            if subtree == "left":
+                return "smap.leaf " + str(self.key) + " (" + str(self.val) + ") " + " (by bool_reflect) (by bool_reflect)"
+            elif subtree == "right":
+                return "smap.leaf " + str(self.key) + " (" + str(self.val) + ") " + " (by bool_reflect) (by bool_reflect)"
+        if not self.left:
+            left = "smap.empty"
+        else:
+            left = self.left.__str__("left")
+        if not self.right:
+            right = "smap.empty" + " (by bool_reflect)"
+        else:
+            right = self.right.__str__("right")
+        return "smap.node " + str(self.key) + " (" + str(self.val) + ") " + "\n(" + left + ")\n(" + right + ")"
 class HoGGraph:
     """An object representing a single HoG graph"""
 
@@ -81,11 +112,14 @@ class HoGGraph:
         assert m, "Could not parse HoG data:\n{0}".format(txt)
         self.vertex_size, self.edge_list = self._get_size_edge_list(m.group('adjacency'))
         self.invariants = self._get_invariants(m.group('invariants'))
-        self.BST = self.edge_list_to_bst(self.edge_list)
+        self.stree = self.edge_list_to_stree(self.edge_list)
         self.edge_size = len(self.edge_list)
         self.neighborhoods = self.edge_list_to_neighborhoods(self.edge_list)
         self.components = compute_components(self.neighborhoods)
         self.connected_components_witness = lean_representation(self.name, self.components[0], self.components[1])
+        self.nbhds_smap = self.neighborhoods_to_smap(self.neighborhoods)
+
+        print(self.nbhds_smap)
 
     def _get_size_edge_list(self, raw_adjacency):
         """Return the number of vertices and the list of edges (i, j), such that i < j."""
@@ -156,22 +190,22 @@ class HoGGraph:
             'edge_list' : self.edge_list,
             'planar' : self.invariants['Planar']['value'],
             'chromatic_number' : self.invariants['Chromatic Number']['value'],
-            'BST' : self.BST,
+            'stree' : self.stree,
             'edge_size' : self.edge_size,
             'connected_components_witness' : self.connected_components_witness
         }
 
-    def edge_list_to_bst(self, list):
+    def edge_list_to_stree(self, list):
         n = len(list)
         if n == 0:
             return None
         if n == 1:
-            return BST(list[0], None, None)
+            return stree(Edge(list[0]), None, None)
         mid = n // 2
-        root = list[mid]
-        left = self.edge_list_to_bst(list[0:mid])
-        right = self.edge_list_to_bst(list[mid+1:])
-        return BST(root, left, right)
+        root = Edge(list[mid])
+        left = self.edge_list_to_stree(list[0:mid])
+        right = self.edge_list_to_stree(list[mid+1:])
+        return stree(root, left, right)
 
 
     def edge_list_to_neighborhoods(self, list):
@@ -183,6 +217,20 @@ class HoGGraph:
             nbhds[v][1].append(u)
         return nbhds
 
+    def neighborhoods_to_smap(self, nbhds):
+        if not self.vertex_size:
+            raise RuntimeError("You have to compute vertex_size before computing neighborhoods!")
+        n = len(nbhds)
+        if n == 0:
+            return None
+        if n == 1:
+            return smap(nbhds[0], self.edge_list_to_stree(nbhds[1]), None, None)
+        mid = n // 2
+        root_key = nbhds[mid][0]
+        root_val = self.edge_list_to_stree(nbhds[mid][1])
+        left = self.neighborhoods_to_smap(list[0:mid])
+        right = self.neighborhoods_to_smap(list[mid+1:])
+        return smap(root_key, root_val, left, right)
 
 def hog_generator(datadir, file_prefix):
     """Generate HoG graphs from input files in the given data directory.

@@ -1,9 +1,10 @@
 import ..graph
-import ..tree_representation
 import ..connected_component
 import ..tree_set
+import ..tree_map
 
 open tree_set
+open tree_map
 
 namespace hog
 
@@ -11,7 +12,7 @@ set_option class.instance_max_depth 5000
 set_option eqn_compiler.max_steps 100000
 
 def ${name}_stree : stree Edge (by { trivial } : bounded.bottom < bounded.top) :=
-${BST}
+${stree}
 
 def ${name}_tset : tset Edge := ${name}_stree
 
@@ -19,7 +20,8 @@ def ${name} : simple_irreflexive_graph :=
 { vertex_size := $vertex_size,
   edges := ${name}_tset,
   edge_size := $edge_size,
-  edge_size_correct := by refl
+  edge_size_correct := by refl,
+  neighborhoods := sorry
 }
 
 ${connected_components_witness}
