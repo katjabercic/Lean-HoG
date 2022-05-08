@@ -39,14 +39,9 @@ def g : simple_irreflexive_graph :=
   edges := example_1,
   edge_size := 3,
   edge_size_correct := by refl,
-  neighborhoods := N₁
+  neighborhoods := N₁,
+  neighborhoods_correct := by refl
 }
-
-#eval decidable_nbhds_condition g.neighborhoods
-
-#eval decidable_nbhds_describe_edges g
-
-#eval decidable_edges_describe_nbhds g
 
 def w : num_components_witness := { 
   G := g,

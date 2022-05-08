@@ -17,56 +17,46 @@ structure Edge : Type :=
 instance Edge_linear_order : linear_order Edge :=
   linear_order.lift (λ (u : Edge), u.edge) (λ u v H, begin cases u, cases v, simp, assumption end)
 
--- set_option trace.class_instances true
-
-structure simple_irreflexive_graph : Type :=
-  (vertex_size : ℕ)
-  (edges : tset Edge)
-  (edge_size : ℕ)
-  (edge_size_correct : edge_size = edges.size)
-  (neighborhoods : tmap ℕ (tset ℕ))
-
-
 def nbhds_condition (nbhds : tmap ℕ (tset ℕ)) : Prop :=
   ∀ i : ℕ, smap.contains_key i nbhds → (∀ j : ℕ, j ∈ nbhds.to_map i → i ∈ nbhds.to_map j)
 
 def decidable_nbhds_condition (nbhds : tmap ℕ (tset ℕ)) : bool :=
   smap.forall_keys (λ i, stree.option_forall (λ j, i ∈ nbhds.to_map j) (nbhds.to_map i)) nbhds
 
--- def decidable_implies_nbhds_condition (nbhds : tmap ℕ (tset ℕ)) : 
---   (decidable_nbhds_condition nbhds = tt) → nbhds_condition nbhds :=
--- begin
---   simp [nbhds_condition, decidable_nbhds_condition],
---   sorry
--- end
-
-def nbhds_describe_edges (g : simple_irreflexive_graph) : Prop := 
-  ∀ i : ℕ, smap.contains_key i g.neighborhoods → (∀ j : ℕ, j ∈ g.neighborhoods.to_map i → decidable.lt_by_cases i j
-    (λ _, {Edge . edge := (i, j)} ∈ g.edges)
+def nbhds_describe_edges (nbhds : tmap ℕ (tset ℕ)) (edges : tset Edge) : Prop := 
+  ∀ i : ℕ, smap.contains_key i nbhds → (∀ j : ℕ, j ∈ nbhds.to_map i → decidable.lt_by_cases i j
+    (λ _, {Edge . edge := (i, j)} ∈ edges)
     (λ _, false)
-    (λ _, {Edge . edge := (j, i)} ∈ g.edges))
+    (λ _, {Edge . edge := (j, i)} ∈ edges))
 
-example (i : ℕ) : decidable_pred (λ j, (decidable.lt_by_cases i j (λ _, ff) (λ _, ff) (λ _, ff))) :=
-begin
-  simp [decidable.lt_by_cases],
-  apply_instance
-end
-
-def decidable_nbhds_describe_edges (g : simple_irreflexive_graph) : bool := 
+def decidable_nbhds_describe_edges (nbhds : tmap ℕ (tset ℕ)) (edges : tset Edge) : bool := 
   smap.forall_keys (λ i, (@stree.option_forall ℕ (_) (λ j, 
     decidable.lt_by_cases i j
-      (λ _, {Edge . edge := (i, j)} ∈ g.edges)
+      (λ _, {Edge . edge := (i, j)} ∈ edges)
       (λ _, false)
-      (λ _, {Edge . edge := (j, i)} ∈ g.edges))
-    ) (begin simp [decidable.lt_by_cases], apply_instance end) (_) (_) (_) (g.neighborhoods.to_map i)) g.neighborhoods
+      (λ _, {Edge . edge := (j, i)} ∈ edges))
+    ) (begin simp [decidable.lt_by_cases], apply_instance end) (_) (_) (_) (nbhds.to_map i)) nbhds
 
-def edges_describe_nbhds (g : simple_irreflexive_graph) : Prop :=
-  ∀ e : Edge, e ∈ g.edges → e.edge.snd ∈ g.neighborhoods.to_map e.edge.fst
+def edges_describe_nbhds (nbhds : tmap ℕ (tset ℕ)) (edges : tset Edge) : Prop :=
+  ∀ e : Edge, e ∈ edges → e.edge.snd ∈ nbhds.to_map e.edge.fst
 
-def decidable_edges_describe_nbhds (g : simple_irreflexive_graph) : bool :=
-  stree.forall (λ e : Edge, e.edge.snd ∈ g.neighborhoods.to_map e.edge.fst) g.edges
+def decidable_edges_describe_nbhds (nbhds : tmap ℕ (tset ℕ)) (edges : tset Edge) : bool :=
+  stree.forall (λ e : Edge, e.edge.snd ∈ nbhds.to_map e.edge.fst) edges
 
-def describes_neighborhoods (g : simple_irreflexive_graph) : Prop := nbhds_describe_edges g ∧ edges_describe_nbhds g
+def describes_neighborhoods (nbhds : tmap ℕ (tset ℕ)) (edges : tset Edge) : Prop := 
+nbhds_condition nbhds ∧ nbhds_describe_edges nbhds edges ∧ edges_describe_nbhds nbhds edges
+
+def decidable_describes_neighborhoods (nbhds : tmap ℕ (tset ℕ)) (edges : tset Edge) : bool := 
+decidable_nbhds_condition nbhds ∧ decidable_nbhds_describe_edges nbhds edges ∧ decidable_edges_describe_nbhds nbhds edges
+
+-- The definition of a finite graph that will represent the graphs that we import from House of Graphs
+structure simple_irreflexive_graph : Type :=
+  (vertex_size : ℕ)
+  (edges : tset Edge)
+  (edge_size : ℕ)
+  (edge_size_correct : edge_size = edges.size)
+  (neighborhoods : tmap ℕ (tset ℕ))
+  (neighborhoods_correct : decidable_nbhds_condition neighborhoods = tt)
 
 
 def edge_relation (G : simple_irreflexive_graph) : ℕ → ℕ → Prop :=
