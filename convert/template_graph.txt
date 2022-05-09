@@ -25,7 +25,7 @@ def ${name} : simple_irreflexive_graph :=
   edge_size := $edge_size,
   edge_size_correct := by refl,
   neighborhoods := nbhds,
-  neighborhoods_correct := sorry
+  neighborhoods_correct := by refl
 }
 
 ${connected_components_witness}
