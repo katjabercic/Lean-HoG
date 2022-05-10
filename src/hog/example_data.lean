@@ -34,6 +34,7 @@ def N₁ : tmap ℕ (tset ℕ) :=
     (smap.leaf 0 temp0 (by bool_reflect) (by bool_reflect))
     (smap.leaf 2 temp2 (by bool_reflect) (by bool_reflect))
 
+
 def g : simple_irreflexive_graph := 
 { vertex_size := 3,
   edges := example_1,
