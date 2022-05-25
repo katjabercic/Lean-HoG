@@ -20,18 +20,15 @@ class stree:
         self.right = right
 
     def __str__(self, subtree = None):
-        if not self.val:
+        if self.val is None:
             return "stree.empty (by bool_reflect)"
-        if not self.left and not self.right:
-            if subtree == "left":
-                return "stree.leaf " + str(self.val) + " (by bool_reflect) (by bool_reflect)"
-            elif subtree == "right":
-                return "stree.leaf " + str(self.val) + " (by bool_reflect) (by bool_reflect)"
-        if not self.left:
+        if self.left is None and self.right is None:
+            return "stree.leaf " + str(self.val) + " (by bool_reflect) (by bool_reflect)"
+        if self.left is None:
             left = "stree.empty (by bool_reflect)"
         else:
             left = self.left.__str__("left")
-        if not self.right:
+        if self.right is None:
             right = "stree.empty (by bool_reflect)"
         else:
             right = self.right.__str__("right")
@@ -45,19 +42,16 @@ class smap:
         self.right = right
 
     def __str__(self, subtree = None):
-        if not self.val:
-            return "smap.empty"
-        if not self.left and not self.right:
-            if subtree == "left":
-                return "smap.leaf " + str(self.key) + " (" + str(self.val) + ") " + " (by bool_reflect) (by bool_reflect)"
-            elif subtree == "right":
-                return "smap.leaf " + str(self.key) + " (" + str(self.val) + ") " + " (by bool_reflect) (by bool_reflect)"
-        if not self.left:
-            left = "smap.empty"
+        if self.val is None:
+            return "smap.empty (by bool_reflect)"
+        if self.left is None and self.right is None:
+            return "smap.leaf " + str(self.key) + " (" + str(self.val) + ") " + " (by bool_reflect) (by bool_reflect)"
+        if self.left is None:
+            left = "smap.empty (by bool_reflect)"
         else:
             left = self.left.__str__("left")
-        if not self.right:
-            right = "smap.empty" + " (by bool_reflect)"
+        if self.right is None:
+            right = "smap.empty (by bool_reflect)"
         else:
             right = self.right.__str__("right")
         return "smap.node " + str(self.key) + " (" + str(self.val) + ") " + "\n(" + left + ")\n(" + right + ")"
@@ -118,6 +112,8 @@ class HoGGraph:
         self.components = compute_components(self.neighborhoods)
         self.connected_components_witness = lean_representation(self.name, self.components[0], self.components[1])
         self.nbhds_smap = self.neighborhoods_to_smap(self.neighborhoods)
+
+        print(self.neighborhoods)
 
     def _get_size_edge_list(self, raw_adjacency):
         """Return the number of vertices and the list of edges (i, j), such that i < j."""
@@ -198,8 +194,6 @@ class HoGGraph:
         n = len(edge_list)
         if n == 0:
             return None
-        if n == 1:
-            return stree(Edge(edge_list[0]), None, None)
         mid = n // 2
         root = Edge(edge_list[mid])
         left = self.edge_list_to_stree(edge_list[0:mid])
@@ -207,17 +201,19 @@ class HoGGraph:
         return stree(root, left, right)
 
     def list_to_stree(self, l):
+        print(l)
         n = len(l)
         if n == 0:
             return None
-        if n == 1:
-            return stree(l[0], None, None)
         mid = n // 2
         root = l[mid]
+        print("root: ", root)
         left = self.list_to_stree(l[0:mid])
         right = self.list_to_stree(l[mid+1:])
-        return stree(root, left, right)
-
+        total = stree(root, left, right)
+        print("left: ", left)
+        print("right: ", right)
+        return total
 
     def edge_list_to_neighborhoods(self, edge_list):
         if not self.vertex_size:

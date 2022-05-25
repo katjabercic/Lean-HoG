@@ -9,16 +9,18 @@ test_log=f'tests/test_log_{timestamp}.csv'
 subprocess_io_location = "/home/jure/Documents/process_io/bin/process_io"
 
 print(timestamp)
+max_ind = 17 * 100 + 1
+k = 10
 
-with open(test_log, 'a', encoding='utf-8') as outfile:
+with open(test_log, 'x', encoding='utf-8') as outfile:
     outfile.write("vertex_size,edge_size,time,memory,olean_size\n")
-    for i in range(171):
+    for i in range(max_ind):
         print(i)
-        graph_number = f'{i * 100 + 1:05d}'
+        graph_number = f'{i * k + 1:05d}'
         lean_file_location = f'/home/jure/OneDrive/faks/lean/Lean-HoG/src/hog/data/hog_{graph_number}'
 
         # Create the lean file with the graph
-        convert = subprocess.run(["make", "convert", f'SKIP={i*100}', "LIMIT=1"], stdout=subprocess.PIPE)
+        convert = subprocess.run(["make", "convert", f'SKIP={i*k}', "LIMIT=1"], stdout=subprocess.PIPE)
         
         # Parse the lean file to get the number of vertices and number of edges
         # The previous command might not have created the file yet once the python line completes
