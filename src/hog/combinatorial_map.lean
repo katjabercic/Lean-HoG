@@ -16,13 +16,12 @@ def tmap_apply {α : Type} [linear_order α] (next : tmap α α) : α → ℕ �
   | some a := tmap_apply a n
   end)
 
-def tmap_add {α : Type} [linear_order α] {β : Type} :
-  tmap α β → α → β → tmap α β := sorry
-
-def tmap_add_list {α : Type} [linear_order α] {β : Type} : 
-  list (α × β) → tmap α β → tmap α β 
-| [] next := next
-| ((k , v) :: ls) next := tmap_add_list ls (tmap_add next k v)
+-- create an edge from two natural numbers
+def create_edge (u v : ℕ) (q : u ≠ v) : Edge :=
+  decidable.lt_by_cases u v
+  (λ _, {Edge. edge := (u, v)})
+  (λ _, {Edge. edge := (u, v)})
+  (λ _, {Edge. edge := (v, u)})
 --structure cycle {α : Type} [linear_order α] : Type :=
   --(carrier : tset α)
 -- def next_in_tree (next : tmap ℕ ℕ) : next.
@@ -66,6 +65,7 @@ structure cycle : Type :=
 theorem cycle_is_cycle_prop (c : cycle) : cycle_prop (c.next) :=
 begin
   induction c,
+  unfold cycle_prop,
   sorry
 end
 
@@ -73,52 +73,37 @@ def is_cycle_of_set (c : cycle) (t : tset ℕ) : bool :=
   (smap.size (c.next) = t.size) ∧
   (t.forall (λ v, c.next.contains_key v))
 
---def is_cycle_of_list (f : ℕ → ℕ) : list ℕ → bool 
---| [] := tt
--- | l@(x :: xs) := walk_with x c.next l x
-def face_next_is (σ : tmap ℕ cycle) (x y z : ℕ) : bool :=
-(match σ.val_at x with
+-- checks that α σ (x, y) = (y, z)
+def σα_maps (σ : tmap ℕ cycle) (x y z : ℕ) : bool :=
+(match σ.val_at y with
 | none := ff
 | some c := (
-  match c.next.val_at y with
+  match c.next.val_at x with
   | none := ff
   | some val := z = val
   end
   )
 end)
 
-def is_list_of_face_aux (σ : tmap ℕ cycle) (fst : ℕ) (snd : ℕ) : list ℕ → bool
+def is_list_of_σα_aux (σ : tmap ℕ cycle) (fst : ℕ) (snd : ℕ) : list ℕ → bool
 | [] := tt
-| (x :: []) := face_next_is σ x fst snd
-| (x :: y :: []) := face_next_is σ x y fst
-| (x :: l@(y :: z :: xs)) := face_next_is σ x y z ∧ is_list_of_face_aux l
+| (x :: []) := σα_maps σ x fst snd
+| (x :: y :: []) := σα_maps σ x y fst
+| (x :: l@(y :: z :: xs)) := σα_maps σ x y z ∧ is_list_of_σα_aux l
 
-
-def is_list_of_face (σ : tmap ℕ cycle) : list ℕ → bool
+-- check that list is a cycle for σα
+def is_list_of_σα (σ : tmap ℕ cycle) : list ℕ → bool
 | [] := ff -- empty lists shouldn't be present
 | (x :: []) := (
   match σ.val_at x with
-  | none := ff
+  | none := ff -- element isn't even in the map
   | some c := c.next.size = 0 -- list has one element only if vertex is isolated
   end
   )
-| l@(x :: y :: xs) := is_list_of_face_aux σ x y l
+| l@(x :: y :: xs) := is_list_of_σα_aux σ x y l
 
 
-def neighbours_add : tmap ℕ (tset ℕ) → Edge → tmap ℕ (tset ℕ) := sorry
-
-def neighbours_aux [lo : linear_order Edge] : (tmap ℕ (tset ℕ)) → Π {low high : bounded Edge}, Π {p : low < high},
-  @stree Edge lo low high p → tmap ℕ (tset ℕ)
-| (neighbours_acc) _ _ _ (stree.empty _) := neighbours_acc
-| neighbours_acc _ _ _ (stree.leaf x _ _) := neighbours_add neighbours_acc x
-| neighbours_acc _ _ _ (stree.node x l r) := (
-  let new_acc := neighbours_aux neighbours_acc l in 
-  let final_acc := neighbours_aux new_acc r in
-  neighbours_add final_acc x
-)
-
-def neighbours (G : simple_irreflexive_graph) : tmap ℕ (tset ℕ) := 
-  neighbours_aux (@smap.empty ℕ (tset ℕ) _ bounded.bottom bounded.top true.intro) G.edges
+def neighbours (G : simple_irreflexive_graph) : tmap ℕ (tset ℕ) := sorry
  
 def smap.forall_items (p : (ℕ → (cycle) → bool)) :
   ∀ {low high : bounded ℕ} {b : low < high} (t : smap ℕ (cycle) b) , bool := sorry
@@ -130,19 +115,38 @@ def graph_rotation_consistent (G : simple_irreflexive_graph) (v : ℕ) (c : cycl
   | some val := is_cycle_of_set c val
   end : bool)
 
+-- constructs an edge and adds it to a tset Edge
+def add_edge_aux (x y : ℕ) (es : tset Edge) : tset Edge :=
+(decidable.lt_by_cases x y
+    (λ _, let e := {Edge. edge := (x, y)} in es.add e)
+    (λ _, es)
+    (λ _, let e := {Edge. edge := (y, x)} in es.add e)
+    )
+
+-- takes all pairs of consecuative numbers to generate edges and add them to a tset 
+def add_edges_from_face_aux : ℕ → tset Edge → list ℕ → tset Edge
+| start es [] := es
+| start es (x :: []) := add_edge_aux x start es
+| start es (x :: y :: xs) := add_edges_from_face_aux start (add_edge_aux x y es) xs
 --def face_map (σ : tmap ℕ cycle) : tmap ℕ cycle 
 
+-- Given a list of faces (represented as lists) add all edges to a tset Edge
+def add_edges_from_face_list : (list (list ℕ)) → tset Edge → tset Edge 
+| [] edges := edges
+| ([] :: fs) edges := add_edges_from_face_list fs edges
+| (f@(x :: xs) :: fs) edges := add_edges_from_face_list fs (add_edges_from_face_aux x edges f)
 structure combinatorial_map (G : simple_irreflexive_graph) : Type :=
   (σ : tmap ℕ cycle)
   (σ_G_consistent : smap.forall_items (graph_rotation_consistent G) σ = tt)
   (faces : list (list ℕ))
-  (composition_faces_consistent : faces.all (is_list_of_face σ)) -- shows that every face is in fact the face of α ∘ σ
+  (composition_faces_consistent : faces.all (is_list_of_σα σ)) -- shows that every face is in fact the face of σ ∘ α
   --shows that every face is present by checking that the correct number of edges is present
   (num_of_edges : 
-    let empty_map : tmap ℕ ℕ := smap.empty (by trivial) in
+    let empty_set : tset Edge := stree.empty (by trivial) in
     -- here add doesn't work as intended
-    let combined_edges : tmap ℕ ℕ := sorry in --faces.foldr tmap_add_list empty_map in
-    (smap.size combined_edges) = 2 * (simple_irreflexive_graph.edge_size G)
+    let combined_edges : tset Edge := 
+      add_edges_from_face_list faces empty_set in
+    combined_edges.size = 2 * G.edge_size
   )
   
   -- might still require checking if list actually contains edges
