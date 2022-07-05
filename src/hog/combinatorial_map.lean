@@ -8,14 +8,33 @@ open tree_set
 -- To bo moved to a different file
 
 -- Apply the tmap next n times to some starting parameter
+--def tmap_apply_aux {α : Type} [linear_order α] (next : tmap α α) : α → ℕ → option α
 def tmap_apply {α : Type} [linear_order α] (next : tmap α α) : α → ℕ → option α
-| x 0 := x
+| x 0 := some x
 | x (n + 1) := 
   (match next.val_at x with
   | none := none
   | some a := tmap_apply a n
   end)
 
+def tmap_apply_suc {α : Type} [linear_order α] (next : tmap α α) {n : ℕ} {src dst : α} 
+  (h : tmap_apply next src n = some dst) : tmap_apply next src (n + 1) = tmap_apply next dst 1 :=
+begin
+  induction n generalizing src,
+  simp [tmap_apply],
+  simp [tmap_apply] at h,
+  rewrite h,
+  simp [tmap_apply] at h,
+  simp [tmap_apply],
+  cases (next.val_at src),
+  simp [tmap_apply._match_1] at h,
+  apply false.elim h,
+  simp [tmap_apply._match_1],
+  simp [tmap_apply._match_1] at h,
+  have h' := n_ih h,
+  simp [tmap_apply] at h',
+  apply h',
+end
 -- create an edge from two natural numbers
 def create_edge (u v : ℕ) (q : u ≠ v) : Edge :=
   decidable.lt_by_cases u v
@@ -190,7 +209,24 @@ structure combinatorial_map (G : simple_irreflexive_graph) : Type :=
   -- might still require checking if list actually contains edges
 
 --end combinatorial_map
-
+theorem path_gives_applications {next : tmap ℕ ℕ} {n src dst : ℕ} : map_path next n src dst → 
+  tmap_apply next src n = some dst :=
+begin
+  intro p,
+  induction n generalizing dst,
+  simp [tmap_apply],
+  cases p,
+  reflexivity,
+  --simp [tmap_apply],
+  cases p,
+  have apply_to_p_dst := n_ih p_p,
+  have h := tmap_apply_suc next apply_to_p_dst,
+  rewrite h,
+  simp [tmap_apply],
+  simp [map_next_is] at p_can_extend,
+  rewrite p_can_extend,
+  simp [tmap_apply._match_1],
+end
 def val_not_in_path_to_dst_neq_val {next : tmap ℕ ℕ} {n src dst val : ℕ} (p : map_path next n src dst)
   (val_not_in_path : ¬ (in_path next val p)) : dst ≠ val :=
 begin
