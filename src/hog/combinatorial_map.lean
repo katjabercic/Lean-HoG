@@ -69,7 +69,7 @@ sorry
 def walk (dst : ℕ) (next : tmap ℕ ℕ) : ℕ → ℕ → bool
 | cur 0 := dst = cur
 | cur (n + 1) := 
-  dst ≠ cur ∧
+  cur ≠ dst ∧
   (match next.val_at cur with
   | none := ff
   | some val := walk val n 
@@ -78,19 +78,153 @@ def map_next_is (next : tmap ℕ ℕ) (src dst : ℕ) : Prop :=
   next.val_at src = some dst
 
 
-inductive map_path (next : tmap ℕ ℕ) : ℕ → ℕ → ℕ → Type
-| source (src : ℕ)  :  map_path 0 src src
-| extend {n src dst dst' : ℕ} (p : map_path n src dst) (can_extend : map_next_is next dst dst') : map_path (n + 1) src dst'
+inductive map_path (next : tmap ℕ ℕ) : ℕ → ℕ → Type
+| source (src : ℕ)  :  map_path src src
+| extend {src dst dst' : ℕ} (p : map_path src dst) (can_extend : map_next_is next dst dst') : map_path src dst'
 
 def in_path (next : tmap ℕ ℕ) (x : ℕ) : 
-  Π {n src dst : ℕ}, map_path next n src dst → Prop
-| n _ _ (map_path.source src) := src = x
-| n src dst' (map_path.extend p can_extend) := dst' = x ∨ in_path p
+  Π {src dst : ℕ}, map_path next src dst → Prop
+| _ _ (map_path.source src) := src = x
+| src dst' (map_path.extend p can_extend) := dst' = x ∨ in_path p
 
-def end_unique {next : tmap ℕ ℕ} : Π {src dst n : ℕ}, map_path next n src dst → Prop 
-| _ _ n (map_path.source src) := true
-| src dst' n (map_path.extend p can_extend) := ¬ (in_path next dst' p)
+def end_unique {next : tmap ℕ ℕ} : Π {src dst : ℕ}, map_path next src dst → Prop 
+| _ _ (map_path.source src) := true
+| src dst' (map_path.extend p can_extend) := ¬ (in_path next dst' p)
 
+def map_path_append {next : tmap ℕ ℕ} : Π {src dst src' dst'}, 
+  map_path next src dst → map_path next src' dst' → map_next_is next dst src' → 
+  map_path next src dst'
+| src dst .(src') .(_) p (map_path.source src') can_extend := map_path.extend p can_extend
+| src dst src' dst' p (map_path.extend p' can_extend') can_extend := 
+  let p'' := map_path_append p p' can_extend in 
+  map_path.extend p'' can_extend'
+def map_path.size {next : tmap ℕ ℕ} : Π {src dst : ℕ}, Π (p : map_path next src dst), ℕ
+| src dst (map_path.source .(src)) := 0
+| src dst (map_path.extend p' can_extend) := p'.size + 1
+def map_path_index {next : tmap ℕ ℕ} : Π {src dst : ℕ}, Π (x : ℕ), Π (p : map_path next src dst), 
+  in_path next x p → ℕ 
+| src dst x (map_path.source .(src)) x_in_p := 0
+| src dst x p@(map_path.extend p' can_extend) x_in_p := 
+  decidable.cases_on (eq.decidable dst x) 
+    (λ dst_neq_x, 
+      let x_in_p' : in_path next x p' :=
+        begin
+          simp [in_path] at x_in_p,
+          cases x_in_p with dst_eq_x x_in_p',
+            apply false.elim (dst_neq_x dst_eq_x),
+          apply x_in_p'
+        end
+      in
+      map_path_index x p' x_in_p'
+    ) 
+    (λ x_eq_dst, p.size) 
+/-
+theorem map_path_index_lte_map_size {next : tmap ℕ ℕ} : Π {src dst : ℕ}, Π {x : ℕ}, 
+  Π (p : map_path next src dst), Π (x_in_p : in_path next x p), map_path_index x p x_in_p ≤ p.size :=
+begin
+  intros src dst x p x_in_p,
+  induction n with n generalizing dst,
+    cases p,
+    simp [map_path_index],
+  cases p,
+  simp [map_path_index],
+  cases h' : (eq.decidable dst x),
+    simp,
+    have x_in_p_p : in_path next x p_p,
+      simp [in_path] at x_in_p,
+      cases x_in_p with dst_eq_x x_in_p_p,
+        apply false.elim (h dst_eq_x),
+      apply x_in_p_p,
+    have h'' := n_ih p_p x_in_p_p,
+    apply le_trans,
+      apply h'',
+      apply nat.le_succ,
+    simp,
+end
+-/
+def src_to_elem {next : tmap ℕ ℕ} : Π {src dst x : ℕ}, Π (p : map_path next src dst), 
+  Π (x_in_p : in_path next x p), map_path next src x 
+| src dst x p@(map_path.source .(src)) x_in_p := 
+  let src_eq_x : src = x :=
+    begin
+      simp [in_path] at x_in_p,     
+      assumption
+    end
+  in
+  @eq.rec_on _ _ (λ x, map_path next src x) _ src_eq_x p
+| src dst x p@(map_path.extend p' can_extend) x_in_p := 
+  decidable.cases_on (eq.decidable dst x) 
+  (λ dst_neq_x, 
+    let x_in_p' : in_path next x p' :=
+      begin
+        simp [in_path] at x_in_p,
+        cases x_in_p with dst_eq_x x_in_p',
+          apply false.elim (dst_neq_x dst_eq_x),
+        apply x_in_p',
+      end
+    in 
+    let p'_to_x := src_to_elem p' x_in_p' in 
+    let h : map_path_index x p' x_in_p' = map_path_index x (p'.extend can_extend) x_in_p :=
+      begin
+        simp [map_path_index], 
+        cases h' : (eq.decidable dst x),
+          simp,
+        apply false.elim (dst_neq_x h),
+      end
+    in
+    eq.rec_on h p'_to_x) 
+  (λ dst_eq_x, 
+  @eq.rec_on _ _ (λ y, map_path next src y) _ dst_eq_x p)
+/-
+def elem_to_dst {next : tmap ℕ ℕ} : Π {n src dst x : ℕ}, Π (p : map_path next n src dst),
+  Π (x_in_p : in_path next x p), map_path next (n - map_path_index x p x_in_p) x dst 
+| 0 src dst x p@(map_path.source .(src)) x_in_p := (
+    let src_eq_x : src = x := 
+      begin
+        simp [in_path] at x_in_p,
+        apply x_in_p,
+      end
+    in
+    let h : 0 = 0 - map_path_index x (map_path.source src) x_in_p := 
+      begin
+        simp [map_path_index],
+      end
+    in 
+    let p' : map_path next (0 - map_path_index x p x_in_p) src src := eq.rec_on h p in
+    @eq.rec_on _ _ (λ y, map_path next (0 - map_path_index x p x_in_p) y src) _ src_eq_x p'
+  )
+| (n + 1) src dst x p@(map_path.extend p' can_extend) x_in_p := (
+    decidable.cases_on (eq.decidable dst x)
+    (λ dst_neq_x, 
+      let x_in_p' : in_path next x p' :=
+        begin
+          simp [in_path] at x_in_p,
+          cases x_in_p with dst_eq_x x_in_p',
+            apply false.elim (dst_neq_x dst_eq_x),
+          apply x_in_p',
+        end
+      in
+      let elem_to_dst' := elem_to_dst p' x_in_p' in 
+      let p'' := map_path.extend elem_to_dst' can_extend in
+      let h : n - (map_path_index x p' x_in_p') + 1 = n + 1 - map_path_index x p x_in_p :=
+        begin
+          simp [map_path_index],
+          cases h' : (eq.decidable dst x),
+            simp,
+            rw add_comm,
+            rw ←(nat.add_sub_assoc (map_path_index_lte_map_size p' x_in_p')),
+            have h'' : 1 + n - map_path_index x p' x_in_p' = n + 1 - map_path_index x p' x_in_p', 
+              apply congr_arg (λ y, y - map_path_index x p' x_in_p'),
+              ring,
+            rw h'',
+            apply false.elim (dst_neq_x h),
+        end,
+      in
+      h.rec_on p''
+    )
+    (λ dst_eq_x, sorry)
+  )
+-/
 def walk_with (start : ℕ) (next : tmap ℕ ℕ) : list ℕ → ℕ → bool
 | [] n := (
   match next.val_at n with
@@ -209,25 +343,22 @@ structure combinatorial_map (G : simple_irreflexive_graph) : Type :=
   -- might still require checking if list actually contains edges
 
 --end combinatorial_map
-theorem path_gives_applications {next : tmap ℕ ℕ} {n src dst : ℕ} : map_path next n src dst → 
-  tmap_apply next src n = some dst :=
+theorem path_gives_applications {next : tmap ℕ ℕ} {src dst : ℕ} : Π (p : map_path next src dst), 
+  tmap_apply next src (p.size) = some dst :=
 begin
   intro p,
-  induction n generalizing dst,
+  induction p,
+    simp [tmap_apply, map_path.size],
+  --simp [tmap_apply, map_path.size],
+  have h := tmap_apply_suc next p_ih,
+  simp [map_path.size],
+  rw h,
   simp [tmap_apply],
-  cases p,
-  reflexivity,
-  --simp [tmap_apply],
-  cases p,
-  have apply_to_p_dst := n_ih p_p,
-  have h := tmap_apply_suc next apply_to_p_dst,
-  rewrite h,
-  simp [tmap_apply],
-  simp [map_next_is] at p_can_extend,
-  rewrite p_can_extend,
+  unfold map_next_is at p_can_extend,
+  rw p_can_extend,
   simp [tmap_apply._match_1],
 end
-def val_not_in_path_to_dst_neq_val {next : tmap ℕ ℕ} {n src dst val : ℕ} (p : map_path next n src dst)
+def val_not_in_path_to_dst_neq_val {next : tmap ℕ ℕ} {src dst val : ℕ} (p : map_path next src dst)
   (val_not_in_path : ¬ (in_path next val p)) : dst ≠ val :=
 begin
   intro dst_eq_val,
@@ -237,18 +368,34 @@ begin
     simp [in_path] at val_not_in_path,
     apply false.elim (val_not_in_path (or.inl dst_eq_val)),
 end
-def extend_map_path {next : tmap ℕ ℕ} : Π {n src dst src' : ℕ}, 
-   Π (p : map_path next n src dst), Π (can_extend : map_next_is next src' src), 
-  map_path next (n + 1) src' dst 
-| n src dst src' p@(map_path.source _) can_extend := 
+def extend_map_path {next : tmap ℕ ℕ} : Π {src dst src' : ℕ}, 
+   Π (p : map_path next src dst), Π (can_extend : map_next_is next src' src), 
+  map_path next src' dst 
+| src dst src' p@(map_path.source _) can_extend := 
   map_path.extend (map_path.source src') can_extend
-| n src dst src' (map_path.extend path can_extend') can_extend := 
+| src dst src' (map_path.extend path can_extend') can_extend := 
   map_path.extend (extend_map_path path can_extend) can_extend'
 
+theorem extend_map_path_size {next : tmap ℕ ℕ} {n src dst src' : ℕ} (p : map_path next src dst)
+  (can_extend : map_next_is next src' src) (p_size : p.size = n) : (extend_map_path p can_extend).size = n + 1 :=
+begin
+  induction p generalizing n, 
+    simp [map_path.size] at p_size,
+    simp [extend_map_path, map_path.size],
+    apply eq.symm,
+    assumption,
+  simp [map_path.size, extend_map_path],
+  simp [map_path.size] at p_size,
+  cases n,
+    simp at p_size,
+    apply false.elim p_size,
+  injection p_size with p_p_size,
+  apply p_ih can_extend p_p_size,
+end
 -- If we extend a map_path from the left an element is in the map if it's in eleement we are adding
 -- or if it is in the rest of the map
-def in_extend_path {next : tmap ℕ ℕ} {n src dst src' x : ℕ} :
-  Π (p' : map_path next n src dst), Π (can_extend : map_next_is next src' src), 
+def in_extend_path {next : tmap ℕ ℕ} {src dst src' x : ℕ} :
+  Π (p' : map_path next src dst), Π (can_extend : map_next_is next src' src), 
   in_path next x (extend_map_path p' can_extend) → in_path next x p' ∨ x = src' :=
 begin
   intros p' can_extend in_p,
@@ -276,8 +423,8 @@ begin
 end
 -- if the new source isn't equal to the destination and the old map
 -- has a unique end the whole map has a unique end
-def unique_end_extend {next : tmap ℕ ℕ} {n src dst src' : ℕ} : 
-  Π (p' : map_path next n src dst), Π (can_extend : map_next_is next src' src), 
+def unique_end_extend {next : tmap ℕ ℕ} {src dst src' : ℕ} : 
+  Π (p' : map_path next src dst), Π (can_extend : map_next_is next src' src), 
   dst ≠ src' → end_unique p' → end_unique (extend_map_path p' can_extend ) :=
 begin
   intros p' next_is dst_neq_src' end_uniq,
@@ -302,45 +449,101 @@ end
 
   Additionaly said path has a unique ending.
 -/
-def walk_gives_path {next : tmap ℕ ℕ} {n src dst : ℕ} : 
-    (walk dst next src n = tt) → ∃ p : map_path next n src dst, end_unique p :=
-  begin
-    intro h,
-    induction n generalizing src,
-    -- the base case
-    unfold walk at h,
-    have h' := (to_bool_iff (dst = src)).mp h,
-    split,
-    show map_path next 0 src dst, by {rewrite h', apply map_path.source src},
-    show end_unique _, by {obviously},
-    -- the n + 1 case
-    unfold walk at h,
-    have h' := (to_bool_iff _).mp h,
-    cases h' with hl hr,
-    have hr' := (to_bool_iff _).mpr hr,
-    simp at hr',
-    cases h_map : (tmap.val_at src next),
-    rewrite h_map at hr',
-    unfold walk._match_1 at hr',
-    simp at hr',
-    apply false.elim hr',
-    rewrite h_map at hr',
-    unfold walk._match_1 at hr',
-    have p' := n_ih hr',
-    cases p' with p' p'_unique,
-    split,
-    show map_path next n_n.succ src dst, 
-    begin
-      apply extend_map_path p' h_map
-    end,  
-    apply unique_end_extend p' h_map hl p'_unique,
-  end
+def walk_src_next {next : tmap ℕ ℕ} : Π {n src dst : ℕ}, Π (val_opt : option ℕ), 
+   next.val_at src = val_opt → walk dst next src (n + 1) → ℕ
+| n src dst none h walk_cond := (
+    let ⟨src_neq_dst, walk_cond'⟩ := (to_bool_iff _).mp walk_cond in
+    let walk_cond'_false : false :=
+      begin
+        rw h at walk_cond',
+        simp [walk._match_1] at walk_cond',
+        apply walk_cond',
+      end
+    in
+    false.elim walk_cond'_false
+  )
+| n src dst (some val) p walk_cond := val
+theorem walk_src_next_is_next {next : tmap ℕ ℕ} : Π {n src dst : ℕ}, Π (val_opt : option ℕ),
+  Π (h : next.val_at src = val_opt), Π (walk_cond : walk dst next src (n + 1)),
+  next.val_at src = some (@walk_src_next next n src dst val_opt h walk_cond) :=
+begin
+  intros n src dst val_opt h walk_cond, 
+  cases val_opt,
+    have h', from (to_bool_iff _).mp walk_cond, 
+    have walk_cond', from h'.right,
+    rw h at walk_cond',
+    simp [walk._match_1] at walk_cond',
+    apply false.elim walk_cond',
+  simp [walk_src_next],
+  apply h,
+end
 
-def next_of_extended_in_path {next : tmap ℕ ℕ} : Π {x n src dst dst' : ℕ}, 
-  Π (p : map_path next n src dst), Π (can_extend : map_next_is next dst dst'), 
+def walk_to_path {next : tmap ℕ ℕ} : Π {n src dst : ℕ}, walk dst next src n = tt → map_path next src dst 
+| 0 src dst walk_cond := (
+    let src_eq_dst : src = dst := eq.symm ((to_bool_iff _).mp walk_cond) in 
+    let p : map_path next src src := map_path.source src in
+    src_eq_dst.rec p
+  )
+| (n + 1) src dst walk_cond := (
+    let src_neq_dst :  src ≠ dst := 
+      begin
+        have h, from ((to_bool_iff _).mp) walk_cond,
+        apply h.left,
+      end
+    in
+    let val_opt := next.val_at src in
+    let val_opt_eq_next : next.val_at src = val_opt := rfl in
+    let val := walk_src_next val_opt val_opt_eq_next walk_cond in
+    let val_is_next := walk_src_next_is_next val_opt val_opt_eq_next walk_cond in
+    let p' : map_path next val dst := (
+        walk_to_path 
+        (begin 
+          have walk_cond', from ((to_bool_iff _).mp walk_cond).right,
+          rw val_is_next at walk_cond',
+          simp [walk._match_1] at walk_cond',
+          apply walk_cond',
+        end)
+      )
+    in
+    extend_map_path p' val_is_next
+  )
+theorem walk_to_path_size {next : tmap ℕ ℕ} {n src dst : ℕ} (walk_cond : walk dst next src n = tt) :
+  (walk_to_path walk_cond).size = n :=
+begin
+  induction n generalizing src,
+  simp [walk_to_path, map_path.size],
+  have src_eq_dst : src = dst, from eq.symm ((to_bool_iff _).mp walk_cond), 
+  subst src_eq_dst,
+  simp [map_path.size],
+  simp [walk_to_path],
+  apply extend_map_path_size,
+  apply n_ih, 
+end
+theorem walk_to_path_end_unique {next : tmap ℕ ℕ} {n src dst : ℕ} (walk_cond : walk dst next src n) :
+  end_unique (walk_to_path walk_cond) :=
+begin
+  induction n generalizing src,
+    have h := walk_to_path_size walk_cond,
+    cases (walk_to_path walk_cond),
+    simp [end_unique],
+    simp [map_path.size] at h,
+    apply false.elim h,
+  simp [walk_to_path],
+  simp [walk] at walk_cond,
+  have walk_cond' := walk_cond.right,
+  have src_neq_dst := (to_bool_iff _).mpr walk_cond.left,
+  simp at src_neq_dst,
+  apply unique_end_extend,
+  intro dst_eq_src,
+  apply false.elim (src_neq_dst (eq.symm dst_eq_src)),
+  apply n_ih,
+end
+
+def next_of_extended_in_path {next : tmap ℕ ℕ} : Π {x src dst dst' : ℕ}, 
+  Π (p : map_path next src dst), Π (can_extend : map_next_is next dst dst'), 
   in_path next x p → ∃ y : ℕ, next.val_at x = some y ∧ in_path next y (map_path.extend p can_extend) :=
 begin
-  intros x n src dst dst' p can_extend in_p,
+  intros x src dst dst' p can_extend in_p,
   induction p generalizing dst',
   simp [in_path] at in_p,
   apply exists.intro,
@@ -370,11 +573,11 @@ begin
   apply h_right, 
 end
 
-def end_unique_for_smaller {next : tmap ℕ ℕ} : Π {x n src dst dst' : ℕ},
-  Π {p : map_path next n src dst}, Π {can_extend : map_next_is next dst dst'},
+def end_unique_for_smaller {next : tmap ℕ ℕ} : Π {src dst dst' : ℕ},
+  Π {p : map_path next src dst}, Π {can_extend : map_next_is next dst dst'},
   end_unique (map_path.extend p can_extend) → end_unique p :=
 begin
-  intros x n src dst dst' p can_extend has_end_unique,
+  intros src dst dst' p can_extend has_end_unique,
   simp [end_unique] at has_end_unique,
   induction p,
   simp [end_unique],
@@ -391,93 +594,129 @@ begin
   apply h_right,
 end
 
-def path_in_smaller_map : Π {next : tmap ℕ ℕ}, Π {n x src dst : ℕ}, 
-  Π (p : map_path next n src dst), end_unique p → Π (h : next.contains_key x), ¬(in_path next x p) →
-  ∃ (p' : map_path (tmap.remove x next h) n src dst), end_unique p' ∧ (∀ y, in_path next y p ↔ in_path (tmap.remove x next h) y p') := 
-begin 
-  intros next n x src dst p p_end_unique h not_in_p,
+def map_path_smaller_map : Π {next : tmap ℕ ℕ}, Π {x src dst : ℕ},
+  Π (p : map_path next src dst), Π (h : next.contains_key x), ¬ (in_path next x p) → 
+  map_path (tmap.remove x next h) src dst
+| next x src dst (map_path.source .(src)) h x_nin_p := map_path.source src
+| next x src dst p@(@map_path.extend ._ ._ dst' ._ p' can_extend) h x_nin_p := (
+  have p'.size < p.size := by simp [map_path.size], -- to help the equation compiler
+  let x_nin_p' : ¬(in_path next x p') := 
+    begin
+      simp [in_path] at x_nin_p,
+      intro x_in_p',
+      apply false.elim (x_nin_p (or.inr x_in_p')),
+    end
+  in
+  let p'_smaller := map_path_smaller_map p' h x_nin_p' in
+  let dst'_in_map := key_in_map_iff_evals dst' dst can_extend in
+  let dst'_neq_x : dst' ≠ x := 
+    begin
+      simp [in_path] at x_nin_p,
+      have x_nin_p' : ¬ (in_path next x p'),
+        intro x_in_p',
+        apply false.elim (x_nin_p (or.inr x_in_p')),
+      exact val_not_in_path_to_dst_neq_val p' x_nin_p',
+    end
+  in
+  let dst_val_eq := remove_preserves_values x next h dst' dst'_in_map dst'_neq_x in
+  let can_extend' : map_next_is (tmap.remove x next h) dst' dst := 
+    begin
+      unfold map_next_is,
+      rw dst_val_eq,
+      unfold map_next_is at can_extend,
+      exact can_extend,
+    end
+  in
+  map_path.extend p'_smaller can_extend'
+  )
+using_well_founded {rel_tac := λ _ _ , 
+  `[exact ⟨_, measure_wf (λ ⟨_, _, _, _, p, _, _⟩, p.size)⟩]} 
+
+theorem map_path_smaller_map_size {next : tmap ℕ ℕ} {x src dst : ℕ}
+  (p : map_path next src dst) (h : next.contains_key x) (x_nin_p : ¬ (in_path next x p)) :
+  p.size = (map_path_smaller_map p h x_nin_p).size :=
+begin
   induction p,
-  split,
-  show map_path (tmap.remove x next h) 0 p p, from map_path.source p,
-  split,
-  simp [end_unique],
-  intro y,
-  split,
-  intro in_p,
-  simp [in_path],
-  simp [in_path] at in_p,
-  apply in_p,
-  intro in_p,
-  simp [in_path],
-  simp [in_path] at in_p,
-  apply in_p,
-  simp [in_path] at not_in_p,
-  have p_dst_neq_x : p_dst' ≠ x := λ p_dst_eq_x, not_in_p (or.inl p_dst_eq_x),
-  have not_in_p_p : ¬ (in_path next x p_p) := λ in_p_p, not_in_p (or.inr in_p_p),
-  have p_p_end_unique := end_unique_for_smaller p_end_unique,
-    show ℕ, from (n - 1),
-  have p_p_in_smaller_map := p_ih p_p_end_unique not_in_p_p,
-  cases p_p_in_smaller_map with p' h',
-  cases h' with p'_end_unique els_consistent,
-  have p_can_extend' : map_next_is (tmap.remove x next h) p_dst p_dst', 
-  begin
-    unfold map_next_is,
-    unfold map_next_is at p_can_extend,
-    have p_dst_in_map := key_in_map_iff_evals p_dst p_dst' p_can_extend,
-    have x_neq_p_dst := val_not_in_path_to_dst_neq_val p_p not_in_p_p, 
-    rewrite remove_preserves_values x next h p_dst p_dst_in_map x_neq_p_dst,
-    apply p_can_extend,
-  end,
-  split,
-    show map_path (tmap.remove x next h) (p_n + 1) p_src p_dst', from (map_path.extend p' p_can_extend'),
-    split,
-      simp [end_unique],
-      intro p_dst'_in_p',
-      have p_dst'_in_p_p := (els_consistent p_dst').mpr p_dst'_in_p',
-      unfold end_unique at p_end_unique,
-      apply false.elim (p_end_unique p_dst'_in_p_p),
-      intro y, 
-      split,
-        intro y_in_path,
-        simp [in_path],
-        simp [in_path] at y_in_path,
-        cases y_in_path,
-        apply or.inl y_in_path,
-        apply or.inr ((els_consistent y).mp y_in_path),
-        intro y_in_path,
-        simp [in_path],
-        simp [in_path] at y_in_path,
-        cases y_in_path,
-        apply or.inl y_in_path,
-        apply or.inr ((els_consistent y).mpr y_in_path),
+    simp [map_path.size, map_path_smaller_map],
+  simp [map_path.size, map_path_smaller_map],
+  apply p_ih,
 end
-def path_of_length_size_all_keys {src : ℕ} : Π {n dst : ℕ}, Π {next : tmap ℕ ℕ}, 
-  Π (p : map_path next n src dst), (end_unique p) → next.contains_key dst → next.size = n + 1 → 
+theorem map_path_smaller_elem {next : tmap ℕ ℕ} {x src dst : ℕ} 
+  (p : map_path next src dst) (h : next.contains_key x) (x_nin_p : ¬ (in_path next x p)) :
+  ∀ y, in_path next y p ↔ in_path (tmap.remove x next h) y (map_path_smaller_map p h x_nin_p) :=
+begin
+  intro y,
+  induction p,
+    simp [in_path, map_path_smaller_map],
+  simp [in_path, map_path_smaller_map],
+  have x_nin_p_p : ¬ (in_path next x p_p),
+    intro x_in_p_p,
+    apply false.elim (x_nin_p (or.inr x_in_p_p)),
+  split,
+  -- →
+  intro y_in_p,
+  cases y_in_p with p_dst'_eq_y y_in_p_p,
+    apply or.inl p_dst'_eq_y,
+  apply or.inr,
+  apply (p_ih x_nin_p_p).mp,
+  apply y_in_p_p,
+  -- ←
+  intro h,
+  cases h with p_dst'_eq_y y_in_p',
+    apply or.inl p_dst'_eq_y,
+  apply or.inr,
+  apply (p_ih x_nin_p_p).mpr, 
+  apply y_in_p',
+end
+theorem map_path_smaller_map_end_unique {next : tmap ℕ ℕ} {x src dst : ℕ}
+  (p : map_path next src dst) (p_end_unique : end_unique p) (h : next.contains_key x) 
+  (x_nin_p : ¬ (in_path next x p)) : end_unique (map_path_smaller_map p h x_nin_p) :=
+begin
+  induction p,
+    simp [end_unique, map_path_smaller_map],
+  have p_p_end_unique : end_unique p_p, from end_unique_for_smaller p_end_unique,
+  have x_nin_p_p : ¬ (in_path next x p_p),
+    simp [in_path] at x_nin_p,
+    intro x_in_p_p,
+    apply false.elim (x_nin_p (or.inr x_in_p_p)),
+  have smaller_end_unique := p_ih p_p_end_unique x_nin_p_p,
+  simp [end_unique, map_path_smaller_map],
+  intro p_dst'_in_path,
+  have p_dst'_in_p_p := (map_path_smaller_elem p_p h x_nin_p_p p_dst').mpr p_dst'_in_path,
+  simp [end_unique] at p_end_unique,
+  apply false.elim (p_end_unique p_dst'_in_p_p),
+end
+
+def path_of_length_size_all_keys {src : ℕ} : Π {dst : ℕ}, Π {next : tmap ℕ ℕ}, 
+  Π (p : map_path next src dst), (end_unique p) → next.contains_key dst → next.size = p.size + 1 → 
   ∀ (x : ℕ), next.contains_key x → in_path next x p :=
 begin
-  intros n,
-  induction n,
+  intros dst next p,
+  induction p_size : (p.size) generalizing p dst next,
     -- case: 0
-    intros dst next p p_end_unique dst_in_map size_cond x x_in_map,
+    intros p_end_unique dst_in_map size_cond x x_in_map,
     simp at size_cond,
     have h := tmap_size_1_implies_all_els_eq size_cond,
     cases p,
     have x_eq_src := h x src x_in_map dst_in_map,
     rewrite x_eq_src,
     simp [in_path],
+    simp [map_path.size] at p_size,
+    apply false.elim p_size,
     -- case: n + 1
-    intros dst next p p_end_unique dst_in_map size_cond x x_in_map,
+    intros p_end_unique dst_in_map size_cond x x_in_map,
     cases p,
+      simp [map_path.size] at p_size,
+      injection p_size,
     have p_p_end_unique := end_unique_for_smaller p_end_unique,
-      show ℕ, from n_n,
     simp [in_path],
     by_cases (dst = x),
       apply or.inl h,
     apply or.inr,
     simp [end_unique] at p_end_unique,
-    have p'_exists := path_in_smaller_map p_p p_p_end_unique dst_in_map p_end_unique,
-    cases p'_exists with p' p'_cond,
-    cases p'_cond with p'_end_unique p'_elem_cond,
+    have p' := map_path_smaller_map p_p dst_in_map p_end_unique,
+    have p'_end_unique := map_path_smaller_map_end_unique p_p p_p_end_unique dst_in_map p_end_unique,
+    have p'_elem_cond := map_path_smaller_elem p_p dst_in_map p_end_unique,
     have p_dst_in_next := key_in_map_iff_evals p_dst dst p_can_extend, 
     have dst_neq_p_dst := val_not_in_path_to_dst_neq_val p_p p_end_unique,
     have p_dst_neq_dst := λ x, dst_neq_p_dst (eq.symm x),
@@ -486,7 +725,18 @@ begin
     have new_map_size := remove_size dst next dst_in_map,
     simp [size_cond] at new_map_size,
     have x_in_new_map := remove_preserves_other_keys dst next dst_in_map x x_in_map h,
-    have x_in_p' := n_ih p' p'_end_unique p_dst_in_new_map new_map_size x x_in_new_map,
+    simp [map_path.size] at p_size,
+    injection p_size with p'_size,
+    rw (map_path_smaller_map_size p_p dst_in_map p_end_unique) at p'_size, 
+    have x_in_p' := 
+      ih
+        (map_path_smaller_map p_p dst_in_map p_end_unique) 
+        p'_size 
+        p'_end_unique 
+        p_dst_in_new_map 
+        new_map_size 
+        x 
+        x_in_new_map,
     apply (p'_elem_cond x).mpr,
     apply x_in_p',
 end
