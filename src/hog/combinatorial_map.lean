@@ -118,30 +118,7 @@ def map_path_index {next : tmap ℕ ℕ} : Π {src dst : ℕ}, Π (x : ℕ), Π 
       map_path_index x p' x_in_p'
     ) 
     (λ x_eq_dst, p.size) 
-/-
-theorem map_path_index_lte_map_size {next : tmap ℕ ℕ} : Π {src dst : ℕ}, Π {x : ℕ}, 
-  Π (p : map_path next src dst), Π (x_in_p : in_path next x p), map_path_index x p x_in_p ≤ p.size :=
-begin
-  intros src dst x p x_in_p,
-  induction n with n generalizing dst,
-    cases p,
-    simp [map_path_index],
-  cases p,
-  simp [map_path_index],
-  cases h' : (eq.decidable dst x),
-    simp,
-    have x_in_p_p : in_path next x p_p,
-      simp [in_path] at x_in_p,
-      cases x_in_p with dst_eq_x x_in_p_p,
-        apply false.elim (h dst_eq_x),
-      apply x_in_p_p,
-    have h'' := n_ih p_p x_in_p_p,
-    apply le_trans,
-      apply h'',
-      apply nat.le_succ,
-    simp,
-end
--/
+
 def src_to_elem {next : tmap ℕ ℕ} : Π {src dst x : ℕ}, Π (p : map_path next src dst), 
   Π (x_in_p : in_path next x p), map_path next src x 
 | src dst x p@(map_path.source .(src)) x_in_p := 
@@ -175,25 +152,19 @@ def src_to_elem {next : tmap ℕ ℕ} : Π {src dst x : ℕ}, Π (p : map_path n
     eq.rec_on h p'_to_x) 
   (λ dst_eq_x, 
   @eq.rec_on _ _ (λ y, map_path next src y) _ dst_eq_x p)
-/-
-def elem_to_dst {next : tmap ℕ ℕ} : Π {n src dst x : ℕ}, Π (p : map_path next n src dst),
-  Π (x_in_p : in_path next x p), map_path next (n - map_path_index x p x_in_p) x dst 
-| 0 src dst x p@(map_path.source .(src)) x_in_p := (
+
+def elem_to_dst {next : tmap ℕ ℕ} : Π {src dst x : ℕ}, Π (p : map_path next src dst),
+  Π (x_in_p : in_path next x p), map_path next x dst 
+| src dst x p@(map_path.source .(src)) x_in_p := (
     let src_eq_x : src = x := 
       begin
         simp [in_path] at x_in_p,
-        apply x_in_p,
+        assumption,
       end
     in
-    let h : 0 = 0 - map_path_index x (map_path.source src) x_in_p := 
-      begin
-        simp [map_path_index],
-      end
-    in 
-    let p' : map_path next (0 - map_path_index x p x_in_p) src src := eq.rec_on h p in
-    @eq.rec_on _ _ (λ y, map_path next (0 - map_path_index x p x_in_p) y src) _ src_eq_x p'
+    @eq.rec_on _ _ (λ y, map_path next y src) _ src_eq_x p
   )
-| (n + 1) src dst x p@(map_path.extend p' can_extend) x_in_p := (
+| src dst x p@(map_path.extend p' can_extend) x_in_p := (
     decidable.cases_on (eq.decidable dst x)
     (λ dst_neq_x, 
       let x_in_p' : in_path next x p' :=
@@ -205,26 +176,14 @@ def elem_to_dst {next : tmap ℕ ℕ} : Π {n src dst x : ℕ}, Π (p : map_path
         end
       in
       let elem_to_dst' := elem_to_dst p' x_in_p' in 
-      let p'' := map_path.extend elem_to_dst' can_extend in
-      let h : n - (map_path_index x p' x_in_p') + 1 = n + 1 - map_path_index x p x_in_p :=
-        begin
-          simp [map_path_index],
-          cases h' : (eq.decidable dst x),
-            simp,
-            rw add_comm,
-            rw ←(nat.add_sub_assoc (map_path_index_lte_map_size p' x_in_p')),
-            have h'' : 1 + n - map_path_index x p' x_in_p' = n + 1 - map_path_index x p' x_in_p', 
-              apply congr_arg (λ y, y - map_path_index x p' x_in_p'),
-              ring,
-            rw h'',
-            apply false.elim (dst_neq_x h),
-        end,
-      in
-      h.rec_on p''
+      map_path.extend elem_to_dst' can_extend
     )
-    (λ dst_eq_x, sorry)
+    (λ dst_eq_x, 
+      let p'' : map_path next dst dst := map_path.source dst in 
+      @eq.rec_on _ _ (λ y, map_path next y dst) _ dst_eq_x p''
+    )
   )
--/
+
 def walk_with (start : ℕ) (next : tmap ℕ ℕ) : list ℕ → ℕ → bool
 | [] n := (
   match next.val_at n with
@@ -238,7 +197,7 @@ def walk_with (start : ℕ) (next : tmap ℕ ℕ) : list ℕ → ℕ → bool
   | some val := walk_with xs val
   end : bool)
 
-def is_cycle (next : tmap ℕ ℕ) : bool :=
+def is_cycle_b (next : tmap ℕ ℕ) : bool :=
 (match next with -- to start the walk we need to get some initial key
 | (smap.empty _) := tt
 | (smap.leaf k v _ _) := walk k next v (next.size - 1)
@@ -246,19 +205,14 @@ def is_cycle (next : tmap ℕ ℕ) : bool :=
 end)
 
 -- for any two elements we can use next some finite number of times to get from the first to the second
-def cycle_prop (next : tmap ℕ ℕ) := next.forall (λ u, next.forall (λ v, ∃ (n : (fin (next.size))), tmap_apply next u n.val = some v))
+def cycle_prop (next : tmap ℕ ℕ) := ∀ (x y : ℕ), next.contains_key x → next.contains_key y → 
+  ∃ (n : ℕ), tmap_apply next x n = some y
 
 structure cycle : Type :=
   (next : tmap ℕ ℕ)
-  (is_cyc : is_cycle next = tt)
+  (is_cycle : is_cycle_b next = tt)
 
--- Given the cycle structure we in fact have a cycle
-theorem cycle_is_cycle_prop (c : cycle) : cycle_prop (c.next) :=
-begin
-  induction c,
-  unfold cycle_prop,
-  sorry
-end
+
 
 def is_cycle_of_set (c : cycle) (t : tset ℕ) : bool :=
   (smap.size (c.next) = t.size) ∧
@@ -740,4 +694,47 @@ begin
     apply (p'_elem_cond x).mpr,
     apply x_in_p',
 end
-
+-- Given the cycle structure we in fact have a cycle
+theorem cycle_is_cycle_prop (c : cycle) : cycle_prop (c.next) :=
+begin
+  cases c with next is_cycle,
+  unfold cycle_prop,
+  unfold is_cycle_b at is_cycle,
+  intros x y x_in_map y_in_map,
+  cases next,
+    -- The empty map case
+    simp [tmap.contains_key] at x_in_map,
+    apply false.elim x_in_map,
+  -- The leaf case
+  split,
+    show ℕ, from 0,
+  simp [tmap_apply],
+  simp [tmap.contains_key] at x_in_map y_in_map,
+  rw y_in_map,
+  assumption,
+  simp [is_cycle_b._match_1] at is_cycle,
+  have elem_cond := 
+    path_of_length_size_all_keys 
+      (walk_to_path is_cycle) 
+      (walk_to_path_end_unique is_cycle)
+      (by simp [tmap.contains_key, smap.contains_key, decidable.lt_by_cases])
+      begin
+        rw walk_to_path_size is_cycle,
+        have h : 1 ≤ (smap.node next_key next_val next_left next_right).size, 
+          simp [smap.size],
+          rw add_assoc,
+          rw add_comm,
+          simp,
+        rw nat.sub_add_cancel h,
+      end,
+  have x_in_path := elem_cond x x_in_map,
+  have y_in_path := elem_cond y y_in_map,
+  have x_to_dst := elem_to_dst (walk_to_path is_cycle) x_in_path,
+  have src_to_y := src_to_elem (walk_to_path is_cycle) y_in_path,
+  have next_key_to_next_val : map_next_is (smap.node next_key next_val next_left next_right) next_key next_val,
+    simp [map_next_is, tmap.val_at, smap.val_at, decidable.lt_by_cases],
+  have x_to_y := map_path_append x_to_dst src_to_y next_key_to_next_val,
+  split,
+    show ℕ, from x_to_y.size,
+  exact path_gives_applications x_to_y,
+end
