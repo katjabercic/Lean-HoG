@@ -43,7 +43,7 @@ end)
 
 -- for any two elements we can use next some finite number of times to get from the first to the second
 def cycle_prop (next : tmap ℕ ℕ) := ∀ (x y : ℕ), next.contains_key x → next.contains_key y → 
-  ∃ (n : ℕ), tmap_apply next x n = some y
+  ∃ (n : ℕ), tmap_iter next x n = some y
 
 structure cycle : Type :=
   (next : tmap ℕ ℕ)
@@ -147,10 +147,11 @@ begin
   -- The leaf case
   split,
     show ℕ, from 0,
-  simp [tmap_apply],
+  simp [tmap_iter],
   simp [tmap.contains_key] at x_in_map y_in_map,
   rw y_in_map,
   assumption,
+  -- The node case
   simp [is_cycle_b._match_1] at is_cycle,
   have elem_cond := 
     path_of_length_size_all_keys 
@@ -175,5 +176,5 @@ begin
   have x_to_y := map_path_append x_to_dst src_to_y next_key_to_next_val,
   split,
     show ℕ, from x_to_y.size,
-  exact path_gives_applications x_to_y,
+  exact map_path_iter_src_dst x_to_y,
 end
