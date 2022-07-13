@@ -8,6 +8,8 @@ open tree_set
 open map_path
 -- To bo moved to a different file
 
+theorem tset_inclusion_size_eq_to_tset_eq {α : Type} [linear_order α] (A : tset α) (B : tset α) : 
+  A.size = B.size → (∀ x, x ∈ A → x ∈ B) → (∀ x, x ∈ B → x ∈ A) := sorry
 -- Apply the tmap next n times to some starting parameter
 
 -- create an edge from two natural numbers
@@ -85,15 +87,29 @@ def is_list_of_σα (σ : tmap ℕ cycle) : list ℕ → bool
 | l@(x :: y :: xs) := is_list_of_σα_aux σ x y l
 
 def neighbours (G : simple_irreflexive_graph) : tmap ℕ (tset ℕ) := sorry
- 
-def smap.forall_items (p : (ℕ → (cycle) → bool)) :
-  ∀ {low high : bounded ℕ} {b : low < high} (t : smap ℕ (cycle) b) , bool := sorry
 
+def tmap.keys {α β : Type} [linear_order α] (m : tmap α β) : tset α := sorry
+def tmap.keys_cond {α β : Type} [linear_order α] (m : tmap α β) : 
+  ∀ x, m.contains_key x ↔ x ∈ (tmap.keys m) := sorry
+def tmap.keys_size {α β : Type} [linear_order α] (m : tmap α β) :
+  m.size = (tmap.keys m).size := sorry
+ 
+def tmap.forall_items {α β : Type} [linear_order α] (p : α → β → bool) :
+  tmap α β → bool := sorry
+def tmap.forall_items_is_forall {α β : Type} [linear_order α] {p : α → β → bool} :  
+  Π {t : tmap α β},
+  tmap.forall_items p t → ∀ x y, t.val_at x = some y → p x y := sorry 
+def smap.forall_keys {α β : Type} [linear_order α] (p : α → Prop) [decidable_pred p] :
+  ∀ {low high : bounded α} {b : low < high} (t : smap α β b) , bool := sorry
+def smap.forall_keys_is_forall {α β : Type} [linear_order α] {p : α → Prop} [decidable_pred p] :
+  ∀ {low high : bounded α} {b : low < high} {t : smap α β b}, 
+  smap.forall_keys p t = tt → (∀ k, t.contains_key k → p k)
+:= sorry
 def graph_rotation_consistent (G : simple_irreflexive_graph) (v : ℕ) (c : cycle) : bool :=
   let ns : option (tset ℕ) := (neighbours G).val_at v in
   (match ns with
   | none := ff
-  | some val := is_cycle_of_set c val
+  | some v_neigh := is_cycle_of_set c v_neigh
   end : bool)
 
 -- constructs an edge and adds it to a tset Edge
@@ -117,9 +133,16 @@ def add_edges_from_face_list : (list (list ℕ)) → tset Edge → tset Edge
 | ([] :: fs) edges := add_edges_from_face_list fs edges
 | (f@(x :: xs) :: fs) edges := add_edges_from_face_list fs (add_edges_from_face_aux x edges f)
 
+def is_cycle_of_opt (σ : tmap ℕ cycle) (x : ℕ) (t : tset ℕ) : bool :=
+(match σ.val_at x with
+| none := ff
+| some c := is_cycle_of_set c t
+end)
 structure combinatorial_map (G : simple_irreflexive_graph) : Type :=
   (σ : tmap ℕ cycle)
-  (σ_G_consistent : smap.forall_items (graph_rotation_consistent G) σ = tt)
+  --(σ_G_consistent : smap.forall_items (graph_rotation_consistent G) σ = tt)
+  (G_σ_consistent : tmap.forall_items (λ k t, is_cycle_of_opt σ k t) (neighbours G) = tt)
+  (σ_keys_neighbour_keys : smap.forall_keys (λ k, (neighbours G).contains_key k) σ)
   (faces : list (list ℕ))
   (composition_faces_consistent : faces.all (is_list_of_σα σ)) -- shows that every face is in fact the face of σ ∘ α
   --shows that every face is present by checking that the correct number of edges is present
@@ -132,7 +155,100 @@ structure combinatorial_map (G : simple_irreflexive_graph) : Type :=
   )
   
   -- might still require checking if list actually contains edges
-
+-- σ maps edges to edges with the same source
+def cycle_contains_key_opt (k : ℕ) : option cycle → bool 
+| none := ff
+| (some c) := c.next.contains_key k
+def in_neighbours_opt (G : simple_irreflexive_graph) (x y : ℕ) : Prop :=
+(match (neighbours G).val_at x with 
+| none := false
+| some (x_neigh) := y ∈ x_neigh
+end)
+/-
+  All edges appear in σ and σ only contains edges
+-/
+theorem σ_edges_consistent {G : simple_irreflexive_graph} (K : combinatorial_map G) :
+  ∀ x y, cycle_contains_key_opt y (K.σ.val_at x) ↔ in_neighbours_opt G x y :=
+begin
+  intros x y,
+  split,
+  -- ->
+    intro y_in_σx,
+    cases h : K.σ.val_at x with c,
+      rw h at y_in_σx,
+      simp [cycle_contains_key_opt] at y_in_σx,
+      apply false.elim,
+      assumption,
+  rw h at y_in_σx,
+  simp [cycle_contains_key_opt] at y_in_σx,
+  let x_in_σ := key_in_map_iff_evals x c h,
+  have σ_keys_neigh_keys := (smap.forall_keys_is_forall K.σ_keys_neighbour_keys) x x_in_σ,
+  unfold in_neighbours_opt,
+  let x_neigh_val := tmap.val_at_safe x σ_keys_neigh_keys,
+  let x_neigh_val_cond : some x_neigh_val = (neighbours G).val_at x := tmap.val_at_safe_cond x σ_keys_neigh_keys,
+  rw ←x_neigh_val_cond,
+  simp [in_neighbours_opt._match_1],
+  have G_σ_cons := 
+    (tmap.forall_items_is_forall K.G_σ_consistent) x x_neigh_val (eq.symm x_neigh_val_cond),
+  simp at G_σ_cons,
+  unfold is_cycle_of_opt at G_σ_cons,
+  rw h at G_σ_cons,
+  simp [is_cycle_of_opt._match_1] at G_σ_cons,
+  unfold is_cycle_of_set at G_σ_cons,
+  have h' := (to_bool_iff _).mp G_σ_cons,
+  cases h' with size_cond h',
+  have h' := (to_bool_iff _).mpr h',
+  simp at h',
+  have h' := stree.forall_is_forall (λ (v : ℕ), ↥(tmap.contains_key v c.next)) x_neigh_val h',  
+  simp at h',
+  let c_keys := tmap.keys c.next, 
+  let c_keys_size := tmap.keys_size c.next,
+  let c_keys_cond := tmap.keys_cond c.next,
+  have size_cond' : c_keys.size = x_neigh_val.size,
+    rw ←c_keys_size,
+    assumption,
+  have h1 := λ x is_elem, (c_keys_cond x).mp (h' x is_elem),
+  have h2 := tset_inclusion_size_eq_to_tset_eq x_neigh_val c_keys (eq.symm size_cond') h1,
+  apply h2 y,
+  apply (c_keys_cond y).mp,
+  assumption,
+  -- <-
+  intro y_in_neigh_x,
+  unfold in_neighbours_opt at y_in_neigh_x,
+  cases h : K.σ.val_at x with c, 
+    have y_cond := (smap.forall_keys_is_forall K.σ_keys_neighbour_keys) y, 
+    simp at y_cond,
+    cases h' : (neighbours G).val_at x with x_neigh,
+      rw h' at y_in_neigh_x,
+      simp [in_neighbours_opt._match_1] at y_in_neigh_x,
+      apply false.elim,
+      assumption,
+    have G_σ_cons := (tmap.forall_items_is_forall K.G_σ_consistent) x x_neigh h',
+    simp at G_σ_cons,
+    unfold is_cycle_of_opt at G_σ_cons,
+    rw h at G_σ_cons,
+    simp [is_cycle_of_opt._match_1] at G_σ_cons,
+    apply false.elim,
+    assumption,
+  simp [cycle_contains_key_opt],
+  cases h' : (neighbours G).val_at x with x_neigh,
+    rw h' at y_in_neigh_x,
+    simp [in_neighbours_opt._match_1] at y_in_neigh_x,
+    apply false.elim,
+    assumption,
+  rw h' at y_in_neigh_x,
+  simp [in_neighbours_opt._match_1] at y_in_neigh_x,
+  have G_σ_cons := (tmap.forall_items_is_forall K.G_σ_consistent) x x_neigh h',
+  simp at G_σ_cons,
+  unfold is_cycle_of_opt at G_σ_cons,
+  rw h at G_σ_cons,
+  simp [is_cycle_of_opt._match_1, is_cycle_of_set] at G_σ_cons,
+  cases G_σ_cons with size_cond forall_neigh,
+  have forall_neigh' := 
+    stree.forall_is_forall (λ (v : ℕ), ↥(tmap.contains_key v c.next)) x_neigh forall_neigh,
+  apply forall_neigh',
+  exact y_in_neigh_x,
+end
 -- Given the cycle structure we in fact have a cycle
 theorem cycle_is_cycle_prop (c : cycle) : cycle_prop (c.next) :=
 begin

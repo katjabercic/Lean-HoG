@@ -19,6 +19,10 @@ theorem remove_preserves_values {α β : Type} [linear_order α] (key : α) :
   (tmap.remove key m p).val_at x = m.val_at x := sorry
 theorem key_in_map_iff_evals {α β : Type} [linear_order α] {next : tmap α β} (key : α) (val : β) :
   next.val_at key = some val → next.contains_key key := sorry
+def tmap.val_at_safe {α β : Type} [linear_order α] {next : tmap α β} (key : α) :
+  next.contains_key key → β := sorry
+theorem tmap.val_at_safe_cond {α β : Type} [linear_order α] {next : tmap α β} (key : α) 
+  (k_in_next : next.contains_key key) : some (tmap.val_at_safe key k_in_next) = next.val_at key := sorry
 set_option trace.check true
 theorem tmap_size_1_implies_all_els_eq {α β : Type} [linear_order α] : Π {next : tmap α β}, 
   next.size = 1 → ∀ (x y : α), next.contains_key x → next.contains_key y → x = y :=
