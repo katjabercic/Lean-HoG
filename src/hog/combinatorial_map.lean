@@ -105,6 +105,12 @@ def smap.forall_keys_is_forall {α β : Type} [linear_order α] {p : α → Prop
   ∀ {low high : bounded α} {b : low < high} {t : smap α β b}, 
   smap.forall_keys p t = tt → (∀ k, t.contains_key k → p k)
 := sorry
+def tset.elem_add {α : Type} [linear_order α] (t : tset α) (x y : α) : x = y → (t.add y).elem x
+  := sorry
+def tset.elem_add_diff {α : Type} [linear_order α] (t : tset α) (x y : α) : 
+  x ≠ y → (t.add y).elem x → t.elem x := sorry
+def tset.add_preserves {α : Type} [linear_order α] (t : tset α) (x y : α) :
+  t.elem x → (t.add y).elem x := sorry
 def graph_rotation_consistent (G : simple_irreflexive_graph) (v : ℕ) (c : cycle) : bool :=
   let ns : option (tset ℕ) := (neighbours G).val_at v in
   (match ns with
@@ -113,18 +119,24 @@ def graph_rotation_consistent (G : simple_irreflexive_graph) (v : ℕ) (c : cycl
   end : bool)
 
 -- constructs an edge and adds it to a tset Edge
-def add_edge_aux (x y : ℕ) (es : tset (lex ℕ ℕ)) : tset (lex ℕ ℕ) :=
-  tset.add (y, x) (es.add (x, y)) 
 -- takes all pairs of consecuative numbers to generate edges and add them to a tset 
 def add_edges_from_face_aux : ℕ → tset (lex ℕ ℕ) → list ℕ → tset (lex ℕ ℕ)
 | start es [] := es
-| start es (x :: []) := add_edge_aux x start es
-| start es (x :: y :: xs) := add_edges_from_face_aux start (add_edge_aux x y es) xs
+| start es (x :: []) :=  es.add (x, start)
+| start es (x :: y :: xs) := (add_edges_from_face_aux start es xs).add (x, y)
 --def face_map (σ : tmap ℕ cycle) : tmap ℕ cycle 
 
 def add_edges_from_face : tset (lex ℕ ℕ) → list ℕ → tset (lex ℕ ℕ)
 | es [] := es 
 | es f@(x :: xs) := add_edges_from_face_aux x es f
+def add_list_to_set : list ℕ → tset (lex ℕ ℕ) → tset (lex ℕ ℕ)
+| [] es := es
+| (_ :: []) es := es
+| (x :: y :: xs) es := (add_list_to_set (y :: xs) es).add (x, y)
+
+def add_face_to_set : list ℕ → tset (lex ℕ ℕ) → tset (lex ℕ ℕ)
+| [] es := es
+| l@(x :: xs) es := add_list_to_set (l ++ [x]) es
 def is_cycle_of_opt (σ : tmap ℕ cycle) (x : ℕ) (t : tset ℕ) : bool :=
 (match σ.val_at x with
 | none := ff
@@ -132,9 +144,10 @@ def is_cycle_of_opt (σ : tmap ℕ cycle) (x : ℕ) (t : tset ℕ) : bool :=
 end)
 def faces_set_from_lst_aux : tset (lex ℕ ℕ) → list (list ℕ) → tset (lex ℕ ℕ)
 | acc [] := acc
-| acc (f :: fs) := faces_set_from_lst_aux (add_edges_from_face acc f) fs
-def faces_set_from_lst  (faces : list (list ℕ)) : tset (lex ℕ ℕ) :=
-  faces_set_from_lst_aux (stree.empty true.intro) faces 
+| acc (f :: fs) := faces_set_from_lst_aux (add_face_to_set f acc) fs
+def faces_set_from_lst : list (list ℕ) → tset (lex ℕ ℕ)
+| [] := stree.empty true.intro 
+| (f :: fs) := add_face_to_set f (faces_set_from_lst fs)
 def face_min : ℕ → list ℕ → lex ℕ ℕ
 | start [] := (start, start)
 | start (x :: []) := (x, start)
@@ -168,6 +181,137 @@ def in_neighbours_opt (G : simple_irreflexive_graph) (x y : ℕ) : Prop :=
 | none := false
 | some (x_neigh) := y ∈ x_neigh
 end)
+def edge_in_face_aux (start : ℕ) : (lex ℕ ℕ) → list ℕ → Prop
+| _ [] := false
+| x (z :: []) := x = (z, start)
+| x (z :: z' :: zs) := x = (z, z') ∨ edge_in_face_aux x (z' :: zs)
+def edge_in_list : (lex ℕ ℕ) → list ℕ → Prop 
+| e [] := false
+| e (x :: []) := false
+| e (x :: y :: xs) := e = (x, y) ∨ edge_in_list e (y :: xs)
+def edge_in_face : (lex ℕ ℕ) → list ℕ → Prop 
+| e [] := false 
+| e l@(x :: xs) := edge_in_list e (l ++ [x]) 
+theorem edge_in_list_iff_in_set (l : list ℕ) : 
+  ∀ e, (add_list_to_set l (stree.empty true.intro)).elem e ↔ edge_in_list e l :=
+begin
+  intro e,
+  induction l with x xs,
+    split,
+    simp [add_list_to_set],
+    simp [edge_in_list],
+  cases xs with y xs,
+    simp [add_list_to_set, edge_in_list],
+  simp [add_list_to_set, edge_in_list],
+  split,
+    intro e_in_extended,
+    by_cases h : e = (x, y),
+      apply or.inl, assumption,
+    let t := add_list_to_set (y :: xs) (stree.empty true.intro),
+    have e_in_t := tset.elem_add_diff t e (x, y) h e_in_extended,
+    apply or.inr,
+    apply l_ih.mp,
+    apply e_in_t,
+  intro h,
+  by_cases h' : e = (x, y),
+    apply tset.elem_add,
+    apply h',
+
+  apply tset.add_preserves,
+  apply l_ih.mpr,
+  cases h,
+    apply false.elim (h' h),
+  exact h,
+end
+theorem edge_in_added_list (l : list ℕ) (t : tset (lex ℕ ℕ)) (e : lex ℕ ℕ) : 
+  (add_list_to_set l t).elem e ↔ edge_in_list e l ∨ t.elem e :=
+begin 
+  induction l with x xs ,
+    simp [add_list_to_set, edge_in_list],
+  cases xs with y xs,
+    simp [add_list_to_set, edge_in_list],
+  simp [add_list_to_set, edge_in_list],
+  split,
+    intro e_in,
+    by_cases h : e = (x, y),
+      apply or.inl,
+      apply or.inl,
+      assumption,
+    have e_in' := tset.elem_add_diff (add_list_to_set (y :: xs) t) _ _ h e_in,
+    rw or.assoc,
+    apply or.inr,
+    apply l_ih.mp,
+    assumption,
+  intro h,
+  cases h with h e_elem,
+    cases h with e_eq e_in,
+      apply tset.elem_add,
+      assumption,
+    apply tset.add_preserves,
+    apply l_ih.mpr,
+    apply or.inl,
+    assumption,
+  apply tset.add_preserves,
+  apply l_ih.mpr,
+  apply or.inr,
+  assumption,
+end
+theorem edge_in_added_face (f : list ℕ) (t : tset (lex ℕ ℕ)) (e : lex ℕ ℕ) : 
+  (add_face_to_set f t).elem e ↔ edge_in_face e f ∨ t.elem e :=
+begin
+  cases f with x xs,
+    simp [add_face_to_set, edge_in_face],
+  simp [add_face_to_set, edge_in_face],
+  apply edge_in_added_list,
+end
+theorem edge_in_face_iff_in_set (l : list ℕ) : 
+  ∀ e, (add_face_to_set l (stree.empty true.intro)).elem e ↔ edge_in_face e l :=
+begin
+  intro e,
+  cases l with x xs,
+    simp [add_face_to_set, edge_in_face],
+  simp [add_face_to_set, edge_in_face],
+  apply edge_in_list_iff_in_set,
+end
+theorem in_faces_set_iff (faces : list (list ℕ)) : 
+  ∀ e, (faces_set_from_lst faces).elem e ↔ ∃ f, f ∈ faces ∧ edge_in_face e f :=
+begin
+  intro e,
+  induction faces with f fs,
+    simp [faces_set_from_lst, faces_set_from_lst_aux],
+  simp [faces_set_from_lst],
+  split,
+    intro e_in,
+    have h := (edge_in_added_face f (faces_set_from_lst fs) e).mp e_in,
+    cases h with e_in_f e_in_fs,
+    split,
+      show list ℕ, from f,
+      split,
+        apply or.inl,
+        refl,
+      assumption,
+    have exists_f := faces_ih.mp e_in_fs,
+    cases exists_f with f' f'_conds,
+    cases f'_conds with f'_in_fs e_in_f',
+    split,
+      show list ℕ, from f',
+      split,
+        apply or.inr f'_in_fs,
+      assumption,
+  intro h,
+  cases h with f' f'_conds,
+  apply (edge_in_added_face f (faces_set_from_lst fs) e).mpr,
+  cases f'_conds with f'_conds e_in_f',
+  cases f'_conds with f_eq_f' f'_in_fs,
+    rw f_eq_f' at e_in_f',
+    apply or.inl,
+    assumption,
+  apply or.inr,
+  apply faces_ih.mpr,
+  split,
+    show list ℕ, from f',
+  split; assumption,
+end
 /-
   All edges appear in σ and σ only contains edges
 -/
