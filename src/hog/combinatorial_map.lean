@@ -113,46 +113,50 @@ def graph_rotation_consistent (G : simple_irreflexive_graph) (v : ℕ) (c : cycl
   end : bool)
 
 -- constructs an edge and adds it to a tset Edge
-def add_edge_aux (x y : ℕ) (es : tset Edge) : tset Edge :=
-(decidable.lt_by_cases x y
-    (λ _, let e := {Edge. edge := (x, y)} in es.add e)
-    (λ _, es)
-    (λ _, let e := {Edge. edge := (y, x)} in es.add e)
-    )
-
+def add_edge_aux (x y : ℕ) (es : tset (lex ℕ ℕ)) : tset (lex ℕ ℕ) :=
+  tset.add (y, x) (es.add (x, y)) 
 -- takes all pairs of consecuative numbers to generate edges and add them to a tset 
-def add_edges_from_face_aux : ℕ → tset Edge → list ℕ → tset Edge
+def add_edges_from_face_aux : ℕ → tset (lex ℕ ℕ) → list ℕ → tset (lex ℕ ℕ)
 | start es [] := es
 | start es (x :: []) := add_edge_aux x start es
 | start es (x :: y :: xs) := add_edges_from_face_aux start (add_edge_aux x y es) xs
 --def face_map (σ : tmap ℕ cycle) : tmap ℕ cycle 
 
--- Given a list of faces (represented as lists) add all edges to a tset Edge
-def add_edges_from_face_list : (list (list ℕ)) → tset Edge → tset Edge 
-| [] edges := edges
-| ([] :: fs) edges := add_edges_from_face_list fs edges
-| (f@(x :: xs) :: fs) edges := add_edges_from_face_list fs (add_edges_from_face_aux x edges f)
-
+def add_edges_from_face : tset (lex ℕ ℕ) → list ℕ → tset (lex ℕ ℕ)
+| es [] := es 
+| es f@(x :: xs) := add_edges_from_face_aux x es f
 def is_cycle_of_opt (σ : tmap ℕ cycle) (x : ℕ) (t : tset ℕ) : bool :=
 (match σ.val_at x with
 | none := ff
 | some c := is_cycle_of_set c t
 end)
+def faces_set_from_lst_aux : tset (lex ℕ ℕ) → list (list ℕ) → tset (lex ℕ ℕ)
+| acc [] := acc
+| acc (f :: fs) := faces_set_from_lst_aux (add_edges_from_face acc f) fs
+def faces_set_from_lst  (faces : list (list ℕ)) : tset (lex ℕ ℕ) :=
+  faces_set_from_lst_aux (stree.empty true.intro) faces 
+def face_min : ℕ → list ℕ → lex ℕ ℕ
+| start [] := (start, start)
+| start (x :: []) := (x, start)
+| start (x :: y :: xs) := min (x, y) (face_min start (y :: xs))
+def compare_faces : list ℕ → list ℕ → bool
+| [] _ := ff
+| _ [] := ff
+| f@(x :: xs) f'@(y :: ys) := face_min x f < face_min y f'
+def faces_ordered : list (list ℕ) → bool
+| [] := tt
+| (f :: []) := tt
+| (f :: f' :: fs) := compare_faces f f' && faces_ordered (f' :: fs)
 structure combinatorial_map (G : simple_irreflexive_graph) : Type :=
   (σ : tmap ℕ cycle)
   --(σ_G_consistent : smap.forall_items (graph_rotation_consistent G) σ = tt)
   (G_σ_consistent : tmap.forall_items (λ k t, is_cycle_of_opt σ k t) (neighbours G) = tt)
   (σ_keys_neighbour_keys : smap.forall_keys (λ k, (neighbours G).contains_key k) σ)
   (faces : list (list ℕ))
-  (composition_faces_consistent : faces.all (is_list_of_σα σ)) -- shows that every face is in fact the face of σ ∘ α
+  (composition_faces_consistent : faces.all (is_list_of_σα σ)) -- shows that every face is in fact a face of σ ∘ α
   --shows that every face is present by checking that the correct number of edges is present
-  (num_of_edges : 
-    let empty_set : tset Edge := stree.empty (by trivial) in
-    -- here add doesn't work as intended
-    let combined_edges : tset Edge := 
-      add_edges_from_face_list faces empty_set in
-    combined_edges.size = 2 * G.edge_size
-  )
+  (num_of_edges : (faces_set_from_lst faces).size = 2 * (G.edge_size))
+  (faces_ord : faces_ordered faces)
   
   -- might still require checking if list actually contains edges
 -- σ maps edges to edges with the same source
