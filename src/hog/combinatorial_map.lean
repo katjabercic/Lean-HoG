@@ -8,6 +8,12 @@ open tree_set
 open map_path
 -- To bo moved to a different file
 
+lemma list.cons_append_assoc {α : Type} (x : α) (l₁ l₂ : list α) : x :: (l₁ ++ l₂) = (x :: l₁) ++ l₂ :=
+begin
+  induction l₁,
+    simp,
+  simp,
+end
 theorem tset_inclusion_size_eq_to_tset_eq {α : Type} [linear_order α] (A : tset α) (B : tset α) : 
   A.size = B.size → (∀ x, x ∈ A → x ∈ B) → (∀ x, x ∈ B → x ∈ A) := sorry
 -- Apply the tmap next n times to some starting parameter
@@ -69,14 +75,14 @@ def σα_maps (σ : tmap ℕ cycle) (x y z : ℕ) : bool :=
   )
 end)
 
-def is_list_of_σα_aux (σ : tmap ℕ cycle) (fst : ℕ) (snd : ℕ) : list ℕ → bool
+/-def is_face_of_σα_aux (σ : tmap ℕ cycle) (fst : ℕ) (snd : ℕ) : list ℕ → bool
 | [] := tt
 | (x :: []) := σα_maps σ x fst snd
 | (x :: y :: []) := σα_maps σ x y fst
-| (x :: l@(y :: z :: xs)) := σα_maps σ x y z ∧ is_list_of_σα_aux l
+| (x :: l@(y :: z :: xs)) := σα_maps σ x y z ∧ is_face_of_σα_aux l
 
 -- check that list is a cycle for σα
-def is_list_of_σα (σ : tmap ℕ cycle) : list ℕ → bool
+def is_face_of_σα (σ : tmap ℕ cycle) : list ℕ → bool
 | [] := ff -- empty lists shouldn't be present
 | (x :: []) := (
   match σ.val_at x with
@@ -84,8 +90,17 @@ def is_list_of_σα (σ : tmap ℕ cycle) : list ℕ → bool
   | some c := c.next.size = 0 -- list has one element only if vertex is isolated
   end
   )
-| l@(x :: y :: xs) := is_list_of_σα_aux σ x y l
-
+| l@(x :: y :: xs) := is_face_of_σα_aux σ x y l
+-/
+def is_list_of_σα (σ : tmap ℕ cycle) : list ℕ → bool
+| [] := tt
+| (x :: []) := ff 
+| (x :: y :: []) := tt 
+| (x :: l@(y :: z :: xs)) := σα_maps σ x y z && is_list_of_σα l
+def is_face_of_σα (σ : tmap ℕ cycle) : list ℕ → bool 
+| [] := tt 
+| (x :: []) := ff
+| l@(x :: y :: xs) := is_list_of_σα σ (l ++ [x] ++ [y])
 def neighbours (G : simple_irreflexive_graph) : tmap ℕ (tset ℕ) := sorry
 
 def tmap.keys {α β : Type} [linear_order α] (m : tmap α β) : tset α := sorry
@@ -136,7 +151,8 @@ def add_list_to_set : list ℕ → tset (lex ℕ ℕ) → tset (lex ℕ ℕ)
 
 def add_face_to_set : list ℕ → tset (lex ℕ ℕ) → tset (lex ℕ ℕ)
 | [] es := es
-| l@(x :: xs) es := add_list_to_set (l ++ [x]) es
+| (x :: []) es := es
+| l@(x :: y :: xs) es := add_list_to_set (l ++ [x] ++ [y]) es
 def is_cycle_of_opt (σ : tmap ℕ cycle) (x : ℕ) (t : tset ℕ) : bool :=
 (match σ.val_at x with
 | none := ff
@@ -148,25 +164,25 @@ def faces_set_from_lst_aux : tset (lex ℕ ℕ) → list (list ℕ) → tset (le
 def faces_set_from_lst : list (list ℕ) → tset (lex ℕ ℕ)
 | [] := stree.empty true.intro 
 | (f :: fs) := add_face_to_set f (faces_set_from_lst fs)
-def face_min : ℕ → list ℕ → lex ℕ ℕ
-| start [] := (start, start)
-| start (x :: []) := (x, start)
-| start (x :: y :: xs) := min (x, y) (face_min start (y :: xs))
-def compare_faces : list ℕ → list ℕ → bool
-| [] _ := ff
-| _ [] := ff
-| f@(x :: xs) f'@(y :: ys) := face_min x f < face_min y f'
+
+def list_min_edge : list ℕ → lex ℕ ℕ
+| [] := (0, 0)
+| (x :: []) := (x, x)
+| (x :: y :: xs) := min (x, y) (list_min_edge (y :: xs))
+def face_min_edge : list ℕ → lex ℕ ℕ
+| [] := (0, 0)
+| l@(x :: xs) := list_min_edge (l ++ [x])
 def faces_ordered : list (list ℕ) → bool
 | [] := tt
 | (f :: []) := tt
-| (f :: f' :: fs) := compare_faces f f' && faces_ordered (f' :: fs)
+| (f :: f' :: fs) := face_min_edge f < face_min_edge f' ∧ faces_ordered (f' :: fs)
 structure combinatorial_map (G : simple_irreflexive_graph) : Type :=
   (σ : tmap ℕ cycle)
   --(σ_G_consistent : smap.forall_items (graph_rotation_consistent G) σ = tt)
   (G_σ_consistent : tmap.forall_items (λ k t, is_cycle_of_opt σ k t) (neighbours G) = tt)
   (σ_keys_neighbour_keys : smap.forall_keys (λ k, (neighbours G).contains_key k) σ)
   (faces : list (list ℕ))
-  (composition_faces_consistent : faces.all (is_list_of_σα σ)) -- shows that every face is in fact a face of σ ∘ α
+  (composition_faces_consistent : ∀ f, f ∈ faces → (is_face_of_σα σ f)) -- shows that every face is in fact a face of σ ∘ α
   --shows that every face is present by checking that the correct number of edges is present
   (num_of_edges : (faces_set_from_lst faces).size = 2 * (G.edge_size))
   (faces_ord : faces_ordered faces)
@@ -191,7 +207,8 @@ def edge_in_list : (lex ℕ ℕ) → list ℕ → Prop
 | e (x :: y :: xs) := e = (x, y) ∨ edge_in_list e (y :: xs)
 def edge_in_face : (lex ℕ ℕ) → list ℕ → Prop 
 | e [] := false 
-| e l@(x :: xs) := edge_in_list e (l ++ [x]) 
+| e (x :: []) := false
+| e l@(x :: y :: xs) := edge_in_list e (l ++ [x] ++ [y]) 
 theorem edge_in_list_iff_in_set (l : list ℕ) : 
   ∀ e, (add_list_to_set l (stree.empty true.intro)).elem e ↔ edge_in_list e l :=
 begin
@@ -261,7 +278,8 @@ theorem edge_in_added_face (f : list ℕ) (t : tset (lex ℕ ℕ)) (e : lex ℕ 
 begin
   cases f with x xs,
     simp [add_face_to_set, edge_in_face],
-  simp [add_face_to_set, edge_in_face],
+  cases xs with y xs,
+    simp [add_face_to_set, edge_in_face],
   apply edge_in_added_list,
 end
 theorem edge_in_face_iff_in_set (l : list ℕ) : 
@@ -270,7 +288,8 @@ begin
   intro e,
   cases l with x xs,
     simp [add_face_to_set, edge_in_face],
-  simp [add_face_to_set, edge_in_face],
+  cases xs with y xs,
+    simp [add_face_to_set, edge_in_face],
   apply edge_in_list_iff_in_set,
 end
 theorem in_faces_set_iff (faces : list (list ℕ)) : 
@@ -396,6 +415,171 @@ begin
     stree.forall_is_forall (λ (v : ℕ), ↥(tmap.contains_key v c.next)) x_neigh forall_neigh,
   apply forall_neigh',
   exact y_in_neigh_x,
+end
+theorem σα_maps_neighbours {G : simple_irreflexive_graph} (K : combinatorial_map G) :
+  ∀ x y z, σα_maps K.σ x y z = tt → in_neighbours_opt G y x :=
+begin 
+  intros x y z map_cond,
+  simp [σα_maps] at map_cond,
+  cases h : K.σ.val_at y with c,
+    rw h at map_cond,
+    simp [σα_maps._match_1] at map_cond,
+    apply false.elim,
+    assumption,
+  rw h at map_cond,
+  simp [σα_maps._match_1] at map_cond,
+  cases h' : c.next.val_at x,
+    rw h' at map_cond,
+    simp [σα_maps._match_2] at map_cond,
+    apply false.elim,
+    assumption,
+  rw ←σ_edges_consistent K,
+  rw h,
+  simp [cycle_contains_key_opt],
+  apply key_in_map_iff_evals,
+  exact h',
+end
+theorem edge_in_list_of_σα_cons {G : simple_irreflexive_graph} (K : combinatorial_map G) :
+  ∀ xs x', is_list_of_σα K.σ (xs ++ [x']) → ∀ x y, edge_in_list (x, y) xs → in_neighbours_opt G y x :=
+begin
+  intros xs x',
+  induction xs with x₁ xs,
+    simp [is_list_of_σα],
+  intro list_cond,
+  intros x y,
+  intro xy_in_list,
+  cases xs with x₂ xs,
+    simp [edge_in_list] at xy_in_list,
+    apply false.elim,
+    assumption,
+  cases xs with x₃ xs,
+    simp [edge_in_list] at xy_in_list,
+    cases xy_in_list with x_eq_x₁ y_eq_x₂,
+    simp [is_list_of_σα] at list_cond,
+    apply σα_maps_neighbours K x y x',
+    rw [x_eq_x₁, y_eq_x₂], assumption,
+  by_cases h : (x, y) = (x₁, x₂),
+    injection h with x_eq_x₁ y_eq_x₂,
+    rw [x_eq_x₁, y_eq_x₂] at xy_in_list,
+    simp [is_list_of_σα] at list_cond,
+    apply σα_maps_neighbours K x y x₃,
+    rw [x_eq_x₁, y_eq_x₂],
+    apply list_cond.left,
+  simp [edge_in_list] at xy_in_list,
+  cases xy_in_list,
+    have xy_eq_x₁x₂ : (x, y) = (x₁, x₂),
+      rw [xy_in_list.left, xy_in_list.right],
+    apply false.elim (h xy_eq_x₁x₂),
+    have xy_in_list' : edge_in_list (x, y) (x₂ :: x₃ :: xs),
+      simp [xy_in_list, edge_in_list],
+    simp [is_list_of_σα] at list_cond,
+    apply xs_ih,
+      apply list_cond.right,
+    assumption,
+end
+lemma edge_not_end_to_edge_in_shorter_list (x y x' y' : ℕ) (xs : list ℕ) :
+  edge_in_list (x, y) (xs ++ [x', y']) → (x, y) ≠ (x', y') → edge_in_list (x, y) (xs ++ [x']) :=
+begin
+  induction xs with z' xs,
+    simp [edge_in_list],
+    intros x_eq_x' y_eq_y' h,
+    apply (h x_eq_x') y_eq_y',
+  simp [edge_in_list],
+  intros xy_in x_neq_y,
+  cases xs with w' xs,
+    simp [edge_in_list] at xy_in,
+    simp [edge_in_list],
+    cases xy_in,
+      apply xy_in,
+    cases xy_in with x_eq_x' y_eq_y',
+    apply false.elim ((x_neq_y x_eq_x') y_eq_y'),
+  by_cases (x, y) = (z', w'),
+    simp [edge_in_list],
+    apply or.inl,
+    injection h with x_eq_z' y_eq_w',
+    rw [x_eq_z', y_eq_w'], simp,
+  apply or.inr,
+  apply xs_ih,
+  simp [edge_in_list] at xy_in,
+  cases xy_in,
+    cases xy_in with x_eq_z' y_eq_w',
+    rw [x_eq_z', y_eq_w'] at h,
+    simp at h,
+    apply false.elim h,
+  apply xy_in,
+  simp, assumption,
+end
+lemma edge_in_face_in_extended_list (x y x' y' : ℕ) (xs : list ℕ) : 
+  edge_in_face (x, y) (x' :: y' :: xs) → edge_in_list (x, y) (x' :: y' :: xs ++ [x']) :=
+begin
+  cases xs with z' xs,
+    simp [edge_in_face, edge_in_list],
+    intro h,
+    repeat {cases h, simp [*]},
+  simp [edge_in_face, edge_in_list],
+  intro h,
+  by_cases h' : (x, y) = (x', y'),
+    injection h' with x_eq_x' y_eq_y',
+    apply or.inl, split; assumption,
+  cases h,
+    apply or.inl, assumption,
+  cases h,
+    apply or.inr, apply or.inl, assumption,
+  apply or.inr, apply or.inr,
+  rw list.cons_append_assoc,
+  apply edge_not_end_to_edge_in_shorter_list,
+  apply h,
+  apply h',
+end
+theorem edge_in_face_of_σα_cons {G : simple_irreflexive_graph} (K : combinatorial_map G) :
+  ∀ xs, is_face_of_σα K.σ xs → ∀ x y, edge_in_face (x, y) xs → in_neighbours_opt G y x :=
+begin
+  intro xs,
+  cases xs with x' xs,
+    simp [is_face_of_σα, edge_in_face],
+  cases xs with y' xs,
+    simp [is_face_of_σα, edge_in_face],
+  intros h x y h',
+  apply edge_in_list_of_σα_cons K (x' :: y' :: xs ++ [x']) y', 
+  simp [is_face_of_σα] at h,
+  simp, assumption,
+  apply edge_in_face_in_extended_list,
+  assumption,
+end
+theorem all_face_edges_in_neighbours {G : simple_irreflexive_graph} (K : combinatorial_map G) :
+  ∀ x y, (∃ f, f ∈ K.faces ∧ edge_in_face (x, y) f) → in_neighbours_opt G y x :=
+begin
+  intros x y,
+  have comp_fs_consistent := K.composition_faces_consistent,
+  intro h,
+  cases h with f f_conds,
+  cases f_conds with f_in_faces xy_in_f,
+  have f_is_face_of := comp_fs_consistent f f_in_faces,
+  apply edge_in_face_of_σα_cons K f f_is_face_of,
+  apply xy_in_f,
+end
+def edges_set (G : simple_irreflexive_graph) : tset (lex ℕ ℕ) := sorry
+theorem in_edges_set_iff (G : simple_irreflexive_graph) : 
+  ∀ x y, (y, x) ∈ (edges_set G) ↔ in_neighbours_opt G x y := sorry
+theorem edges_set_size (G : simple_irreflexive_graph) :
+  (edges_set G).size = 2 * (G.edge_size) := sorry
+theorem pair_in_face_iff_edge {G : simple_irreflexive_graph} (K : combinatorial_map G) :
+  ∀ x y, (∃ f, f ∈ K.faces ∧ edge_in_face (x, y) f) ↔ in_neighbours_opt G y x :=
+begin
+  intros x y,
+  split,
+    apply all_face_edges_in_neighbours,
+  rw ←in_faces_set_iff,
+  rw ←in_edges_set_iff G y x,
+  apply tset_inclusion_size_eq_to_tset_eq,
+  rw edges_set_size,
+  apply K.num_of_edges,
+  intros e e_in_faces_set,
+  have h := (in_faces_set_iff K.faces e).mp e_in_faces_set,
+  cases e with x' y',
+  rw in_edges_set_iff,
+  apply all_face_edges_in_neighbours,
+  apply h,
 end
 -- Given the cycle structure we in fact have a cycle
 theorem cycle_is_cycle_prop (c : cycle) : cycle_prop (c.next) :=
