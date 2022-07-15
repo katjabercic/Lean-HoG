@@ -795,6 +795,32 @@ begin
   simp at r,
   assumption,
 end
+theorem faces_unique_edges_diff_faces (faces : list (list ℕ)) : faces_unique_edges faces = tt →
+  ∀ i j : fin (faces.length), i.val ≤ j.val →
+    ∀ e, edge_in_face e (list.nth_le faces i.val i.property) →
+          edge_in_face e (list.nth_le faces j.val j.property) →
+    i.val = j.val :=
+begin
+  intros unique_cond,
+  unfold faces_unique_edges at unique_cond,
+  cases h : faces_unique_edges_aux (stree.empty true.intro) faces with acc,
+    rw h at unique_cond,
+    simp [faces_unique_edges._match_1] at unique_cond,
+    apply false.elim unique_cond,
+  rw h at unique_cond,
+  simp [faces_unique_edges._match_1] at unique_cond,
+  apply faces_unique_edges_aux_diff_faces,
+  apply h,
+end
+theorem combinatorial_map_faces_unique_edges {G : simple_irreflexive_graph} (K : combinatorial_map G) :
+  ∀ i j : fin (K.faces.length), i.val ≤ j.val →
+    ∀ e, edge_in_face e (list.nth_le K.faces i.val i.property) →
+          edge_in_face e (list.nth_le K.faces j.val j.property) →
+    i.val = j.val :=
+begin
+  apply faces_unique_edges_diff_faces,
+  apply K.edges_unique,
+end
 -- Given the cycle structure we in fact have a cycle
 theorem cycle_is_cycle_prop (c : cycle) : cycle_prop (c.next) :=
 begin
