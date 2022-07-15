@@ -74,31 +74,13 @@ def σα_maps (σ : tmap ℕ cycle) (x y z : ℕ) : bool :=
   end
   )
 end)
-
-/-def is_face_of_σα_aux (σ : tmap ℕ cycle) (fst : ℕ) (snd : ℕ) : list ℕ → bool
-| [] := tt
-| (x :: []) := σα_maps σ x fst snd
-| (x :: y :: []) := σα_maps σ x y fst
-| (x :: l@(y :: z :: xs)) := σα_maps σ x y z ∧ is_face_of_σα_aux l
-
--- check that list is a cycle for σα
-def is_face_of_σα (σ : tmap ℕ cycle) : list ℕ → bool
-| [] := ff -- empty lists shouldn't be present
-| (x :: []) := (
-  match σ.val_at x with
-  | none := ff -- element isn't even in the map
-  | some c := c.next.size = 0 -- list has one element only if vertex is isolated
-  end
-  )
-| l@(x :: y :: xs) := is_face_of_σα_aux σ x y l
--/
 def is_list_of_σα (σ : tmap ℕ cycle) : list ℕ → bool
 | [] := tt
 | (x :: []) := ff 
 | (x :: y :: []) := tt 
 | (x :: l@(y :: z :: xs)) := σα_maps σ x y z && is_list_of_σα l
 def is_face_of_σα (σ : tmap ℕ cycle) : list ℕ → bool 
-| [] := tt 
+| [] := ff 
 | (x :: []) := ff
 | l@(x :: y :: xs) := is_list_of_σα σ (l ++ [x] ++ [y])
 def neighbours (G : simple_irreflexive_graph) : tmap ℕ (tset ℕ) := sorry
@@ -126,13 +108,33 @@ def tset.elem_add_diff {α : Type} [linear_order α] (t : tset α) (x y : α) :
   x ≠ y → (t.add y).elem x → t.elem x := sorry
 def tset.add_preserves {α : Type} [linear_order α] (t : tset α) (x y : α) :
   t.elem x → (t.add y).elem x := sorry
-def graph_rotation_consistent (G : simple_irreflexive_graph) (v : ℕ) (c : cycle) : bool :=
-  let ns : option (tset ℕ) := (neighbours G).val_at v in
-  (match ns with
-  | none := ff
-  | some v_neigh := is_cycle_of_set c v_neigh
-  end : bool)
+def add_list_to_set_if_unique : tset (lex ℕ ℕ) → list ℕ → option (tset (lex ℕ ℕ))
+| acc [] := some acc
+| acc (x :: []) := some acc
+| acc (x :: y :: xs) := (
+    match acc.elem (x, y) with 
+    | tt := none
+    | ff := add_list_to_set_if_unique (acc.add (x, y)) (y :: xs)
+    end
+  )
 
+def add_face_to_set_if_unique : tset (lex ℕ ℕ) → list ℕ → option (tset (lex ℕ ℕ))
+| acc [] := some acc 
+| acc (x :: []) := some acc
+| acc l@(x :: y :: xs) := add_list_to_set_if_unique acc (l ++ [x, y])
+def faces_unique_edges_aux : tset (lex ℕ ℕ) → list (list ℕ) → option (tset (lex ℕ ℕ)) 
+| acc [] := some acc 
+| acc (f :: fs) := (
+    match add_face_to_set_if_unique acc f with 
+    | none := none
+    | some acc := faces_unique_edges_aux acc fs
+    end
+  )
+def faces_unique_edges (fs : list (list ℕ)) : bool :=
+match (faces_unique_edges_aux (stree.empty true.intro) fs) with
+| none := ff
+| some acc := tt
+end
 -- constructs an edge and adds it to a tset Edge
 -- takes all pairs of consecuative numbers to generate edges and add them to a tset 
 def add_edges_from_face_aux : ℕ → tset (lex ℕ ℕ) → list ℕ → tset (lex ℕ ℕ)
@@ -185,10 +187,23 @@ structure combinatorial_map (G : simple_irreflexive_graph) : Type :=
   (composition_faces_consistent : ∀ f, f ∈ faces → (is_face_of_σα σ f)) -- shows that every face is in fact a face of σ ∘ α
   --shows that every face is present by checking that the correct number of edges is present
   (num_of_edges : (faces_set_from_lst faces).size = 2 * (G.edge_size))
-  (faces_ord : faces_ordered faces)
+  (edges_unique : faces_unique_edges faces = tt)
+  --(faces_ord : faces_ordered faces)
   
   -- might still require checking if list actually contains edges
 -- σ maps edges to edges with the same source
+theorem faces_nonempty {G : simple_irreflexive_graph} (K : combinatorial_map G) :
+  ∀ f ∈ K.faces, (list.length f) ≠ 0 :=
+begin
+  intros f f_in_faces,
+  intro f_len,
+  cases f,
+    have h := K.composition_faces_consistent list.nil f_in_faces,
+    simp [is_face_of_σα, is_list_of_σα] at h,
+    apply h,
+  simp [list.length] at f_len,
+  apply f_len,
+end
 def cycle_contains_key_opt (k : ℕ) : option cycle → bool 
 | none := ff
 | (some c) := c.next.contains_key k
@@ -580,6 +595,205 @@ begin
   rw in_edges_set_iff,
   apply all_face_edges_in_neighbours,
   apply h,
+end
+theorem add_unique_list_preserves {t : tset (lex ℕ ℕ)} (acc : tset (lex ℕ ℕ)) (l : list ℕ) :
+  add_list_to_set_if_unique acc l = some t → ∀ e, acc.elem e → t.elem e :=
+begin
+  intros add_l_to_set e e_in_acc,
+  induction l with x xs generalizing acc,
+    simp [add_list_to_set_if_unique] at add_l_to_set,
+    rw ←add_l_to_set,
+    assumption,
+  cases xs with y xs,
+    simp [add_list_to_set_if_unique] at add_l_to_set,
+    rw ←add_l_to_set,
+    assumption,
+  simp [add_list_to_set_if_unique] at add_l_to_set,
+  cases acc.elem (x, y),
+    simp [add_list_to_set_if_unique._match_1] at add_l_to_set,
+    apply l_ih (acc.add (x, y)) add_l_to_set,
+      apply tset.add_preserves, assumption,
+  simp [add_list_to_set_if_unique._match_1] at add_l_to_set,
+  apply false.elim, assumption,
+end
+theorem add_unique_list_to_set {t : tset (lex ℕ ℕ)} (acc : tset (lex ℕ ℕ)) (l : list ℕ) :
+  add_list_to_set_if_unique acc l = some t → ∀ e, edge_in_list e l → t.elem e :=
+begin
+  intros add_l_to_set e e_in_l, 
+  induction l with x xs generalizing acc,
+    simp [edge_in_list] at e_in_l,
+    apply false.elim, assumption,
+  cases xs with y xs,
+    simp [edge_in_list] at e_in_l,
+    apply false.elim, assumption,
+  simp [edge_in_list] at e_in_l,
+  simp [add_list_to_set_if_unique] at add_l_to_set,
+  cases acc.elem (x,y),
+    simp [add_list_to_set_if_unique._match_1] at add_l_to_set,
+    cases e_in_l with e_eq_xy,
+      apply add_unique_list_preserves (acc.add (x, y)) (y :: xs),
+      assumption,
+      apply tset.elem_add, assumption,
+    apply l_ih e_in_l (acc.add (x,y)) add_l_to_set,
+  simp [add_list_to_set_if_unique._match_1] at add_l_to_set,
+  apply false.elim, assumption,
+end
+theorem add_unique_list_lst_not_in_acc {t : tset (lex ℕ ℕ)} (acc : tset (lex ℕ ℕ)) (l : list ℕ) :
+  add_list_to_set_if_unique acc l = some t → ∀ e, edge_in_list e l → ¬ (acc.elem e) :=
+begin 
+  intros add_l e e_in_l e_in_t,
+  induction l with x xs generalizing acc,
+    simp [edge_in_list] at e_in_l, assumption,
+  cases xs with y xs,
+    simp [edge_in_list] at e_in_l, assumption,
+  simp [add_list_to_set_if_unique] at add_l,
+  simp [edge_in_list] at e_in_l,
+  cases e_in_l with e_eq_xy,
+    rw e_eq_xy at e_in_t,
+    have xy_in_t := (to_bool_iff _).mpr e_in_t,
+    simp at xy_in_t,
+    rw xy_in_t at add_l,
+    simp [add_list_to_set_if_unique] at add_l,
+    assumption,
+  cases acc.elem (x, y),
+    simp [add_list_to_set_if_unique] at add_l,
+    apply l_ih e_in_l (acc.add (x, y)) add_l,
+      apply tset.add_preserves, assumption,
+  simp [add_list_to_set_if_unique] at add_l,
+  assumption,
+end
+theorem add_unique_face_fc_not_in_acc {t : tset (lex ℕ ℕ)} (acc : tset (lex ℕ ℕ)) (l : list ℕ) :
+  add_face_to_set_if_unique acc l = some t → ∀ e, edge_in_face e l → ¬ (acc.elem e) :=
+begin
+  cases l with x xs,
+    simp [add_face_to_set_if_unique, edge_in_face],
+  cases xs with y xs,
+    simp [edge_in_face],
+  unfold edge_in_face, unfold add_face_to_set_if_unique,
+  intros add_l e e_in,
+  apply add_unique_list_lst_not_in_acc acc (x :: y :: xs ++ [x, y]) add_l,
+  simp,
+  simp at e_in,
+  assumption,
+end
+theorem add_unique_face_preserves {t : tset (lex ℕ ℕ)} (acc : tset (lex ℕ ℕ)) (f : list ℕ) : 
+  add_face_to_set_if_unique acc f = some t → ∀ e, acc.elem e → t.elem e :=
+begin 
+  cases f with x xs,
+    simp [add_face_to_set_if_unique],
+    intro acc_eq_t,
+    rw acc_eq_t,
+    simp,
+  cases xs with y xs,
+    simp [add_face_to_set_if_unique],
+    intro acc_eq_t,
+    rw acc_eq_t,
+    simp,
+  simp [add_face_to_set_if_unique],
+  apply add_unique_list_preserves,
+end
+theorem add_unique_face_to_set {t : tset (lex ℕ ℕ)} (acc : tset (lex ℕ ℕ)) (f : list ℕ) :
+  add_face_to_set_if_unique acc f = some t → ∀ e, edge_in_face e f → t.elem e :=
+begin
+  cases f with x xs,
+    simp [add_face_to_set_if_unique, edge_in_face],
+  cases xs with y xs,
+    simp [edge_in_face],
+  simp [add_face_to_set_if_unique, edge_in_face],
+  apply add_unique_list_to_set,
+end
+theorem faces_unique_edges_aux_edge_not_in_later {t : tset (lex ℕ ℕ)} (acc : tset (lex ℕ ℕ)) 
+  (f : list ℕ) (fs : list (list ℕ)) : faces_unique_edges_aux acc (f :: fs) = some t → 
+    ∀ e, edge_in_face e f ∨ acc.elem e → ∀ g, g ∈ fs → ¬ (edge_in_face e g) :=
+begin
+  intros unique_cond e e_in g g_in_fs e_in_g, 
+  simp [faces_unique_edges_aux] at unique_cond,
+  cases h : add_face_to_set_if_unique acc f with t',
+    rw h at unique_cond,
+    simp [faces_unique_edges_aux] at unique_cond,
+    assumption,
+  rw h at unique_cond,
+  simp [faces_unique_edges_aux] at unique_cond,
+  induction fs with f' fs generalizing acc f t',
+    simp at g_in_fs, assumption,
+  simp at g_in_fs,
+  cases h' : add_face_to_set_if_unique t' f' with t'',
+    simp [faces_unique_edges_aux] at unique_cond,
+    rw h' at unique_cond,
+    simp [faces_unique_edges_aux] at unique_cond,
+    assumption,
+  simp [faces_unique_edges_aux] at unique_cond,
+  rw h' at unique_cond,
+  simp [faces_unique_edges_aux] at unique_cond,
+  cases g_in_fs with g_eq_f',
+    cases e_in with e_in_f e_in_acc,
+      have e_in_t' := add_unique_face_to_set acc f h e e_in_f,
+      rw g_eq_f' at e_in_g,
+      apply add_unique_face_fc_not_in_acc t' f' h' e e_in_g e_in_t',
+    have e_in_t' := add_unique_face_preserves acc f h e e_in_acc,
+    rw g_eq_f' at e_in_g,
+    apply add_unique_face_fc_not_in_acc t' f' h' e e_in_g e_in_t',
+  cases e_in with e_in_f e_in_acc,
+    have e_in_t' := add_unique_face_to_set acc f h e e_in_f,
+    apply fs_ih g_in_fs t' f' t'' (or.inr e_in_t') h' unique_cond,
+  have e_in_t' := add_unique_face_preserves acc f h e e_in_acc,
+  apply fs_ih g_in_fs t' f' t'' (or.inr e_in_t') h' unique_cond,
+end
+theorem faces_unique_edges_aux_diff_faces  {t : tset (lex ℕ ℕ)} (acc : tset (lex ℕ ℕ)) 
+  (faces : list (list ℕ)) : faces_unique_edges_aux acc faces = some t →
+  ∀ i j : fin (faces.length), i.val ≤ j.val →
+    ∀ e, edge_in_face e (list.nth_le faces i.val i.property) →
+          edge_in_face e (list.nth_le faces j.val j.property) →
+    i.val = j.val :=
+begin
+  intros unique_cond i j i_le_j e e_in_fi e_in_fj,
+  induction faces with f fs generalizing i j acc,
+    cases i with i i_prop,
+    simp at i_prop,
+    apply false.elim, assumption,
+  simp [faces_unique_edges_aux] at unique_cond,
+  cases i with i i_prop,
+  cases j with j j_prop,
+  cases i,
+    simp [list.nth_le] at e_in_fi,
+    cases j,
+      simp,
+    simp [list.nth_le] at e_in_fj,
+    cases h : add_face_to_set_if_unique acc f with t',
+      rw h at unique_cond,
+      simp [faces_unique_edges_aux] at unique_cond,
+      apply false.elim, assumption,
+    rw h at unique_cond,
+    simp [faces_unique_edges_aux] at unique_cond,
+    simp [list.length] at j_prop,
+    rw nat.succ_lt_succ_iff at j_prop,
+    have fj_in_fs := (list.mem_iff_nth_le).mpr ⟨j, j_prop, rfl⟩,
+    apply false.elim,
+    apply faces_unique_edges_aux_edge_not_in_later 
+      acc f fs _ e (or.inl e_in_fi) (fs.nth_le j j_prop) fj_in_fs e_in_fj,
+      apply t,
+    simp [faces_unique_edges_aux],
+    rw h,
+    simp [faces_unique_edges_aux],
+    apply unique_cond,
+  cases j,
+    simp at i_le_j,
+    apply false.elim,
+    assumption,
+  simp at i_le_j,
+  simp,
+  simp [list.nth_le] at e_in_fi e_in_fj,
+  cases h : add_face_to_set_if_unique acc f with t',
+    rw h at unique_cond,
+    simp [faces_unique_edges_aux] at unique_cond,
+    apply false.elim, assumption,
+  rw h at unique_cond,
+  simp [faces_unique_edges_aux] at unique_cond,
+  have r := faces_ih ⟨i, nat.le_of_succ_le_succ (i_prop)⟩ 
+                      ⟨j, nat.le_of_succ_le_succ (j_prop)⟩
+                      t' unique_cond (nat.le_of_succ_le_succ i_le_j) e_in_fi e_in_fj,
+  simp at r,
+  assumption,
 end
 -- Given the cycle structure we in fact have a cycle
 theorem cycle_is_cycle_prop (c : cycle) : cycle_prop (c.next) :=
