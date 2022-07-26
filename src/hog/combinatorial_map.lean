@@ -741,12 +741,12 @@ begin
 end
 theorem faces_unique_edges_aux_diff_faces  {t : tset (lex ℕ ℕ)} (acc : tset (lex ℕ ℕ)) 
   (faces : list (list ℕ)) : faces_unique_edges_aux acc faces = some t →
-  ∀ i j : fin (faces.length), i.val ≤ j.val →
+  ∀ i j : fin (faces.length), 
     ∀ e, edge_in_face e (list.nth_le faces i.val i.property) →
           edge_in_face e (list.nth_le faces j.val j.property) →
-    i.val = j.val :=
+    i = j :=
 begin
-  intros unique_cond i j i_le_j e e_in_fi e_in_fj,
+  intros unique_cond i j e e_in_fi e_in_fj,
   induction faces with f fs generalizing i j acc,
     cases i with i i_prop,
     simp at i_prop,
@@ -765,61 +765,7 @@ begin
       apply false.elim, assumption,
     rw h at unique_cond,
     simp [faces_unique_edges_aux] at unique_cond,
-    simp [list.length] at j_prop,
-    rw nat.succ_lt_succ_iff at j_prop,
-    have fj_in_fs := (list.mem_iff_nth_le).mpr ⟨j, j_prop, rfl⟩,
-    apply false.elim,
-    apply faces_unique_edges_aux_edge_not_in_later 
-      acc f fs _ e (or.inl e_in_fi) (fs.nth_le j j_prop) fj_in_fs e_in_fj,
-      apply t,
-    simp [faces_unique_edges_aux],
-    rw h,
-    simp [faces_unique_edges_aux],
-    apply unique_cond,
-  cases j,
-    simp at i_le_j,
-    apply false.elim,
-    assumption,
-  simp at i_le_j,
-  simp,
-  simp [list.nth_le] at e_in_fi e_in_fj,
-  cases h : add_face_to_set_if_unique acc f with t',
-    rw h at unique_cond,
-    simp [faces_unique_edges_aux] at unique_cond,
-    apply false.elim, assumption,
-  rw h at unique_cond,
-  simp [faces_unique_edges_aux] at unique_cond,
-  have r := faces_ih ⟨i, nat.le_of_succ_le_succ (i_prop)⟩ 
-                      ⟨j, nat.le_of_succ_le_succ (j_prop)⟩
-                      t' unique_cond (nat.le_of_succ_le_succ i_le_j) e_in_fi e_in_fj,
-  simp at r,
-  assumption,
-end
-theorem faces_unique_edges_diff_faces (faces : list (list ℕ)) : faces_unique_edges faces = tt →
-  ∀ i j : fin (faces.length), i.val ≤ j.val →
-    ∀ e, edge_in_face e (list.nth_le faces i.val i.property) →
-          edge_in_face e (list.nth_le faces j.val j.property) →
-    i.val = j.val :=
-begin
-  intros unique_cond,
-  unfold faces_unique_edges at unique_cond,
-  cases h : faces_unique_edges_aux (stree.empty true.intro) faces with acc,
-    rw h at unique_cond,
-    simp [faces_unique_edges._match_1] at unique_cond,
-    apply false.elim unique_cond,
-  rw h at unique_cond,
-  simp [faces_unique_edges._match_1] at unique_cond,
-  apply faces_unique_edges_aux_diff_faces,
-  apply h,
-end
-theorem combinatorial_map_faces_unique_edges {G : simple_irreflexive_graph} (K : combinatorial_map G) :
-  ∀ i j : fin (K.faces.length), i.val ≤ j.val →
-    ∀ e, edge_in_face e (list.nth_le K.faces i.val i.property) →
-          edge_in_face e (list.nth_le K.faces j.val j.property) →
-    i.val = j.val :=
-begin
-  apply faces_unique_edges_diff_faces,
-  apply K.edges_unique,
+
 end
 -- Given the cycle structure we in fact have a cycle
 theorem cycle_is_cycle_prop (c : cycle) : cycle_prop (c.next) :=
