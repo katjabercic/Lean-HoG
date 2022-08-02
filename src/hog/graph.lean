@@ -7,8 +7,8 @@ structure simple_irreflexive_graph : Type :=
   (vertex_size : ℕ)
   (edge : fin vertex_size → fin vertex_size → Prop)
   [edge_decidable : decidable_rel edge]
-  (irreflexive : (∀ i, ¬ edge i i))
-  (symmetric : (∀ i j, edge i j → edge j i))
+  (irreflexive : ∀ i, ¬ edge i i)
+  (symmetric : ∀ i j, edge i j → edge j i)
 
 
 def from_edge_list (n : ℕ) (edges : list (ℕ × ℕ)) : simple_irreflexive_graph :=
@@ -42,7 +42,7 @@ noncomputable def max_degree (g : simple_irreflexive_graph) : ℕ := simple_grap
 
 class hog_max_degree (g : simple_irreflexive_graph) : Type :=
   (val : ℕ)
-  (mag_degree_eq : max_degree g = val . obviously)
+  (max_degree_eq : max_degree g = val . obviously)
 
 noncomputable def min_degree (g : simple_irreflexive_graph) : ℕ := simple_graph.min_degree (to_simple_graph g)
 
