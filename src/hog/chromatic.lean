@@ -34,6 +34,19 @@ end
 def is_chromatic_number (g:simple_irreflexive_graph) (c:ℕ) :=
   exists_coloring_col g c ∧ (∀ c2, exists_coloring_col g c2 → c2 ≥ c)
 
-
+lemma chromatic_number_is_unique (g:simple_irreflexive_graph) :
+  ∀ c d, is_chromatic_number g c ∧ is_chromatic_number g d → c=d:=
+begin
+  intros c d chr,
+  cases chr with chr_c chr_d,
+  dunfold is_chromatic_number at *,
+  cases chr_c with chr_c_col chr_c_valid,
+  cases chr_d with chr_d_col chr_d_valid,
+  specialize chr_c_valid d,
+  specialize chr_d_valid c,
+  have cd := chr_d_valid chr_c_col,
+  have dc := chr_c_valid chr_d_col,
+  exact le_antisymm (chr_c_valid chr_d_col) (chr_d_valid chr_c_col),
+end
 
 
