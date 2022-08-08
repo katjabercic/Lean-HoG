@@ -1,8 +1,6 @@
 -- Define chromatic number
 import .graph
 
-variable G : simple_irreflexive_graph
-
 
 structure coloring (g : simple_irreflexive_graph) (ncolors : ℕ): Type :=
   (color : fin g.vertex_size → fin ncolors)
@@ -23,30 +21,29 @@ def coloring_from_edge_list (g:simple_irreflexive_graph) : coloring g g.vertex_s
 def exists_coloring_col (g:simple_irreflexive_graph) (ncolors:ℕ): Prop :=
   nonempty (coloring g ncolors)
 
+
 lemma exists_coloring (g:simple_irreflexive_graph) :
-  ∃ c, nonempty (coloring g c) :=
+  ∃ c, exists_coloring_col g c :=
 begin
   use g.vertex_size,
-  have q:= coloring_from_edge_list g,
-  exact nonempty.intro q,
+  use coloring_from_edge_list g,
 end
 
-def is_chromatic_number (g:simple_irreflexive_graph) (c:ℕ) :=
-  exists_coloring_col g c ∧ (∀ c2, exists_coloring_col g c2 → c2 ≥ c)
 
-lemma chromatic_number_is_unique (g:simple_irreflexive_graph) :
-  ∀ c d, is_chromatic_number g c ∧ is_chromatic_number g d → c=d:=
+instance ig (g:simple_irreflexive_graph): decidable_pred (λ (n : ℕ), exists_coloring_col g n) :=
 begin
-  intros c d chr,
-  cases chr with chr_c chr_d,
-  dunfold is_chromatic_number at *,
-  cases chr_c with chr_c_col chr_c_valid,
-  cases chr_d with chr_d_col chr_d_valid,
-  specialize chr_c_valid d,
-  specialize chr_d_valid c,
-  have cd := chr_d_valid chr_c_col,
-  have dc := chr_c_valid chr_d_col,
-  exact le_antisymm (chr_c_valid chr_d_col) (chr_d_valid chr_c_col),
+  dunfold exists_coloring_col,
+  intros c,
+  ring_nf,
+  sorry,
 end
 
+def chromatic_number (g:simple_irreflexive_graph):nat :=
+  nat.find (exists_coloring g)
+
+def testiranje : simple_irreflexive_graph :=
+  from_edge_list 1 []
+
+
+#reduce chromatic_number testiranje
 
