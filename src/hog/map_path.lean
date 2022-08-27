@@ -1,7 +1,9 @@
 import .tree_set
+import .tree_map
 
 namespace map_path
 open tree_set
+open tree_map
 /- Some functions and lemmas that need to be defined for tmap -/
 -- remove key from tmap
 def tmap.remove {α β : Type} [linear_order α] (key : α) : Π (m : tmap α β), m.contains_key key → tmap α β 
@@ -229,7 +231,7 @@ begin
   apply p_ih can_extend p_p_size,
 end
 /- 
-  If we extend a map_path from the left an element is in the map if it's in eleement we are adding
+  If we extend a map_path from the left an element is in the map if it's in element we are adding
   or if it is in the rest of the map
 -/
 def in_extend_path {next : tmap ℕ ℕ} {src dst src' x : ℕ} :
