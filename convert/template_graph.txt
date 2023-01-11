@@ -1,8 +1,31 @@
 import ..graph
+import ..connected_component
+import ..tree_set
+import ..tree_map
+
+open tree_set
+open tree_map
 
 namespace hog
 
-def $name : simple_irreflexive_graph :=
-  from_edge_list $vertex_size $edge_list
+set_option class.instance_max_depth 5000
+set_option eqn_compiler.max_steps 100000
+
+def ${name}_stree : stree edge (by { trivial } : bounded.bottom < bounded.top) :=
+${stree}
+
+def ${name}_tset : tset edge := ${name}_stree
+
+def nbhds : tmap ℕ (tset ℕ) :=
+${nbhds_smap}
+
+def ${name} : simple_irreflexive_graph := 
+{ vertex_size := $vertex_size,
+  edges := ${name}_tset,
+  edge_size := $edge_size,
+  edge_size_correct := by refl,
+  neighborhoods := nbhds,
+  neighborhoods_correct := by refl
+}
 
 end hog
