@@ -81,33 +81,33 @@ end
 def inner_vertices {g : simple_irreflexive_graph} (s t : fin g.vertex_size) : path s t → set (fin g.vertex_size) :=
 λ p, set.inter (vertices p) {s, t}
 
-def edges {g : simple_irreflexive_graph} (s t : fin g.vertex_size) : path s t → tree_set.tset Edge :=
+def edges {g : simple_irreflexive_graph} (s t : fin g.vertex_size) : path s t → tree_set.tset edge :=
 begin
   intro p,
   induction p,
   { exact tree_set.stree.empty trivial },
   { apply decidable.lt_by_cases p_s p_t,
     { intro st,
-      apply p_ih.insert { Edge . edge := (p_s, p_t), src_lt_trg := st },
+      apply p_ih.insert { edge . edge := (p_s, p_t), src_lt_trg := st },
       trivial,
       trivial,
     },
     { intro _, exact p_ih },
     { intro ts,
-      apply p_ih.insert { Edge . edge := (p_t, p_s), src_lt_trg := ts },
+      apply p_ih.insert { edge . edge := (p_t, p_s), src_lt_trg := ts },
       trivial,
       trivial
     }
   },
   { apply decidable.lt_by_cases p_t p_u,
     { intro tu,
-      apply p_ih.insert { Edge . edge := (p_t, p_u), src_lt_trg := tu },
+      apply p_ih.insert { edge . edge := (p_t, p_u), src_lt_trg := tu },
       trivial,
       trivial
     },
     { intro _, exact p_ih },
     { intro ut,
-      apply p_ih.insert { Edge . edge := (p_u, p_t), src_lt_trg := ut },
+      apply p_ih.insert { edge . edge := (p_u, p_t), src_lt_trg := ut },
       trivial,
       trivial
     }

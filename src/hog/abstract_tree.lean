@@ -22,7 +22,7 @@ structure abstract_tree : Type :=
   (has_correct_num_edges : G.vertex_size - 1 = G.edge_size . bool_reflect)
   (connected : connected_graph G)
 
-def hog : BST Edge :=
+def hog : BST edge :=
 { tree := BT.node {edge := (2, 3)} (BT.node {edge := (1, 4)} (BT.leaf {edge := (0, 4)}) (BT.empty)) (BT.leaf {edge := (3, 4)}),
   is_bst := begin simp, bool_reflect end
 }

@@ -11,10 +11,10 @@ namespace hog
 set_option class.instance_max_depth 5000
 set_option eqn_compiler.max_steps 100000
 
-def ${name}_stree : stree Edge (by { trivial } : bounded.bottom < bounded.top) :=
+def ${name}_stree : stree edge (by { trivial } : bounded.bottom < bounded.top) :=
 ${stree}
 
-def ${name}_tset : tset Edge := ${name}_stree
+def ${name}_tset : tset edge := ${name}_stree
 
 def nbhds : tmap ℕ (tset ℕ) :=
 ${nbhds_smap}

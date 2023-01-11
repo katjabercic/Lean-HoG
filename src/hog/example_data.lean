@@ -9,7 +9,7 @@ namespace hog
 open tree_set
 open tree_map
 
-def example_1: tset Edge :=
+def example_1: tset edge :=
   stree.node { edge := (0,2) }
     (stree.leaf { edge := (0,1) } (by bool_reflect) (by bool_reflect))
     (stree.leaf { edge := (1,2) } (by bool_reflect) (by bool_reflect))

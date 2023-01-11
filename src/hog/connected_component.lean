@@ -55,7 +55,7 @@ structure num_components_witness : Type :=
   (num_components : ℕ)
   (c : ℕ → fin num_components)
   (h : ℕ → ℕ)
-  (connect_edges : ∀ (e : Edge), e ∈ G.edges → c (e.edge.fst) = c (e.edge.snd))
+  (connect_edges : ∀ (e : edge), e ∈ G.edges → c (e.edge.fst) = c (e.edge.snd))
   (root : fin num_components → ℕ)
   (is_root :  ∀ i, c (root i) = i ∧ h (root i) = 0)
   (uniqueness_of_roots : ∀ v, h v = 0 → v = root (c v)) -- can we get rid of this condition?
@@ -109,7 +109,7 @@ begin
         begin
           apply decidable.lt_by_cases u v,
           { intros uv, -- u < v
-            let e := { Edge . edge := (u, v), src_lt_trg := uv },
+            let e := { edge . edge := (u, v), src_lt_trg := uv },
             have euv : e ∈ w.G.edges,
             cases hyp,
             apply edge_relation_is_mem u v uv hyp_left,
@@ -119,7 +119,7 @@ begin
             rw uv,
           },
           { intros vu,
-            let e := { Edge . edge := (v, u), src_lt_trg := vu },
+            let e := { edge . edge := (v, u), src_lt_trg := vu },
             have evu : e ∈ w.G.edges,
             cases hyp,
             apply edge_relation_is_mem v u vu (edge_relation_symmetric u v hyp_left),
@@ -160,7 +160,7 @@ begin
     induction h with u v rel_uv,
     { apply decidable.lt_by_cases u v,
       { intro uv,
-        let e := { Edge . edge := (u, v), src_lt_trg := uv },
+        let e := { edge . edge := (u, v), src_lt_trg := uv },
         have euv : e ∈ w.G.edges,
         apply edge_relation_is_mem u v uv rel_uv,
         apply w.connect_edges e euv,
@@ -169,7 +169,7 @@ begin
         rw uv,
       },
       { intros vu,
-        let e := { Edge . edge := (v, u), src_lt_trg := vu },
+        let e := { edge . edge := (v, u), src_lt_trg := vu },
         have evu : e ∈ w.G.edges,
         apply edge_relation_is_mem v u vu (edge_relation_symmetric u v rel_uv),
         symmetry,
