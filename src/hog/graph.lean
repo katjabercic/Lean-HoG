@@ -10,12 +10,12 @@ open tree_set
 open tree_map
 
 -- The type of edges
-structure Edge : Type :=
+structure edge : Type :=
   (edge : lex ℕ ℕ)
   (src_lt_trg : edge.fst < edge.snd . obviously)
 
-instance Edge_linear_order : linear_order Edge :=
-  linear_order.lift (λ (u : Edge), u.edge) (λ u v H, begin cases u, cases v, simp, assumption end)
+instance edge_linear_order : linear_order edge :=
+  linear_order.lift (λ (u : edge), u.edge) (λ u v H, begin cases u, cases v, simp, assumption end)
 
 def nbhds_condition (nbhds : tmap ℕ (tset ℕ)) : Prop :=
   ∀ i : ℕ, smap.contains_key i nbhds → (∀ j : ℕ, j ∈ nbhds.to_map i → i ∈ nbhds.to_map j)
@@ -23,36 +23,36 @@ def nbhds_condition (nbhds : tmap ℕ (tset ℕ)) : Prop :=
 def decidable_nbhds_condition (nbhds : tmap ℕ (tset ℕ)) : bool :=
   smap.forall_keys (λ i, stree.option_forall (λ j, i ∈ nbhds.to_map j) (nbhds.to_map i)) nbhds
 
-def nbhds_describe_edges (nbhds : tmap ℕ (tset ℕ)) (edges : tset Edge) : Prop := 
+def nbhds_describe_edges (nbhds : tmap ℕ (tset ℕ)) (edges : tset edge) : Prop := 
   ∀ i : ℕ, smap.contains_key i nbhds → (∀ j : ℕ, j ∈ nbhds.to_map i → decidable.lt_by_cases i j
-    (λ _, {Edge . edge := (i, j)} ∈ edges)
+    (λ _, {edge . edge := (i, j)} ∈ edges)
     (λ _, false)
-    (λ _, {Edge . edge := (j, i)} ∈ edges))
+    (λ _, {edge . edge := (j, i)} ∈ edges))
 
-def decidable_nbhds_describe_edges (nbhds : tmap ℕ (tset ℕ)) (edges : tset Edge) : bool := 
+def decidable_nbhds_describe_edges (nbhds : tmap ℕ (tset ℕ)) (edges : tset edge) : bool := 
   smap.forall_keys (λ i, (@stree.option_forall ℕ (_) (λ j, 
     decidable.lt_by_cases i j
-      (λ _, {Edge . edge := (i, j)} ∈ edges)
+      (λ _, {edge . edge := (i, j)} ∈ edges)
       (λ _, false)
-      (λ _, {Edge . edge := (j, i)} ∈ edges))
+      (λ _, {edge . edge := (j, i)} ∈ edges))
     ) (begin simp [decidable.lt_by_cases], apply_instance end) (_) (_) (_) (nbhds.to_map i)) nbhds
 
-def edges_describe_nbhds (nbhds : tmap ℕ (tset ℕ)) (edges : tset Edge) : Prop :=
-  ∀ e : Edge, e ∈ edges → e.edge.snd ∈ nbhds.to_map e.edge.fst
+def edges_describe_nbhds (nbhds : tmap ℕ (tset ℕ)) (edges : tset edge) : Prop :=
+  ∀ e : edge, e ∈ edges → e.edge.snd ∈ nbhds.to_map e.edge.fst
 
-def decidable_edges_describe_nbhds (nbhds : tmap ℕ (tset ℕ)) (edges : tset Edge) : bool :=
-  stree.forall (λ e : Edge, e.edge.snd ∈ nbhds.to_map e.edge.fst) edges
+def decidable_edges_describe_nbhds (nbhds : tmap ℕ (tset ℕ)) (edges : tset edge) : bool :=
+  stree.forall (λ e : edge, e.edge.snd ∈ nbhds.to_map e.edge.fst) edges
 
-def describes_neighborhoods (nbhds : tmap ℕ (tset ℕ)) (edges : tset Edge) : Prop := 
+def describes_neighborhoods (nbhds : tmap ℕ (tset ℕ)) (edges : tset edge) : Prop := 
 nbhds_condition nbhds ∧ nbhds_describe_edges nbhds edges ∧ edges_describe_nbhds nbhds edges
 
-def decidable_describes_neighborhoods (nbhds : tmap ℕ (tset ℕ)) (edges : tset Edge) : bool := 
+def decidable_describes_neighborhoods (nbhds : tmap ℕ (tset ℕ)) (edges : tset edge) : bool := 
 decidable_nbhds_condition nbhds ∧ decidable_nbhds_describe_edges nbhds edges ∧ decidable_edges_describe_nbhds nbhds edges
 
 -- The definition of a finite graph that will represent the graphs that we import from House of Graphs
 structure simple_irreflexive_graph : Type :=
   (vertex_size : ℕ)
-  (edges : tset Edge)
+  (edges : tset edge)
   (edge_size : ℕ)
   (edge_size_correct : edge_size = edges.size)
   (neighborhoods : tmap ℕ (tset ℕ))
@@ -61,9 +61,9 @@ structure simple_irreflexive_graph : Type :=
 
 def edge_relation (G : simple_irreflexive_graph) : ℕ → ℕ → Prop :=
 λ u v, decidable.lt_by_cases u v
-  (λ _, {Edge . edge := (u, v)} ∈ G.edges)
+  (λ _, {edge . edge := (u, v)} ∈ G.edges)
   (λ _, false)
-  (λ _, {Edge . edge := (v, u)} ∈ G.edges)
+  (λ _, {edge . edge := (v, u)} ∈ G.edges)
 
 lemma edge_relation_irreflexive {G : simple_irreflexive_graph} : ∀ v, ¬ edge_relation G v v :=
 begin 
@@ -97,7 +97,7 @@ begin
 end
 
 lemma edge_relation_is_mem {G : simple_irreflexive_graph} : 
-  Π u v (uv : u < v), edge_relation G u v → { Edge . edge := (u, v), src_lt_trg := uv } ∈ G.edges :=
+  Π u v (uv : u < v), edge_relation G u v → { edge . edge := (u, v), src_lt_trg := uv } ∈ G.edges :=
 begin
   intros u v uv euv,
   simp [edge_relation, decidable.lt_by_cases, uv] at euv,
