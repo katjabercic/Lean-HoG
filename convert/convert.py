@@ -13,7 +13,7 @@ class Edge:
     def __str__(self):
         return "{edge := " + str(self.val) + "}"
 
-class stree:
+class Stree:
     def __init__(self, val, left, right):
         self.val = val
         self.left = left
@@ -34,7 +34,7 @@ class stree:
             right = self.right.__str__("right")
         return "stree.node " + str(self.val) + "\n(" + left + ")\n(" + right + ")"
 
-class smap:
+class Smap:
     def __init__(self, key, val, left, right):
         self.key = key
         self.val = val
@@ -112,8 +112,6 @@ class HoGGraph:
         self.components = compute_components(self.neighborhoods)
         self.connected_components_witness = lean_representation(self.name, self.components[0], self.components[1])
         self.nbhds_smap = self.neighborhoods_to_smap(self.neighborhoods)
-
-        print(self.neighborhoods)
 
     def _get_size_edge_list(self, raw_adjacency):
         """Return the number of vertices and the list of edges (i, j), such that i < j."""
@@ -198,21 +196,17 @@ class HoGGraph:
         root = Edge(edge_list[mid])
         left = self.edge_list_to_stree(edge_list[0:mid])
         right = self.edge_list_to_stree(edge_list[mid+1:])
-        return stree(root, left, right)
+        return Stree(root, left, right)
 
     def list_to_stree(self, l):
-        print(l)
         n = len(l)
         if n == 0:
             return None
         mid = n // 2
         root = l[mid]
-        print("root: ", root)
         left = self.list_to_stree(l[0:mid])
         right = self.list_to_stree(l[mid+1:])
-        total = stree(root, left, right)
-        print("left: ", left)
-        print("right: ", right)
+        total = Stree(root, left, right)
         return total
 
     def edge_list_to_neighborhoods(self, edge_list):
@@ -232,13 +226,13 @@ class HoGGraph:
             return None
         if n == 1:
             vals = self.list_to_stree(nbhds[0][1])
-            return smap(nbhds[0][0], vals, None, None)
+            return Smap(nbhds[0][0], vals, None, None)
         mid = n // 2
         root_key = nbhds[mid][0]
         root_val = self.list_to_stree(nbhds[mid][1])
         left = self.neighborhoods_to_smap(nbhds[0:mid])
         right = self.neighborhoods_to_smap(nbhds[mid+1:])
-        return smap(root_key, root_val, left, right)
+        return Smap(root_key, root_val, left, right)
 
 def hog_generator(datadir, file_prefix):
     """Generate HoG graphs from input files in the given data directory.
@@ -263,8 +257,9 @@ def write_lean_files(datadir, outdir, file_prefix, limit=None, skip=0):
        """
 
     # Load the template file
-    with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'template_graph.txt')) as fh:
+    with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'template_graph.txt')) as fh, open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'template_connected_components.txt')) as fh_cc:
         template = Template(fh.read())
+        templace_cc = Template(fh_cc.read())
 
     # Make sure the output directory exists
     if os.path.exists(outdir):
@@ -284,6 +279,8 @@ def write_lean_files(datadir, outdir, file_prefix, limit=None, skip=0):
             print ("Writing graph {0}".format(graph.name), end='\r')
             with open(os.path.join(outdir, "{0}.lean".format(graph.name)), 'w') as fh:
                 fh.write(template.substitute(graph.get_data()))
+            with open(os.path.join(outdir, "{0}_cc.lean".format(graph.name)), 'w') as fh:
+                fh.write(templace_cc.substitute(graph.get_data()))
         counter += 1
     print ("Wrote {0} graphs to {1}".format(counter - skip, outdir))
 

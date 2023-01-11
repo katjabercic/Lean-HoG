@@ -1,0 +1,11 @@
+import .${name}
+
+open tree_set
+
+namespace hog
+
+${connected_components_witness}
+
+def ${name}_components_witness : number_of_connected_components := witness_components ${name}_witness
+
+end hog

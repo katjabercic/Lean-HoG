@@ -17,7 +17,6 @@ def bst.values {α : Type} [linear_order α] : Π (l u : α), bst α l u → lis
 | l u (bst.leaf min max x cond) := [x]
 | l u (bst.node l₁ u₁ l₂ u₂ x left right cond) := bst.values l₁ u₁ left ++ [x] ++ bst.values l₂ u₂ right
 
-
 def t : bst ℕ 0 2 := bst.leaf 0 2 1 (by simp)
 
 #check bst.values t
