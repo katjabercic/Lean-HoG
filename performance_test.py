@@ -11,13 +11,16 @@ subprocess_io_location = "/home/jure/Documents/process_io/bin/process_io"
 print(timestamp)
 max_ind = 17 * 100 + 1
 k = 10
-
+start = time.time()
+avg_time = 0
+total_time = 0
 with open(test_log, 'x', encoding='utf-8') as outfile:
-    outfile.write("vertex_size,edge_size,time,memory,olean_size\n")
+    outfile.write("id,vertex_size,edge_size,time,memory,olean_size\n")
     for i in range(max_ind):
-        print(i)
+        t1_start = time.perf_counter()
         graph_number = f'{i * k + 1:05d}'
-        lean_file_location = f'/home/jure/OneDrive/faks/lean/Lean-HoG/src/hog/data/hog_{graph_number}'
+        lean_file_location = f'/home/jure/Documents/source-control/Lean-HoG/src/hog/data/hog_{graph_number}'
+        outfile.write(graph_number + ",")
 
         # Create the lean file with the graph
         convert = subprocess.run(["make", "convert", f'SKIP={i*k}', "LIMIT=1"], stdout=subprocess.PIPE)
@@ -39,7 +42,7 @@ with open(test_log, 'x', encoding='utf-8') as outfile:
         outfile.write(vertex_size + "," + edge_size + ",")
 
         # Run lean on the converted files and time the execution
-        timed = subprocess.run(["/usr/bin/time", "lean", "--make", "--memory=25000", "src/hog/data"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        timed = subprocess.run(["/usr/bin/time", "lean", "--make", "--memory=25000", f'{lean_file_location}.lean'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
         match = re.search("^(\d+\.\d+)user", timed.stderr.decode("utf-8"))
         outfile.write(match.group(1) + ",")
@@ -57,5 +60,10 @@ with open(test_log, 'x', encoding='utf-8') as outfile:
 
         outfile.write("\n")
         outfile.flush()
+        t1_stop = time.perf_counter()
+        elapsed = t1_stop - t1_start
+        total_time += elapsed
+        avg_time = (avg_time * i + elapsed) / (i+1)
+        print(f'Processing graphs: {i} / {max_ind}, total elapsed time: {total_time}, average time: {avg_time}', end='\r')
 
-print("Done")
+print(f'Done, total time: {total_time}')

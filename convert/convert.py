@@ -191,7 +191,7 @@ class HoGGraph:
     def edge_list_to_stree(self, edge_list):
         n = len(edge_list)
         if n == 0:
-            return None
+            return Stree(None, None, None) 
         mid = n // 2
         root = Edge(edge_list[mid])
         left = self.edge_list_to_stree(edge_list[0:mid])
