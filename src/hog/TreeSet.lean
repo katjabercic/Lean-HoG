@@ -2,6 +2,7 @@ import Mathlib.Init.Algebra.Order
 import Mathlib.Tactic.LibrarySearch
 import Mathlib.Tactic.Tauto
 import Mathlib.Mathport.Syntax
+import Mathlib.Logic.Basic
 import Init.Core
 import Init.Prelude
 
@@ -70,8 +71,6 @@ theorem Bounded_le_trans {α : Type} [Preorder α] {a b c : Bounded α} :
     | element y => contradiction
     | top => rfl
 
-  -- cases_matching* (Bounded α) ; try { tautology },
-  -- apply le_trans
 
 instance Bounded_preorder (α : Type) [Preorder α] : Preorder (Bounded α) where
   lt := Bounded_lt
@@ -83,40 +82,30 @@ instance Bounded_preorder (α : Type) [Preorder α] : Preorder (Bounded α) wher
 instance Bounded_partial_order (α : Type) [PartialOrder α]: PartialOrder (Bounded α) where
   le_antisymm := by
     intros a b h h'
-    cases a <;> repeat (first | cases b | rfl | contradiction)
-    { sorry }
-    { contradiction }
-    -- match a, b with
-    -- | bottom, bottom => rfl
-    -- | bottom, element y => contradiction
-    -- | bottom, top => contradiction
-    -- | element x, bottom => contradiction
-    -- | element x, element y => 
-    --   have x_eq_y : x = y := by apply le_antisymm <;> tauto
-    --   rw [x_eq_y]
-    -- | element x, top => contradiction
-    -- | top, bottom => contradiction
-    -- | top, element y => contradiction
-    -- | top, top => rfl
+    cases a <;> repeat (first | cases b | rfl | contradiction | simp; apply le_antisymm <;> assumption)
 
-#check instDecidableTrue
+lemma foo (a : α) [LinearOrder α] : bottom ≤ (element a) := by
+  rfl
 
-example : Decidable True := by
-  library_search
-  
+lemma foo' (a b : α) [LinearOrder α] : Decidable (element a ≤ element b) := by
+  apply decidable_of_iff (a ≤ b)
+  apply Iff.intro <;> (intro h; assumption)
+
 instance Bounded_linear_order (α : Type) [LinearOrder α] : LinearOrder (Bounded α) where
   le_total := by
     intros a b
     cases a <;> cases b <;> tauto
     apply le_total
   decidable_le := by
-    sorry
-    -- intros a b
-    -- cases a <;> cases b
-    -- simp
-    -- apply instDecidableTrue
-    -- simp
-      
+    intros a b
+    cases a <;> cases b <;> simp <;>
+    (first 
+      | apply instDecidableTrue 
+      | apply decidable_of_iff True; simp; rfl
+      | apply decidable_of_iff False ; simp; by_contra; contradiction
+      | apply foo'
+    )
+    
 
 inductive Stree (α : Type) [LinearOrder α] : ∀ {low high : Bounded α}, low < high → Type
   | empty : ∀ {low high} (p : low < high), Stree α p
@@ -133,9 +122,9 @@ inductive Stree (α : Type) [LinearOrder α] : ∀ {low high : Bounded α}, low 
 @[reducible]
 def Stree.elem {α : Type} [LinearOrder α] (x : α) :
     ∀ {low high : Bounded α} {p : low < high}, Stree α p → Bool
-  | low, high, p, (Stree.empty _) => false
-  | low, high, p, (Stree.leaf y _ _) => (x = y)
-  | low, high, p, (Stree.node y left right) => by sorry
+  | _, _, _, (Stree.empty _) => false
+  | _, _, _, (Stree.leaf y _ _) => (x = y)
+  | _, _, _, (Stree.node y left right) => (x = y) || Stree.elem y left || Stree.elem y right
 
 def Stree.size {α : Type} [LinearOrder α] : ∀ {low high : Bounded α} {p : low < high}, Stree α p → Nat
   | low, high, p, (Stree.empty _) => 0
@@ -259,23 +248,23 @@ lemma Stree.exists_is_exists {α : Type} [LinearOrder α] (p : α → Bool) :
   --     simp [Stree.elem, decidable.lt_by_cases, yz, lt_asymm yz], tautology }
   -- }
 
-def Stree.intersection {α : Type} [LinearOrder α] :
-  ∀ {low high : Bounded α} {b : low < high},
-  Stree α b → Stree α b → Stree α b
-| _, _, b, (Stree.empty _), t => Stree.empty b
-| _, _, b, t, (Stree.empty _) => Stree.empty b
-| _, _, b, (Stree.leaf x _ _), (Stree.leaf y _ _) => if x = y then (Stree.leaf x _ _) else Stree.empty b
-| _, _, b, (Stree.node x left right), (Stree.leaf y _ _) => 
-    if x = y then (Stree.leaf x _ _) 
-    else if Stree.elem y left then (Stree.leaf y _ _)
-    else if Stree.elem y right then (Stree.leaf y _ _)
-    else Stree.empty b
-| _, _, b, (Stree.leaf x _ _), (Stree.node y left right) =>
-    if x = y then (Stree.leaf x _ _) 
-    else if Stree.elem x left then (Stree.leaf x _ _)
-    else if Stree.elem x right then (Stree.leaf x _ _)
-    else Stree.empty b
-| _, _, b, (Stree.node x left right), t =>  sorry
+-- def Stree.intersection {α : Type} [LinearOrder α] :
+--   ∀ {low high : Bounded α} {b : low < high},
+--   Stree α b → Stree α b → Stree α b
+-- | _, _, b, (Stree.empty _), t => Stree.empty b
+-- | _, _, b, t, (Stree.empty _) => Stree.empty b
+-- | _, _, b, (Stree.leaf x _ _), (Stree.leaf y _ _) => if x = y then (Stree.leaf x _ _) else Stree.empty b
+-- | _, _, b, (Stree.node x left right), (Stree.leaf y _ _) => 
+--     if x = y then (Stree.leaf x _ _) 
+--     else if Stree.elem y left then (Stree.leaf y _ _)
+--     else if Stree.elem y right then (Stree.leaf y _ _)
+--     else Stree.empty b
+-- | _, _, b, (Stree.leaf x _ _), (Stree.node y left right) =>
+--     if x = y then (Stree.leaf x _ _) 
+--     else if Stree.elem x left then (Stree.leaf x _ _)
+--     else if Stree.elem x right then (Stree.leaf x _ _)
+--     else Stree.empty b
+-- | _, _, b, (Stree.node x left right), t =>  sorry
 
 def Tset (α : Type) [lo : LinearOrder α] := @Stree α lo bottom top (by rfl)
 
@@ -295,7 +284,7 @@ instance Tset.option_has_mem {α : Type} [LinearOrder α] : Membership α (Optio
 instance Tset.has_insert {α : Type} [LinearOrder α]: Insert α (Tset α) where
   insert := fun x t => Stree.insert x t rfl rfl 
 
-def Tset.add {α : Type} [LinearOrder α] (x : α) (t : Tset α) := Stree.insert x t (_) (_)
+-- def Tset.add {α : Type} [LinearOrder α] (x : α) (t : Tset α) := Stree.insert x t (_) (_)
 
 lemma Tset.forall_is_forall {α : Type} [LinearOrder α] (p : α → Prop) [DecidablePred p]:
   ∀ (t : Tset α), Stree.forall p t = tt → ∀ (x : α), x ∈ t → p x :=
