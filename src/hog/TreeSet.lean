@@ -124,7 +124,7 @@ def Stree.elem {α : Type} [LinearOrder α] (x : α) :
     ∀ {low high : Bounded α} {p : low < high}, Stree α p → Bool
   | _, _, _, (Stree.empty _) => false
   | _, _, _, (Stree.leaf y _ _) => (x = y)
-  | _, _, _, (Stree.node y left right) => (x = y) || Stree.elem y left || Stree.elem y right
+  | _, _, _, (Stree.node y left right) => (x = y) || Stree.elem x left || Stree.elem x right
 
 def Stree.size {α : Type} [LinearOrder α] : ∀ {low high : Bounded α} {p : low < high}, Stree α p → Nat
   | low, high, p, (Stree.empty _) => 0
@@ -133,16 +133,42 @@ def Stree.size {α : Type} [LinearOrder α] : ∀ {low high : Bounded α} {p : l
 
 theorem Stree.elem_low {α : Type} [LinearOrder α] (x : α)
   {low high : Bounded α} {p : low < high} (t : Stree α p) :
-  Stree.elem x t = tt → low < element x := by
-  sorry
-  -- induction t with _ _ _ _ _ _ _ _ _ _ y,
-  -- { obviously },
-  -- { obviously },
-  -- { apply (decidable.lt_by_cases x y),
-  --   { intro xy, simp [Stree.elem, decidable.lt_by_cases, xy], obviously },
-  --   { intro xy, obviously },
-  --   { intro yx, simp [Stree.elem, decidable.lt_by_cases, yx, lt_asymm yx], intro, transitivity' y, obviously }
-  -- }
+  Stree.elem x t = true → low < element x := by
+  induction t with
+  | empty _ => intro h; contradiction
+  | leaf _ _ _ =>
+    intro h
+    simp at h
+    rw [h]
+    assumption
+  | node y l r left_ih right_ih =>
+    apply @Decidable.byCases (x < y)
+    . intro x_less_y
+      intro h
+      simp at h
+      cases h with
+      | inl hp =>
+        cases hp with
+        | inl hpp => rw [hpp]; assumption
+        | inr hpq => apply left_ih hpq
+      | inr hq =>
+        have h' : element y < element x := by apply right_ih hq
+        have h'' : y < x := by assumption
+        have g : ¬ (y < x) := by apply lt_asymm x_less_y
+        contradiction
+    . intro _
+      intro h
+      simp at h
+      cases h with
+      | inl hp => 
+        cases hp with
+        | inl hpp => rw [hpp]; assumption
+        | inr hpq =>
+          apply left_ih hpq
+      | inr hq =>
+        have h' : element y < element x := by apply right_ih hq
+        apply lt_trans' h'
+        assumption
 
 theorem Stree.elem_high {α : Type} [LinearOrder α] (x : α)
   {low high : Bounded α} {p : low < high} (t : Stree α p) :
