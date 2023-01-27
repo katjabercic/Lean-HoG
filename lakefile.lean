@@ -2,8 +2,12 @@ import Lake
 open Lake DSL
 
 package «lean-HOG» {
-  srcDir := "src" 
+  srcDir := "src/hog"
 }
+
+lean_lib TreeSet {
+}
+lean_lib TreeMap
 
 require mathlib from git
   "https://github.com/leanprover-community/mathlib4.git"

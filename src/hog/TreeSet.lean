@@ -92,7 +92,7 @@ lemma foo' (a b : α) [LinearOrder α] : Decidable (element a ≤ element b) := 
   apply decidable_of_iff (a ≤ b)
   apply Iff.intro <;> (intro h; assumption)
 
-instance Bounded_linear_order (α : Type) [LinearOrder α] : LinearOrder (Bounded α) where
+noncomputable instance Bounded_linear_order (α : Type) [LinearOrder α] : LinearOrder (Bounded α) where
   le_total := by
     intros a b
     cases a <;> cases b <;> tauto
