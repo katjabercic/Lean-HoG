@@ -1,5 +1,4 @@
 import TreeSet
-
 namespace TreeMap
 
 open TreeSet
@@ -110,27 +109,15 @@ lemma Smap.forall_is_forall {α β : Type} [LinearOrder α] (p : α × β → Pr
     . intro yx
       simp [Smap.containsKey, lt_by_cases, yx, lt_asymm]
       tauto
-  -- intros low high b t,
-  -- induction t with _ _ _ _ _ _ _ _ _ _  _ y B ,
-  -- { simp },
-  -- { simp [Smap.forall, Smap.val_at, decidable.lt_by_cases, option_prod, option_prod_curried] },
-  -- { simp [Smap.forall, Smap.val_at], intros py lall rall x,
-  --   apply (decidable.lt_by_cases x y),
-  --   { intro xy, simp [ Smap.containsKey, decidable.lt_by_cases, xy], obviously }, -- can we find a better proof that obviously?
-  --   { intro xy, simp [ Smap.containsKey, decidable.lt_by_cases, xy], assumption },
-  --   { intro yx, simp [ Smap.containsKey, decidable.lt_by_cases, yx, lt_asymm yx], tautology },
-  -- }
 
+def Tmap (α β : Type) [lo : LinearOrder α] := @Smap α β lo bottom top (by rfl)
 
--- def tmap (α β : Type) [lo : LinearOrder α] := @Smap α β lo bottom top true.intro
+def Tmap.containsKey {α β : Type} [LinearOrder α] (key : α) : Tmap α β → Bool := Smap.containsKey key
 
--- def tmap.contains_key {α β : Type} [LinearOrder α] (key : α) : tmap α β → Bool := Smap.contains_key key
+def Tmap.containsVal {α β : Type} [LinearOrder α] [DecidableEq β] (val : β) : Tmap α β → Bool := Smap.containsVal val
 
--- def tmap.contains_val {α β : Type} [LinearOrder α] [decidable_eq β] (val : β) : tmap α β → Bool := Smap.contains_val val
+def Tmap.valAt {α β : Type} [LinearOrder α] (key : α) : Tmap α β → Option β := Smap.valAt key
 
--- def tmap.val_at {α β : Type} [LinearOrder α] (key : α) : tmap α β → option β := Smap.val_at key
-
--- def tmap.to_map {α β : Type} [LinearOrder α] : tmap α β → (α → option β) := Smap.to_map
-
+def Tmap.toMap {α β : Type} [LinearOrder α] : Tmap α β → (α → Option β) := Smap.toMap
 
 end TreeMap

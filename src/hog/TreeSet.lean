@@ -101,7 +101,7 @@ noncomputable instance Bounded_linear_order (α : Type) [LinearOrder α] : Linea
     intros a b
     cases a <;> cases b <;> simp <;>
     (first 
-      | apply instDecidableTrue 
+      | apply instDecidableTrue
       | apply decidable_of_iff True; simp; rfl
       | apply decidable_of_iff False ; simp; by_contra; contradiction
       | apply foo'
@@ -199,8 +199,6 @@ theorem Stree.elem_high {α : Type} [LinearOrder α] (x : α)
         assumption
     | inr hq => apply right_ih hq
 
-#check lt_by_cases
-
 @[reducible]
 def Stree.insert {α : Type} [LinearOrder α] (x : α) :
   ∀ {low high : Bounded α} {p : low < high} (t : Stree α p), low < element x → element x < high → Stree α p
@@ -216,7 +214,7 @@ def Stree.insert {α : Type} [LinearOrder α] (x : α) :
       (fun _ => Stree.node y left right)
       (fun yx => Stree.node y left (@Stree.insert _ _ x _ _ _ right yx xhigh))
 
-theorem elem_insert (α : Type) [LinearOrder α] (x : α) {low high : Bounded α}
+theorem elemInsert (α : Type) [LinearOrder α] (x : α) {low high : Bounded α}
   {lowx : low < element x} {xhigh : element x < high} (p : low < high) (t : Stree α p) :
   Stree.elem x (Stree.insert x t lowx xhigh) := by
   induction t with
@@ -235,12 +233,12 @@ def Stree.forall {α : Type} [LinearOrder α] (p : α → Prop) [DecidablePred p
   | _, _, _, (Stree.node x left right) => 
     Decidable.decide (p x) && Stree.forall p left && Stree.forall p right
 
-def Stree.option_forall {α : Type} [LinearOrder α] (p : α → Prop) [DecidablePred p] :
+def Stree.optionForall {α : Type} [LinearOrder α] (p : α → Prop) [DecidablePred p] :
   ∀ {low high : Bounded α} {b : low < high} (t : Option (Stree α b)), Bool
   | _, _, _, none => false
   | _, _, _, (some t) => Stree.forall p t
 
-lemma Stree.forall_is_forall {α : Type} [LinearOrder α] (p : α → Prop) [DecidablePred p]:
+lemma Stree.forallIsForall {α : Type} [LinearOrder α] (p : α → Prop) [DecidablePred p]:
   ∀ {low high : Bounded α} {b : low < high} (t : Stree α b), 
   Stree.forall p t = true → ∀ (x : α), Stree.elem x t → p x :=  by
   intros low high b t
@@ -272,7 +270,7 @@ def Stree.exists {α : Type} [LinearOrder α] :
   | _, _, _, (Stree.leaf x _ _), p => p x
   | _, _, _, (Stree.node x left right), p => p x || Stree.exists left p || Stree.exists right p
 
-lemma Stree.exists_is_exists {α : Type} [LinearOrder α] (p : α → Bool) :
+lemma Stree.existsIsExists {α : Type} [LinearOrder α] (p : α → Bool) :
   ∀ {low high : Bounded α} {b : low < high} (t : Stree α b), 
   Stree.exists t p = true → ∃ (x : α), Stree.elem x t ∧ p x := by
   intros low high b t h
@@ -350,24 +348,24 @@ def Tset (α : Type) [lo : LinearOrder α] := @Stree α lo bottom top (by rfl)
 
 def Tset.mem {α : Type} [LinearOrder α] (x : α) (t : Tset α) := Stree.elem x t
 
-def Tset.option_mem {α : Type} [LinearOrder α] (x : α) : Option (Tset α) → Bool
+def Tset.optionMem {α : Type} [LinearOrder α] (x : α) : Option (Tset α) → Bool
   | none => false
   | (some t) => Tset.mem x t
   
-instance Tset.has_mem {α : Type} [LinearOrder α]: Membership α (Tset α) where
+instance Tset.hasMem {α : Type} [LinearOrder α]: Membership α (Tset α) where
   mem := fun x t => Tset.mem x t
   
-instance Tset.option_has_mem {α : Type} [LinearOrder α] : Membership α (Option (Tset α)) where
-  mem := fun x t => Tset.option_mem x t
+instance Tset.optionHasMem {α : Type} [LinearOrder α] : Membership α (Option (Tset α)) where
+  mem := fun x t => Tset.optionMem x t
 
-instance Tset.has_insert {α : Type} [LinearOrder α]: Insert α (Tset α) where
+instance Tset.hasInsert {α : Type} [LinearOrder α]: Insert α (Tset α) where
   insert := fun x t => Stree.insert x t rfl rfl 
 
 def Tset.add {α : Type} [l : LinearOrder α] (x : α) (t : Tset α) := @Stree.insert α l x bottom top (by rfl) t 
 
-lemma Tset.forall_is_forall {α : Type} [LinearOrder α] (p : α → Prop) [DecidablePred p]:
+lemma Tset.forallIsForall {α : Type} [LinearOrder α] (p : α → Prop) [DecidablePred p]:
   ∀ (t : Tset α), Stree.forall p t = true → ∀ (x : α), x ∈ t → p x :=
-  by apply Stree.forall_is_forall
+  by apply Stree.forallIsForall
 
 -- def Tset.intersection {α : Type} [LinearOrder α] : Tset α → Tset α → Tset α := sorry
 end TreeSet
