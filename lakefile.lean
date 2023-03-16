@@ -9,6 +9,7 @@ lean_lib TreeSet
 lean_lib TreeMap
 lean_lib Graph
 lean_lib Tactic
+lean_lib ConnectedComponents
 
 require mathlib from git
   "https://github.com/leanprover-community/mathlib4.git"
