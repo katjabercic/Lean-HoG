@@ -138,7 +138,7 @@ class HoGGraph:
         # Sanity checks
         for p in edge_list:
             assert p[0] >= 0 and p[1] >= 0
- 
+
         return vertex_size, edge_list
 
     def _get_invariants(self, txt):
@@ -193,7 +193,7 @@ class HoGGraph:
     def edge_list_to_stree(self, edge_list):
         n = len(edge_list)
         if n == 0:
-            return Stree(None, None, None) 
+            return Stree(None, None, None)
         mid = n // 2
         root = Edge(edge_list[mid])
         left = self.edge_list_to_stree(edge_list[0:mid])
@@ -281,7 +281,7 @@ def write_lean_files(datadir, outdir, file_prefix, limit=None, skip=0):
             print ("Writing graph {0}".format(graph.name), end='\r')
             with open(os.path.join(outdir, "{0}.lean".format(graph.name)), 'w') as fh:
                 fh.write(template.substitute(graph.get_data()))
-            with open(os.path.join(outdir, "{0}_cc.lean".format(graph.name)), 'w') as fh:
+            with open(os.path.join(outdir, "components_{0}.lean".format(graph.name)), 'w') as fh:
                 fh.write(templace_cc.substitute(graph.get_data()))
         counter += 1
     print ("Wrote {0} graphs to {1}".format(counter - skip, outdir))

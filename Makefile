@@ -1,35 +1,42 @@
-OUTDIR=src/hog/data/Data
-CONVERT=convert/convert.py
-LEANPKG=leanpkg
-LEAN=lean
+### Configuration
+
+# Folder with original HoG data file (if you do not have it, comment this out)
 DATADIR=data/raw-hog
+
+# Use this instead if you don't have the real HoG data
+# DATADIR=sample-data
+
+# Folder where generated Lean files are placed
+LEANDIR=src/hog/data/Data
+
+# The script that converts HoG data files to Lean files
+CONVERT=convert/convert.py
+
+# We compile everything using lake - the lean build system
 LAKE=lake
-BASE_MODULE=Data
 
 LIMIT=100
 SKIP=0
 
-.PHONY: convert build buildall cleandata
+.PHONY: convert-data build-lean build-graphs clean-data clean-lean
 
 all: convert build
 
-%.olean: %.lean
-	$(LAKE) build $(BASE_MODULE).$(notdir $(basename $<)) -v
-
-clean:
+clean-lean:
 	$(LAKE) clean
 
-convert: cleandata
-	python3 $(CONVERT) --datadir $(DATADIR) --out $(OUTDIR) --limit $(LIMIT) --skip $(SKIP)
+build-lean:
+	$(LAKE) build
+	echo "(If you want to compile the graphs, use this instead: make build-graphs)"
 
-build: $(OUTDIR)/*.olean
+convert-data: clean-graphs
+	python3 $(CONVERT) --datadir $(DATADIR) --out $(LEANDIR) --limit $(LIMIT) --skip $(SKIP)
 
-buildall:
-	$(LEANPKG) build
-	
-test: cleandata
-	python3 $(CONVERT) --out $(OUTDIR) --limit 100 --skip $(SKIP) --datadir "sample_data"
-	$(LEAN) --make $(OUTDIR)
+build-graphs:
+	for g in $(LEANDIR)/hog*.lean ; do \
+	  echo "Compiling $$g." ; \
+          $(LAKE) build Data.`basename "$$g" .lean` ; \
+        done
 
-cleandata:
-	/bin/rm -rf $(OUTDIR)
+clean-graphs:
+	/bin/rm -rf $(LEANDIR)
