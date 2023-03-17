@@ -56,7 +56,7 @@ def g : SimpleIrreflexiveGraph := {
   edgeSize := 3,
   edgeSizeCorrect := by rfl,
   neighborhoods := N₁,
-  neighborhoods_correct := by rfl
+  neighborhoodsCorrect := by rfl
 }
 
 lemma foos : (Edge.mk (0,1)) ∈ g.edges := by

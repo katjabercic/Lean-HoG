@@ -1,4 +1,4 @@
-OUTDIR=src/hog/data
+OUTDIR=src/hog/data/Data
 CONVERT=convert/convert.py
 LEANPKG=leanpkg
 LEAN=lean

@@ -1,31 +1,31 @@
-import ..graph
-import ..connected_component
-import ..tree_set
-import ..tree_map
+import Graph
+import ConnectedComponents
+import TreeSet
+import TreeMap
 
-open tree_set
-open tree_map
+open TreeSet
+open TreeMap
 
-namespace hog
+namespace Hog
 
-set_option class.instance_max_depth 5000
-set_option eqn_compiler.max_steps 100000
+-- set_option class.instance_max_depth 5000
+-- set_option eqn_compiler.max_steps 100000
 
-def ${name}_stree : stree edge (by { trivial } : bounded.bottom < bounded.top) :=
+def ${name}_stree : Stree Edge (by { trivial } : Bounded.bottom < Bounded.top) :=
 ${stree}
 
-def ${name}_tset : tset edge := ${name}_stree
+def ${name}_tset : Tset Edge := ${name}_stree
 
-def nbhds : tmap ℕ (tset ℕ) :=
+def nbhds : Tmap ℕ (Tset ℕ) :=
 ${nbhds_smap}
 
-def ${name} : simple_irreflexive_graph := 
-{ vertex_size := $vertex_size,
+def ${name} : SimpleIrreflexiveGraph := 
+{ vertexSize := $vertex_size,
   edges := ${name}_tset,
-  edge_size := $edge_size,
-  edge_size_correct := by refl,
+  edgeSize := $edge_size,
+  edgeSizeCorrect := by rfl,
   neighborhoods := nbhds,
-  neighborhoods_correct := by refl
+  neighborhoodsCorrect := by rfl
 }
 
-end hog
+end Hog

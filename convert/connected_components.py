@@ -64,80 +64,78 @@ def compute_components(neighborhoods):
     return (vertices, roots)
 
 def c_representation(vertices):
-    c = f'  c := λ v : ℕ,\n    match v with\n'
+    c = f'  c := fun v : ℕ => \n    match v with\n'
     for v in vertices:
-        c += f'    | {v.id} := {v.c}\n'
-    c += '    | _ := 0\n    end,'
+        c += f'    | {v.id} => {v.c}\n'
+    c += '    | _ => 0'
     return c
 
 def h_representation(vertices):
-    h = f'  h := λ v : ℕ,\n    match v with\n'
+    h = f'  h := fun v : ℕ => \n    match v with\n'
     for v in vertices:
-        h += f'    | {v.id} := {v.h}\n'
-    h += '    | _ := 0\n    end,'
+        h += f'    | {v.id} => {v.h}\n'
+    h += '    | _ => 0'
     return h
 
 def connect_edges_representation(vertices):
     n = len(vertices)
-    h = f'  connect_edges := \n'
-    h += f'    begin\n'
-    h += f'      apply tset.forall_is_forall,\n'
+    h = f'  connectEdges := by\n'
+    h += f'      apply Tset.forallIsForall\n'
     h += f'      bool_reflect\n'
-    h += f'    end,'
     return h
 
 def root_representation(roots):
     num_components = len(roots)
-    root_rep = f'  root := λ i : fin {num_components},\n    match i with\n'
+    root_rep = f'  root := fun i : Fin {num_components} =>\n    match i with\n'
     for root in roots:
-        root_rep += f'    | ⟨ {root[0]}, _ ⟩ := {root[1]}\n'
-    root_rep += f'    | _ := 0\n    end,'
+        root_rep += f'    | ⟨ {root[0]}, _ ⟩ => {root[1]}\n'
+    root_rep += f'    | _ => 0'
     return root_rep
 
 def is_root_representation(roots):
     num_components = len(roots)
-    root_rep = f'  is_root := λ i,\n    match i with\n'
+    root_rep = f'  isRoot := fun i =>\n    match i with\n'
     for root in roots:
-        root_rep += f'    | ⟨ {root[0]}, _ ⟩ := by bool_reflect\n'
-    root_rep += f'    | _ := sorry\n    end,'
+        root_rep += f'    | ⟨ {root[0]}, _ ⟩ => by bool_reflect\n'
+    root_rep += f'    | _ => sorry'
     return root_rep
 
 def uniqueness_of_roots_representation(vertices):
-    h = f'  uniqueness_of_roots := λ v,\n    match v with\n'
+    h = f'  uniquenessOfRoots := fun v =>\n    match v with\n'
     for v in vertices:
         if v.h == 0:
-            h += f'    | {v.id} := by bool_reflect\n'
+            h += f'    | {v.id} => by bool_reflect\n'
         else:
-            h += f'    | {v.id} := by contradiction\n'            
-    h += '    | _ := sorry\n    end,'
+            h += f'    | {v.id} => by simp\n'            
+    h += '    | _ => sorry'
     return h
 
 def next_representation(vertices):
-    h = f'  next := λ v,\n    match v with\n'
+    h = f'  next := fun v =>\n    match v with\n'
     for v in vertices:
         if v.next:
-            h += f'    | {v.id} := {v.next.id}\n'
-    h += '    | _ := 0\n    end,'
+            h += f'    | {v.id} => {v.next.id}\n'
+    h += '    | _ => 0,'
     return h
 
 def height_cond_representation(vertices):
-    h = f'  height_cond := λ v,\n    match v with\n'
+    h = f'  heightCond := fun v =>\n    match v with\n'
     for v in vertices:
         if v.h == 0:
-            h += f'    | {v.id} :=\n      begin\n        have nh : ¬ 0 < 0 := irrefl 0,\n        contradiction,\n      end\n'
+            h += f'    | {v.id} => by\n      have nh : ¬ 0 < 0 := irrefl 0\n      simp\n'
         else:
-            h += f'    | {v.id} :=\n      begin\n        simp [edge_relation, decidable.lt_by_cases],\n        bool_reflect,\n      end\n'
-    h += '    | _ := sorry\n    end,'
+            h += f'    | {v.id} => by\n      simp [edgeRelation, lt_by_cases]\n'
+    h += '    | _ => sorry'
     return h
 
 
 def lean_representation(name, vertices, roots):
     representation = ''
 
-    representation += f'def {name}_witness : num_components_witness :=\n'
-    representation += f'let H : {name}.vertex_size = {len(vertices)} := by bool_reflect in\n'
+    representation += f'def {name}_witness : numComponentsWitness :=\n'
+    representation += f'let H : {name}.vertexSize = {len(vertices)} := by bool_reflect\n'
     representation += f'{{ G := {name},\n'
-    representation += f'  num_components := {len(roots)},\n'
+    representation += f'  numComponents := {len(roots)},\n'
     representation += c_representation(vertices) + '\n'
     representation += h_representation(vertices) + '\n'
     representation += connect_edges_representation(vertices) + '\n'

@@ -1,11 +1,11 @@
-import .${name}
+import Data.${name}
 
-open tree_set
+open TreeSet
 
-namespace hog
+namespace Hog
 
 ${connected_components_witness}
 
-def ${name}_components_witness : number_of_connected_components := witness_components ${name}_witness
+theorem ${name}_components_witness : numberOfConnectedComponents := witnessComponents ${name}_witness
 
-end hog
+end Hog

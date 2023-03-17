@@ -11,7 +11,7 @@ class Edge:
         self.val = val
 
     def __str__(self):
-        return "{edge := " + str(self.val) + "}"
+        return f'(Edge.mk {str(self.val)})'
 
 class Stree:
     def __init__(self, val, left, right):
@@ -21,18 +21,18 @@ class Stree:
 
     def __str__(self, subtree = None):
         if self.val is None:
-            return "stree.empty (by bool_reflect)"
+            return "Stree.empty (by bool_reflect)"
         if self.left is None and self.right is None:
-            return "stree.leaf " + str(self.val) + " (by bool_reflect) (by bool_reflect)"
+            return "Stree.leaf " + str(self.val) + " (by bool_reflect) (by bool_reflect)"
         if self.left is None:
-            left = "stree.empty (by bool_reflect)"
+            left = "Stree.empty (by bool_reflect)"
         else:
             left = self.left.__str__("left")
         if self.right is None:
-            right = "stree.empty (by bool_reflect)"
+            right = "Stree.empty (by bool_reflect)"
         else:
             right = self.right.__str__("right")
-        return "stree.node " + str(self.val) + "\n(" + left + ")\n(" + right + ")"
+        return "Stree.node " + str(self.val) + "\n(" + left + ")\n(" + right + ")"
 
 class Smap:
     def __init__(self, key, val, left, right):
@@ -43,18 +43,18 @@ class Smap:
 
     def __str__(self, subtree = None):
         if self.val is None:
-            return "smap.empty (by bool_reflect)"
+            return "Smap.empty (by bool_reflect)"
         if self.left is None and self.right is None:
-            return "smap.leaf " + str(self.key) + " (" + str(self.val) + ") " + " (by bool_reflect) (by bool_reflect)"
+            return "Smap.leaf " + str(self.key) + " (" + str(self.val) + ") " + " (by bool_reflect) (by bool_reflect)"
         if self.left is None:
-            left = "smap.empty (by bool_reflect)"
+            left = "Smap.empty (by bool_reflect)"
         else:
             left = self.left.__str__("left")
         if self.right is None:
-            right = "smap.empty (by bool_reflect)"
+            right = "Smap.empty (by bool_reflect)"
         else:
             right = self.right.__str__("right")
-        return "smap.node " + str(self.key) + " (" + str(self.val) + ") " + "\n(" + left + ")\n(" + right + ")"
+        return "Smap.node " + str(self.key) + " (" + str(self.val) + ") " + "\n(" + left + ")\n(" + right + ")"
 class HoGGraph:
     """An object representing a single HoG graph"""
 
@@ -100,7 +100,7 @@ class HoGGraph:
     }
 
     def __init__(self, name, txt):
-        self.name = name
+        self.name = name.replace("_", "")
         m = re.fullmatch(r'(?P<adjacency>(?:[0-9]+:[0-9 ]*\n)*)(?P<invariants>.*)',
                          txt, flags=re.MULTILINE+re.DOTALL)
         assert m, "Could not parse HoG data:\n{0}".format(txt)
@@ -176,8 +176,10 @@ class HoGGraph:
     def get_data(self):
         """Return a dictionary with graph data, to be used in a template file."""
 
+        name = self.name.replace("_", "")
+        print(name)
         return {
-            'name' : self.name,
+            'name' : name,
             'vertex_size' : self.vertex_size,
             'edge_list' : self.edge_list,
             'planar' : self.invariants['Planar']['value'],
@@ -246,7 +248,7 @@ def hog_generator(datadir, file_prefix):
         with open(os.path.join(datadir, input_file), 'r') as fh:
             # Iterate through all graphs in the file
             for txt in re.finditer(r'^1:.+?^Vertex Connectivity: .+?\n', fh.read(), flags=re.DOTALL+re.MULTILINE):
-                yield HoGGraph("{0}{1:05d}".format(file_prefix, counter), txt.group(0))
+                yield HoGGraph("hog{0:05d}".format(counter), txt.group(0))
                 counter += 1
 
 
@@ -298,7 +300,7 @@ if __name__ == "__main__":
     arg_parser = ArgumentParser()
     arg_parser.add_argument("--datadir", default=relative('..', 'data'), dest="datadir",
                         help="read HoG graph files from this directory")
-    arg_parser.add_argument("--outdir", default=relative('..', 'src', 'hog', 'data'), dest="outdir",
+    arg_parser.add_argument("--outdir", default=relative('..', 'src', 'hog', 'data', 'Data'), dest="outdir",
                         help="output Lean files to this directory")
     arg_parser.add_argument("--limit", type=int, default=0, dest="limit",
                         help="limit the number of graphs to process")
@@ -310,7 +312,7 @@ if __name__ == "__main__":
     write_lean_files(
         datadir=args.datadir,
         outdir=args.outdir,
-        file_prefix='hog_',
+        file_prefix='Hog',
         limit=args.limit,
         skip=args.skip
     )
