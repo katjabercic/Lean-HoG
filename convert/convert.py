@@ -296,7 +296,7 @@ if __name__ == "__main__":
         return os.path.join(mydir, *fs)
 
     arg_parser = ArgumentParser()
-    arg_parser.add_argument("--datadir", default=relative('..', 'data'), dest="datadir",
+    arg_parser.add_argument("--datadir", dest="datadir",
                         help="read HoG graph files from this directory")
     arg_parser.add_argument("--outdir", default=relative('..', 'src', 'hog', 'data'), dest="outdir",
                         help="output Lean files to this directory")

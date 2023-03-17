@@ -2,6 +2,7 @@ OUTDIR=src/hog/data
 CONVERT=convert/convert.py
 LEANPKG=leanpkg
 LEAN=lean
+DATADIR=data/raw-hog
 
 LIMIT=100
 SKIP=0
@@ -11,7 +12,7 @@ SKIP=0
 all: convert build
 
 convert: cleandata
-	python3 $(CONVERT) --out $(OUTDIR) --limit $(LIMIT) --skip $(SKIP)
+	python3 $(CONVERT) --datadir $(DATADIR) --out $(OUTDIR) --limit $(LIMIT) --skip $(SKIP)
 
 build:
 	$(LEAN) --make $(OUTDIR)
