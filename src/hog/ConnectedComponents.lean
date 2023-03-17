@@ -6,36 +6,34 @@ import Init.WF
 import Graph
 import TreeSet
 
-
 @[simp, reducible]
-def connected (G : SimpleIrreflexiveGraph) : ℕ → ℕ → Prop := EqvGen (edgeRelation G)
+def connected (G : SimpleIrreflexiveGraph) : Nat → Nat → Prop := EqvGen (edgeRelation G)
 
-macro g:term "|" v:term "≈" u:term : term => `(connected $g $v $u)
-
--- notation g | v ≈ u := connected g v u
+-- macro g:term "|" v:term "≈" u:term : term => `(connected $g $v $u)
+-- notation g "|" v "≈" u => connected g v u
 
 @[simp]
-lemma edgeConnected {G : SimpleIrreflexiveGraph} {u v : ℕ} (e : (edgeRelation G) u v) : 
+lemma edgeConnected {G : SimpleIrreflexiveGraph} {u v : Nat} (e : (edgeRelation G) u v) : 
   connected G u v := EqvGen.rel u v e
 
 @[simp]
-lemma connectedRefl {G : SimpleIrreflexiveGraph} {v : ℕ} : connected G v v := EqvGen.refl v
+lemma connectedRefl {G : SimpleIrreflexiveGraph} {v : Nat} : connected G v v := EqvGen.refl v
 
 @[simp]
-lemma connectedTrans {G : SimpleIrreflexiveGraph} {u v w : ℕ} (cuv : connected G u v) (cvw : connected G v w) : 
+lemma connectedTrans {G : SimpleIrreflexiveGraph} {u v w : Nat} (cuv : connected G u v) (cvw : connected G v w) : 
   connected G u w := EqvGen.trans u v w cuv cvw
 
 notation p "⊕" q => connectedTrans p q
 
 @[simp]
-lemma connectedSymm {G : SimpleIrreflexiveGraph} {u v : ℕ} (cuv : connected G u v) : 
+lemma connectedSymm {G : SimpleIrreflexiveGraph} {u v : Nat} (cuv : connected G u v) : 
   connected G v u := EqvGen.symm u v cuv
 
 notation p "↑" => connectedSymm p
 
 -- -- because connectedness if defined as an equivalence relation, two connected vertices cannot be equal
 @[simp]
-lemma notConnectedNotEqual {G : SimpleIrreflexiveGraph} {u v : ℕ} : ¬connected G u v → ¬u = v := by
+lemma notConnectedNotEqual {G : SimpleIrreflexiveGraph} {u v : Nat} : ¬connected G u v → ¬u = v := by
   intro h
   by_contra
   suffices h' : connected G u v
@@ -44,34 +42,34 @@ lemma notConnectedNotEqual {G : SimpleIrreflexiveGraph} {u v : ℕ} : ¬connecte
   rw [eq]
   apply connectedRefl
 
-def connectedGraph : SimpleIrreflexiveGraph → Prop := fun G => ∀ (u v : ℕ), connected G u v
+def connectedGraph : SimpleIrreflexiveGraph → Prop := fun G => ∀ (u v : Nat), connected G u v
 
 structure numberOfConnectedComponents : Type :=
   (G : SimpleIrreflexiveGraph)
-  (numComponents : ℕ)
-  (c : ℕ → Fin numComponents)
+  (numComponents : Nat)
+  (c : Nat → Fin numComponents)
   (hasEnough : ∀ (i : Fin numComponents), ∃ u, c u = i)
   (conn : ∀ u v, c u = c v ↔ connected G u v)
 
 structure numComponentsWitness : Type :=
   (G : SimpleIrreflexiveGraph)
-  (numComponents : ℕ)
-  (c : ℕ → Fin numComponents)
-  (h : ℕ → ℕ)
+  (numComponents : Nat)
+  (c : Nat → Fin numComponents)
+  (h : Nat → Nat)
   (connectEdges : ∀ (e : Edge), (e ∈ G.edges) → c e.edge.fst = c e.edge.snd)
-  (root : Fin numComponents → ℕ)
+  (root : Fin numComponents → Nat)
   (isRoot :  ∀ i, c (root i) = i ∧ h (root i) = 0)
   (uniquenessOfRoots : ∀ v, h v = 0 → v = root (c v))
-  (next : ℕ → ℕ) -- for each vertex with height > 0, give a neighbor with lower height
+  (next : Nat → Nat) -- for each vertex with height > 0, give a neighbor with lower height
   (heightCond : ∀ v, (0 < h v) → (edgeRelation G) (next v) v ∧ h (next v) < h v)
 
-theorem foo (α : Type) (f : α → ℕ) (P : α → Prop)
+theorem foo (α : Type) (f : α → Nat) (P : α → Prop)
   (base : ∀ a, f a = 0 → P a)
   (ind : ∀ a, (∀ b, f b < f a → P b) → P a) :
   ∀ a, P a := by
   intro a
   let Q := fun n => ∀ a, f a = n → P a
-  have Qstep : ∀ (n : ℕ), (∀ (m : ℕ), m < n → Q m) → Q n
+  have Qstep : ∀ (n : Nat), (∀ (m : Nat), m < n → Q m) → Q n
   { intros n h a ξ
     apply (ind a)
     intros b fb_lt_fa
@@ -81,7 +79,7 @@ theorem foo (α : Type) (f : α → ℕ) (P : α → Prop)
   }
   exact @WellFounded.fix _ Q Nat.lt (Nat.lt_wfRel.wf) Qstep (f a) a rfl
 
--- theorem bar (α : Type) (f : α → ℕ) (P : α → Prop)
+-- theorem bar (α : Type) (f : α → Nat) (P : α → Prop)
 --   (ind : ∀ a, (∀ b, f b < f a → P b) → P a) :
 --   ∀ a, P a :=
 -- begin
@@ -94,8 +92,8 @@ theorem foo (α : Type) (f : α → ℕ) (P : α → Prop)
 -- end
 
 lemma connectedToRoot (w : numComponentsWitness) : 
-  ∀ v : ℕ, connected w.G v (w.root (w.c v)) := by
-  fapply @foo ℕ (w.h) (fun u => connected w.G u (w.root (w.c u)))
+  ∀ v : Nat, connected w.G v (w.root (w.c v)) := by
+  fapply @foo Nat (w.h) (fun u => connected w.G u (w.root (w.c u)))
   { intros v h
     have h := w.uniquenessOfRoots v h
     rw [←h]
@@ -119,7 +117,7 @@ lemma connectedToRoot (w : numComponentsWitness) :
           { intros uv -- u = v
             rw [uv]
           }
-          { intros vu
+          { intros vu -- v < u
             let e : Edge := { edge := (v, u), src_lt_trg := vu }
             have evu : e ∈ w.G.edges
             cases hyp
@@ -143,7 +141,7 @@ lemma witnessConnectedCondition (w : numComponentsWitness) : ∀ u v, w.c u = w.
   intros u v
   apply Iff.intro
   · intro H
-    have connectedToRoot : ∀ x : ℕ, connected w.G x (w.root (w.c x))
+    have connectedToRoot : ∀ x : Nat, connected w.G x (w.root (w.c x))
     { intro x
       apply connectedToRoot
     }
@@ -154,7 +152,7 @@ lemma witnessConnectedCondition (w : numComponentsWitness) : ∀ u v, w.c u = w.
       exact h ⊕ (h' ↑)
     }
   · intro h
-    induction h with -- u v rel_uv
+    induction h with
     | rel u v rel_uv =>
       {
         apply lt_by_cases u v
@@ -173,10 +171,10 @@ lemma witnessConnectedCondition (w : numComponentsWitness) : ∀ u v, w.c u = w.
           apply w.connectEdges e evu
       }
     | refl u => rfl
-    | symm u v rel_uv =>
+    | symm u v =>
       apply symm
       assumption
-    | trans u v w rel_uv rel_vw =>
+    | trans u v w =>
       trans
       assumption
       assumption
@@ -191,17 +189,12 @@ theorem witnessComponents : numComponentsWitness → numberOfConnectedComponents
         have h : Function.HasRightInverse w.c
         unfold Function.HasRightInverse
         apply Exists.intro
-        exact w.root        
-        -- fapply
-        -- exact w.root,
-        -- unfold Function.right_inverse,
-        -- unfold Function.left_inverse,
-        -- intro v,
-        -- have := w.is_root v
-        -- cases this,
-        -- assumption,
-        -- apply iff.mpr Function.surjective_iff_has_right_inverse,
-        -- assumption
-      ,
+        unfold Function.RightInverse
+        unfold Function.LeftInverse
+        intro x
+        have isRoot := w.isRoot x
+        apply isRoot.left
+        apply Iff.mpr Function.surjective_iff_hasRightInverse
+        assumption
       conn := by apply witnessConnectedCondition,
     }

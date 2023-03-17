@@ -351,7 +351,8 @@ def Tset.mem {α : Type} [LinearOrder α] (x : α) (t : Tset α) := Stree.elem x
 def Tset.optionMem {α : Type} [LinearOrder α] (x : α) : Option (Tset α) → Bool
   | none => false
   | (some t) => Tset.mem x t
-  
+
+@[simp]
 instance Tset.hasMem {α : Type} [LinearOrder α]: Membership α (Tset α) where
   mem := fun x t => Tset.mem x t
   

@@ -64,7 +64,6 @@ def decidableNbhdsCondition (nbhds : Tmap ℕ (Tset ℕ)) : Bool :=
 -- decidableNbhdsCondition nbhds ∧ decidable_nbhds_describe_edges nbhds edges ∧ decidable_edges_describe_nbhds nbhds edges
 
 -- The definition of a finite graph that will represent the graphs that we import from House of Graphs
-
 structure SimpleIrreflexiveGraph : Type :=
   (vertexSize : ℕ)
   (edges : Tset Edge)
