@@ -222,7 +222,7 @@ class HoGGraph:
         if not self.vertex_size:
             raise RuntimeError("You have to compute vertex_size before computing neighborhoods!")
         n = len(nbhds)
-        if n == 0:
+        if n == 0: # we ran out of neighborhoods in a recursion step
             return None
         if n == 1:
             vals = self.list_to_stree(nbhds[0][1])
