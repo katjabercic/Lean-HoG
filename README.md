@@ -7,7 +7,7 @@ Incorporation of the [House of Graphs](http://hog.grinvin.org/) into [Lean](http
 ### Project structure
 
 * [`etc`](./etc) - various irrelevant files
-* [`data`](./data) - original HoG data files
+* [`data`](./data) - original HoG data files (a private submodule)
 * [`convert`](./convert) - Python scripts for converting HoG data to Lean code
 * [`src`](./src) - Lean code
 
