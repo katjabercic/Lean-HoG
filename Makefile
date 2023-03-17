@@ -1,8 +1,10 @@
-OUTDIR=src/hog/data
+OUTDIR=src/hog/data/Data
 CONVERT=convert/convert.py
 LEANPKG=leanpkg
 LEAN=lean
 DATADIR=data/raw-hog
+LAKE=lake
+BASE_MODULE=Data
 
 LIMIT=100
 SKIP=0
@@ -11,11 +13,16 @@ SKIP=0
 
 all: convert build
 
+%.olean: %.lean
+	$(LAKE) build $(BASE_MODULE).$(notdir $(basename $<)) -v
+
+clean:
+	$(LAKE) clean
+
 convert: cleandata
 	python3 $(CONVERT) --datadir $(DATADIR) --out $(OUTDIR) --limit $(LIMIT) --skip $(SKIP)
 
-build:
-	$(LEAN) --make $(OUTDIR)
+build: $(OUTDIR)/*.olean
 
 buildall:
 	$(LEANPKG) build

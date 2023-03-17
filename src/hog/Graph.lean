@@ -70,13 +70,13 @@ structure SimpleIrreflexiveGraph : Type :=
   (edgeSize : ℕ)
   (edgeSizeCorrect : edgeSize = edges.size)
   (neighborhoods : Tmap ℕ (Tset ℕ))
-  (neighborhoods_correct : decidableNbhdsCondition neighborhoods = true)
+  (neighborhoodsCorrect : decidableNbhdsCondition neighborhoods = true)
 
 def edgeRelation (G : SimpleIrreflexiveGraph) : ℕ → ℕ → Prop :=
   fun u v => lt_by_cases u v
-    (fun _ => { edge := (u,v) } ∈ G.edges)
+    (fun _ => { edge := (u,v), src_lt_trg := by assumption } ∈ G.edges)
     (fun _ => False)
-    (fun _ => { edge := (v,u) } ∈ G.edges)
+    (fun _ => { edge := (v,u), src_lt_trg := by assumption } ∈ G.edges)
 
 lemma edgeRelationIrreflexive {G : SimpleIrreflexiveGraph} : ∀ v, ¬ edgeRelation G v v := by
   intro v
