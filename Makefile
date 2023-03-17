@@ -18,6 +18,10 @@ build:
 
 buildall:
 	$(LEANPKG) build
+	
+test: cleandata
+	python3 $(CONVERT) --out $(OUTDIR) --limit 100 --skip $(SKIP) --datadir "sample_data"
+	$(LEAN) --make $(OUTDIR)
 
 cleandata:
 	/bin/rm -rf $(OUTDIR)

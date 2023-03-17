@@ -191,7 +191,7 @@ class HoGGraph:
     def edge_list_to_stree(self, edge_list):
         n = len(edge_list)
         if n == 0:
-            return None
+            return Stree(None, None, None) 
         mid = n // 2
         root = Edge(edge_list[mid])
         left = self.edge_list_to_stree(edge_list[0:mid])
@@ -201,7 +201,7 @@ class HoGGraph:
     def list_to_stree(self, l):
         n = len(l)
         if n == 0:
-            return None
+            return Stree(None, None, None)
         mid = n // 2
         root = l[mid]
         left = self.list_to_stree(l[0:mid])
@@ -245,7 +245,7 @@ def hog_generator(datadir, file_prefix):
         # Process next file
         with open(os.path.join(datadir, input_file), 'r') as fh:
             # Iterate through all graphs in the file
-            for txt in re.finditer(r'^1: .+?^Vertex Connectivity: .+?\n', fh.read(), flags=re.DOTALL+re.MULTILINE):
+            for txt in re.finditer(r'^1:.+?^Vertex Connectivity: .+?\n', fh.read(), flags=re.DOTALL+re.MULTILINE):
                 yield HoGGraph("{0}{1:05d}".format(file_prefix, counter), txt.group(0))
                 counter += 1
 

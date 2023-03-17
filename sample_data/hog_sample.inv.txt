@@ -1,0 +1,137 @@
+1: 2 3 6 7
+2: 1 4 6 7
+3: 1 5 6 7
+4: 2 5 6 7
+5: 3 4 6 7
+6: 1 2 3 4 5 7
+7: 1 2 3 4 5 6
+
+Acyclic: No
+Algebraic Connectivity: 3.382
+Average Degree: 4.571
+Bipartite: No
+Chromatic Index: 6
+Chromatic Number: 5
+Circumference: 7
+Claw-Free: Yes
+Clique Number: 4
+Connected: Yes
+Density: 0.762
+Diameter: 2
+Edge Connectivity: 4
+Eulerian: Yes
+Genus: 1
+Girth: 3
+Hamiltonian: Yes
+Independence Number: 2
+Index: 4.702
+Laplacian Largest Eigenvalue: 7
+Longest Induced Cycle: 5
+Longest Induced Path: 3
+Matching Number: 3
+Maximum Degree: 6
+Minimum Degree: 4
+Minimum Dominating Set: 1
+Number of Components: 1
+Number of Edges: 16
+Number of Triangles: 15
+Number of Vertices: 7
+Planar: No
+Radius: 1
+Regular: No
+Second Largest Eigenvalue: 0.618
+Smallest Eigenvalue: -1.702
+Vertex Connectivity: 4
+
+
+
+1:
+2:
+3: 4 5
+4: 3 6
+5: 3 6
+6: 4 5
+
+Acyclic: No
+Algebraic Connectivity: 0
+Average Degree: 1.333
+Bipartite: Yes
+Chromatic Index: 2
+Chromatic Number: 2
+Circumference: 4
+Claw-Free: Yes
+Clique Number: 2
+Connected: No
+Density: 0.267
+Diameter: infinity
+Edge Connectivity: 0
+Eulerian: No
+Genus: undefined
+Girth: 4
+Hamiltonian: No
+Independence Number: 4
+Index: 2
+Laplacian Largest Eigenvalue: 4
+Longest Induced Cycle: 4
+Longest Induced Path: 2
+Matching Number: 2
+Maximum Degree: 2
+Minimum Degree: 0
+Minimum Dominating Set: 4
+Number of Components: 3
+Number of Edges: 4
+Number of Triangles: 0
+Number of Vertices: 6
+Planar: Yes
+Radius: undefined
+Regular: No
+Second Largest Eigenvalue: 0
+Smallest Eigenvalue: -2
+Vertex Connectivity: 0
+
+
+
+1: 5
+2: 5
+3: 4
+4: 3 5
+5: 1 2 4
+
+Acyclic: Yes
+Algebraic Connectivity: 0.519
+Average Degree: 1.6
+Bipartite: Yes
+Chromatic Index: 3
+Chromatic Number: 2
+Circumference: undefined
+Claw-Free: No
+Clique Number: 2
+Connected: Yes
+Density: 0.4
+Diameter: 3
+Edge Connectivity: 1
+Eulerian: No
+Genus: 0
+Girth: undefined
+Hamiltonian: No
+Independence Number: 3
+Index: 1.848
+Laplacian Largest Eigenvalue: 4.17
+Longest Induced Cycle: undefined
+Longest Induced Path: 3
+Matching Number: 2
+Maximum Degree: 3
+Minimum Degree: 1
+Minimum Dominating Set: 2
+Number of Components: 1
+Number of Edges: 4
+Number of Triangles: 0
+Number of Vertices: 5
+Planar: Yes
+Radius: 2
+Regular: No
+Second Largest Eigenvalue: 0.765
+Smallest Eigenvalue: -1.848
+Vertex Connectivity: 1
+
+
