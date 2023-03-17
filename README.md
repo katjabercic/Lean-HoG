@@ -26,6 +26,15 @@ It is possible to provide two optional parameters:
 * `LIMIT=n` processes only `n` graphs,
 * `SKIP=m` skips the first `m` graphs.
 
+## Obtaining House of graphs data
+
+It is tricky to obtain the House of graphs data because the project only offers an interactive web page. We hhave downloaded the data, but are not allowed to share it publicly, so you will have to do it yourself. Place the data in the `data` folder.
+
+If you have the data in a git repository, you may add it as a submodule:
+
+	git submodule add <repository-with-hog-data> data
+
+
 ## Reading and references
 
 ### Lean
