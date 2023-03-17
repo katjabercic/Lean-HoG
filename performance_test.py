@@ -19,7 +19,7 @@ with open(test_log, 'x', encoding='utf-8') as outfile:
     for i in range(max_ind):
         t1_start = time.perf_counter()
         graph_number = f'{i * k + 1:05d}'
-        lean_file_location = f'/home/jure/Documents/source-control/Lean-HoG/src/hog/data/hog_{graph_number}'
+        lean_file_location = f'/home/jure/Documents/source-control/Lean-HoG/src/hog/data/Data/hog{graph_number}'
         outfile.write(graph_number + ",")
 
         # Create the lean file with the graph
@@ -33,30 +33,30 @@ with open(test_log, 'x', encoding='utf-8') as outfile:
 
         with open(f'{lean_file_location}.lean', "r") as leanfile:
             for line in leanfile:
-                match_vsize = re.search("vertex_size := (\d+)", line)
+                match_vsize = re.search("vertexSize := (\d+)", line)
                 if match_vsize:
                     vertex_size = match_vsize.group(1)
-                match_esize = re.search("edge_size := (\d+)", line)
+                match_esize = re.search("edgeSize := (\d+)", line)
                 if match_esize:
                     edge_size = match_esize.group(1)
         outfile.write(vertex_size + "," + edge_size + ",")
 
         # Run lean on the converted files and time the execution
-        timed = subprocess.run(["/usr/bin/time", "lean", "--make", "--memory=25000", f'{lean_file_location}.lean'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        timed = subprocess.run(["/usr/bin/time", "make", "build"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
         match = re.search("^(\d+\.\d+)user", timed.stderr.decode("utf-8"))
         outfile.write(match.group(1) + ",")
         outfile.flush()
 
-        if subprocess_io_location:
-            perf = subprocess.run([subprocess_io_location, "lean", "--make", "--memory=25000", "src/hog/data"], stdout=subprocess.PIPE)
-            match = re.search("maxrss:.*(\d+)", perf.stdout.decode("utf-8"))
-            outfile.write(match.group(1) + ",")
-            outfile.flush()
+        # if subprocess_io_location:
+        #     perf = subprocess.run([subprocess_io_location, "make", "build"], stdout=subprocess.PIPE)
+        #     match = re.search("maxrss:.*(\d+)", perf.stdout.decode("utf-8"))
+        #     outfile.write(match.group(1) + ",")
+        #     outfile.flush()
 
-        # Get the olean file size and add it to the log file
-        stats = subprocess.run(["stat", f'--printf=%s',  f'{lean_file_location}.olean'], stdout=subprocess.PIPE)
-        outfile.write(stats.stdout.decode("utf-8"))
+        # # Get the olean file size and add it to the log file
+        # stats = subprocess.run(["stat", f'--printf=%s',  f'{lean_file_location}.olean'], stdout=subprocess.PIPE)
+        # outfile.write(stats.stdout.decode("utf-8"))
 
         outfile.write("\n")
         outfile.flush()
