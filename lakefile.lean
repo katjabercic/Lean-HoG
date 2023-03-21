@@ -5,6 +5,9 @@ package «lean-HOG» {
   srcDir := "src/hog"
 }
 
+@[default_target]
+lean_lib HoG where
+
 lean_lib TreeSet
 lean_lib TreeMap
 lean_lib Graph
