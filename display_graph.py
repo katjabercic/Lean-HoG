@@ -11,12 +11,16 @@ from argparse import ArgumentParser
 
 def display(data):
     plt.ion()
-
+    modified = os.path.getmtime("tests/" + data)
     plt.figure(figsize=(27,7))
     while True:
+        if modified == os.path.getmtime("tests/" + data):
+            time.sleep(0.01)
+            continue
+        modified = os.path.getmtime("tests/" + data)
         df = pd.read_csv("tests/" + data)
         curr_graph = df['id'].iloc[-1]
-        max_ind = 17 * 100 + 1
+        max_ind = 20 * 1000 + 1
         total_time = df['time'].sum()
         avg_time = total_time / len(df['id'])
 
@@ -36,7 +40,7 @@ def display(data):
         plt.ylabel('time(s)')
 
         plt.suptitle(data + f'\nProcessing graphs: {curr_graph} / {max_ind}, total elapsed time: {total_time:.2f} s, average time: {avg_time:.2f} s')
-        plt.pause(3)
+        plt.pause(1)
         plt.clf()
 
 if __name__ == "__main__":

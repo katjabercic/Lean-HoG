@@ -13,6 +13,7 @@ lean_lib TreeMap
 lean_lib Graph
 lean_lib Tactic
 lean_lib ConnectedComponents
+lean_lib Path
 lean_lib Data {
   srcDir := "data"
 }

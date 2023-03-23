@@ -20,7 +20,7 @@ def run_performance_tests(skip):
         print("Could not compile process_io, do you have gcc installed?")
 
     print(timestamp)
-    max_ind = 17 * 100 + 1
+    max_ind = 20 * 100 + 1
     k = 10
     start = time.time()
     avg_time = 0
@@ -98,7 +98,7 @@ def run_performance_tests(skip):
 if __name__ == "__main__":
 
     arg_parser = ArgumentParser()
-    arg_parser.add_argument("--skip", type=int, required=False, dest="skip",
+    arg_parser.add_argument("--skip", type=int, default=0, required=False, dest="skip",
                         help="skip this many graphs initially")
     args = arg_parser.parse_args()
 

@@ -9,8 +9,7 @@ import TreeSet
 @[simp, reducible]
 def connected (G : SimpleIrreflexiveGraph) : Nat → Nat → Prop := EqvGen (edgeRelation G)
 
--- macro g:term "|" v:term "≈" u:term : term => `(connected $g $v $u)
--- notation g "|" v "≈" u => connected g v u
+macro g:term "|-" v:term "≈" u:term : term => `(connected $g $v $u)
 
 @[simp]
 lemma edgeConnected {G : SimpleIrreflexiveGraph} {u v : Nat} (e : (edgeRelation G) u v) : 
@@ -111,7 +110,7 @@ lemma connectedToRoot (w : numComponentsWitness) :
             let e : Edge := { edge := (u, v), src_lt_trg := uv }
             have euv : e ∈ w.G.edges
             cases hyp
-            apply edgeRelationIsMem u v uv (by assumption)
+            apply edgeRelationIsMem (by assumption)
             apply w.connectEdges e euv
           }
           { intros uv -- u = v
@@ -121,7 +120,7 @@ lemma connectedToRoot (w : numComponentsWitness) :
             let e : Edge := { edge := (v, u), src_lt_trg := vu }
             have evu : e ∈ w.G.edges
             cases hyp
-            apply edgeRelationIsMem v u vu (edgeRelationSymmetric u v (by assumption))
+            apply edgeRelationIsMem (edgeRelationSymmetric (by assumption))
             apply symm
             apply w.connectEdges e evu
           }
@@ -159,14 +158,14 @@ lemma witnessConnectedCondition (w : numComponentsWitness) : ∀ u v, w.c u = w.
         · intro uv
           let e : Edge := { edge := (u, v), src_lt_trg := uv }
           have euv : e ∈ w.G.edges
-          apply edgeRelationIsMem u v uv rel_uv
+          apply edgeRelationIsMem rel_uv
           apply w.connectEdges e euv
         · intro uv
           rw [uv]
         · intro vu
           let e : Edge := { edge := (v, u), src_lt_trg := vu }
           have evu : e ∈ w.G.edges
-          apply edgeRelationIsMem v u vu (edgeRelationSymmetric u v rel_uv)
+          apply edgeRelationIsMem (edgeRelationSymmetric rel_uv)
           apply symm
           apply w.connectEdges e evu
       }
