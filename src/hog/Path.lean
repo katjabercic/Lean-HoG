@@ -16,13 +16,13 @@ inductive Path {g : SimpleIrreflexiveGraph} : Fin g.vertexSize → Fin g.vertexS
 macro p:term ".~" next:term : term => `(Path.right $next $p)
 macro next:term "~." p:term : term => `(Path.left $next $p)
 
-def symmPath {g : SimpleIrreflexiveGraph} {s t : Fin g.vertexSize} :  Path s t → Path t s
-  | .trivial s => .trivial s
-  | .left s t u e p => Path.right u t s (edgeRelationSymmetric e) (symmPath p)
-  | .right s t u e p => Path.left u t s (edgeRelationSymmetric e) (symmPath p)
-  
 
-macro p:term "↑" : term => `(symmPath $p)
+def reversePath {g : SimpleIrreflexiveGraph} {s t : Fin g.vertexSize} :  Path s t → Path t s
+  | .trivial s => .trivial s
+  | .left s t u e p => Path.right u t s (edgeRelationSymmetric e) (reversePath p)
+  | .right s t u e p => Path.left u t s (edgeRelationSymmetric e) (reversePath p)
+
+macro p:term "↑" : term => `(reversePath $p)
 
 def concatPath {g : SimpleIrreflexiveGraph} {s t u : Fin g.vertexSize} : Path s t → Path t u → Path s u := fun p q =>
   match p with
@@ -48,3 +48,45 @@ def length {g : SimpleIrreflexiveGraph} {s t : Fin g.vertexSize} : Path s t → 
   | .trivial s => 0
   | .left s _ t e p' => length p' + 1
   | .right s _ t e p' => length p' + 1
+
+
+-- The easy direction, just apply induction on the structure of path
+lemma pathImpliesConnected {g : SimpleIrreflexiveGraph} {s t : Fin g.vertexSize} : Path s t → connected g s t
+  | .trivial s => connectedRefl
+  | .left s _ t e p' => (edgeConnected e) ⊕ (pathImpliesConnected p')
+  | .right s _ t e p' => pathImpliesConnected p' ⊕ (edgeConnected e)
+
+
+-- lemma witnessPathToRoot (w : numComponentsWitness) (s : Fin w.G.vertexSize) : Path s (w.root (w.c s)) := by
+--   apply @foo (Fin w.G.vertexSize) (w.h) (fun v => path v (w.root (w.c v)))
+--   { intros v H
+--     have h := w.uniqueness_of_roots v H
+--     rw [←h]
+--     apply path.trivial
+--   }
+--   { intros v h
+--     by_cases H : (0 < w.h v)
+--     { let u := w.next v
+--       have hyp := w.height_cond v H
+--       have p : path u (w.root (w.c u)) := by apply h; cases hyp; exact hyp_right
+--       have same_c : w.c u = w.c v := {by apply w.connectEdges, cases hyp, assumption}
+--       rw [←same_c]
+--       have q : path u v := { by apply edge_path, cases hyp, exact hyp_left }
+--       exact (q ↑) + p
+--     }
+--     { simp at H
+--       have h := w.uniqueness_of_roots v H
+--       rw [←h]
+--       apply path.trivial
+--     }
+--   }
+
+
+-- lemma witness_to_path (w : num_components_witness) (s t : fin w.G.vertex_size) : connected w.G s t → path s t :=
+-- begin
+--   intro cst,
+--   have equal_c : w.c s = w.c t := begin apply iff.mpr, apply witness_connected_condition, exact cst end,
+--   have path_s_root : path s (w.root (w.c s)) := witness_path_to_root w s,
+--   rw equal_c at path_s_root,
+--   exact path_s_root + (witness_path_to_root w t ↑)
+-- end
