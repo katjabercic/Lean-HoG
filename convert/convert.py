@@ -21,15 +21,15 @@ class Stree:
 
     def __str__(self, subtree = None):
         if self.val is None:
-            return "Stree.empty (by bool_reflect)"
+            return "Stree.empty (by first | bool_reflect | trivial)"
         if self.left is None and self.right is None:
-            return "Stree.leaf " + str(self.val) + " (by bool_reflect) (by bool_reflect)"
+            return "Stree.leaf " + str(self.val) + " (by first | bool_reflect | trivial) (by first | bool_reflect | trivial)"
         if self.left is None:
-            left = "Stree.empty (by bool_reflect)"
+            left = "Stree.empty (by first | bool_reflect | trivial)"
         else:
             left = self.left.__str__("left")
         if self.right is None:
-            right = "Stree.empty (by bool_reflect)"
+            right = "Stree.empty (by first | bool_reflect | trivial)"
         else:
             right = self.right.__str__("right")
         return "Stree.node " + str(self.val) + "\n(" + left + ")\n(" + right + ")"
@@ -43,15 +43,15 @@ class Smap:
 
     def __str__(self, subtree = None):
         if self.val is None:
-            return "Smap.empty (by bool_reflect)"
+            return "Smap.empty (by first | bool_reflect | trivial)"
         if self.left is None and self.right is None:
-            return "Smap.leaf " + str(self.key) + " (" + str(self.val) + ") " + " (by bool_reflect) (by bool_reflect)"
+            return "Smap.leaf " + str(self.key) + " (" + str(self.val) + ") " + " (by first | bool_reflect | trivial) (by first | bool_reflect | trivial)"
         if self.left is None:
-            left = "Smap.empty (by bool_reflect)"
+            left = "Smap.empty (by first | bool_reflect | trivial)"
         else:
             left = self.left.__str__("left")
         if self.right is None:
-            right = "Smap.empty (by bool_reflect)"
+            right = "Smap.empty (by first | bool_reflect | trivial)"
         else:
             right = self.right.__str__("right")
         return "Smap.node " + str(self.key) + " (" + str(self.val) + ") " + "\n(" + left + ")\n(" + right + ")"

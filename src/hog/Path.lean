@@ -56,37 +56,62 @@ lemma pathImpliesConnected {g : SimpleIrreflexiveGraph} {s t : Fin g.vertexSize}
   | .left s _ t e p' => (edgeConnected e) ⊕ (pathImpliesConnected p')
   | .right s _ t e p' => pathImpliesConnected p' ⊕ (edgeConnected e)
 
+theorem moo (α : Type) (f : α → ℕ) (P : α → Type)
+  (base : ∀ a, f a = 0 → P a)
+  (ind : ∀ a, (∀ b, f b < f a → P b) → P a) :
+  ∀ a, P a := by
+  intro a
+  let Q := fun n => ∀ a, f a = n → P a
+  have Qstep : ∀ (n : ℕ), (∀ (m : ℕ), m < n → Q m) → Q n
+  { intros n h a ξ
+    apply (ind a)
+    intros b fb_lt_fa
+    rw [ξ] at fb_lt_fa
+    apply (h (f b)) fb_lt_fa
+    rfl
+  }
+  exact @WellFounded.fix _ Q Nat.lt Nat.lt_wfRel.wf Qstep (f a) a rfl
 
--- lemma witnessPathToRoot (w : numComponentsWitness) (s : Fin w.G.vertexSize) : Path s (w.root (w.c s)) := by
---   apply @foo (Fin w.G.vertexSize) (w.h) (fun v => path v (w.root (w.c v)))
---   { intros v H
---     have h := w.uniqueness_of_roots v H
---     rw [←h]
---     apply path.trivial
---   }
---   { intros v h
---     by_cases H : (0 < w.h v)
---     { let u := w.next v
---       have hyp := w.height_cond v H
---       have p : path u (w.root (w.c u)) := by apply h; cases hyp; exact hyp_right
---       have same_c : w.c u = w.c v := {by apply w.connectEdges, cases hyp, assumption}
---       rw [←same_c]
---       have q : path u v := { by apply edge_path, cases hyp, exact hyp_left }
---       exact (q ↑) + p
---     }
---     { simp at H
---       have h := w.uniqueness_of_roots v H
---       rw [←h]
---       apply path.trivial
---     }
---   }
+lemma witnessPathToRoot (w : numComponentsWitnessExact) (s : Fin w.G.vertexSize) : Path s (w.root (w.c s)) := by
+  apply @moo (Fin w.G.vertexSize) (w.h) (fun v => Path v (w.root (w.c v)))
+  { intros v H
+    have h := w.uniquenessOfRoots v H
+    rw [←h]
+    apply Path.trivial
+  }
+  { intros v h
+    by_cases H : (0 < w.h v)
+    · let u := w.next v
+      let hyp := w.heightCond v H
+      have p : Path u (w.root (w.c u)) := by apply h; cases hyp; assumption
+      have same_c : w.c ↑u = w.c ↑v := by
+        have er : edgeRelation w.G ↑u ↑v := by simp [hyp]
+        apply @Nat.lt_by_cases u v
+        · intro H'
+          let e : Edge := Edge.mk (u, v) 
+          apply w.connectEdges e (edgeRelationIsMem er)
+        · intro H'
+          rw [H']
+        · intro H'
+          let e : Edge := Edge.mk (v, u)
+          have er' : edgeRelation w.G ↑v ↑u := by apply edgeRelationSymmetric er
+          apply Eq.symm
+          apply w.connectEdges e (edgeRelationIsMem er')
+      rw [←same_c]
+      have q : Path u v := by apply edgePath; cases hyp; assumption
+      exact (q ↑) + p
+    · simp at H
+      have h := w.uniquenessOfRoots v H
+      rw [←h]
+      apply Path.trivial
+  }
 
-
--- lemma witness_to_path (w : num_components_witness) (s t : fin w.G.vertex_size) : connected w.G s t → path s t :=
--- begin
---   intro cst,
---   have equal_c : w.c s = w.c t := begin apply iff.mpr, apply witness_connected_condition, exact cst end,
---   have path_s_root : path s (w.root (w.c s)) := witness_path_to_root w s,
+-- lemma witnessToPath (w : numComponentsWitnessLoose) (s t : Fin w.G.vertexSize) : connected w.G s t → Path s t := by
+--   intro cst
+--   have equal_c : w.c s = w.c t := by
+--     apply Iff.mpr
+--     apply witnessConnectedCondition
+--     exact cst
+--   have path_s_root : Path s (w.root (w.c s)) := witnessPathToRoot w s,
 --   rw equal_c at path_s_root,
 --   exact path_s_root + (witness_path_to_root w t ↑)
--- end
