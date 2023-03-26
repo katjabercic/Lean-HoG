@@ -10,6 +10,11 @@ import Init.Prelude
 
 namespace TreeSet
 
+-- =====================================================================================================
+-- ==                                               Bounded                                           ==
+-- =====================================================================================================
+--
+
 inductive Bounded (α : Type) : Type
   | bottom : Bounded α 
   | element : α -> Bounded α 
@@ -126,9 +131,9 @@ def Bounded.liftFunction {α β : Type} : (α → β) → (Bounded α → Bounde
 
 macro "↑↑" f:term : term => `(Bounded.liftFunction $f)
 
--- =========================================================
--- ==                      Stree                          ==
--- =========================================================
+-- =====================================================================================================
+-- ==                                               Stree                                             ==
+-- =====================================================================================================
 --
 
 -- Definition of binary search tree
@@ -136,7 +141,7 @@ inductive Stree (α : Type) [LinearOrder α] : ∀ {low high : Bounded α}, low 
   | empty : ∀ {low high} (p : low < high), Stree α p
   | leaf : ∀ {low high} (x : α) (lowx : low < element x) (xhigh : element x < high), Stree α (lt_trans lowx xhigh)
   | node : ∀ {low high} (x : α) {q : low < element x} {r : element x < high}
-             (_ : Stree α q) (_ : Stree α r), Stree α (lt_trans q r)
+             (left : Stree α q) (right : Stree α r), Stree α (lt_trans q r)
 
 @[simp]
 def Stree.elem {α : Type} [LinearOrder α] (x : α) :
@@ -144,6 +149,10 @@ def Stree.elem {α : Type} [LinearOrder α] (x : α) :
   | _, _, _, (Stree.empty _) => false
   | _, _, _, (Stree.leaf y _ _) => (x = y)
   | _, _, _, (Stree.node y left right) => (x = y) || Stree.elem x left || Stree.elem x right
+
+@[simp]
+instance Stree.hasMem {α : Type} [LinearOrder α] {low high : Bounded α} {p : low < high}: Membership α (Stree α p) where
+  mem := fun x t => Stree.elem x t
 
 @[simp]
 def Stree.size {α : Type} [LinearOrder α] : ∀ {low high : Bounded α} {p : low < high}, Stree α p → Nat
@@ -237,6 +246,34 @@ theorem elemInsert (α : Type) [LinearOrder α] (x : α) {low high : Bounded α}
   | node y l r left_ih right_ih =>
     apply lt_by_cases x y <;> intro h <;>
     simp [Stree.insert, lt_by_cases, h, lt_asymm, left_ih, right_ih]
+
+def Stree.toList {α : Type} [LinearOrder α] {low high : Bounded α} {p : low < high} : Stree α p → List α
+  | Stree.empty _ => []
+  | Stree.leaf x _ _ => [x]
+  | Stree.node x left right => left.toList ++ [x] ++ right.toList
+
+-- lemma toListElem {α : Type} [LinearOrder α] {low high : Bounded α} {p : low < high} (s : Stree α p) :
+--   ∀ x : α, List.elem x s.toList → Stree.elem x s := by
+--   intro x h
+--   match s with
+--   | Stree.empty _ => contradiction
+--   | Stree.leaf y _ _ =>
+--     by_cases H : (x = y)
+--     · simp
+--       assumption
+--     · simp at h
+--       simp [h]
+--       sorry
+--   | Stree.node y l r => sorry
+    
+-- theorem toListBounds {α : Type} [LinearOrder α] {low high : Bounded α} {p : low < high} (s : Stree α p) :
+--   ∀ x ∈ s.toList, low < x && x < high := by
+--   intros x h
+--   match s with
+--   | .empty _ =>
+--     simp at h
+--   | .leaf y _ _ => _
+--   | .node y l r => _
 
 @[reducible]
 def Stree.forall {α : Type} [LinearOrder α] (p : α → Prop) [DecidablePred p] :
@@ -362,6 +399,15 @@ def Stree.intersection {α : Type} [l : LinearOrder α] :
     (@intersection α l (element x) high r right (Stree.coe r' r (by rw [H]) rfl right')))
   else sorry
 
+def Stree.disjoint {α : Type} [LinearOrder α] {low high low' high' : Bounded α} {h : low < high} {h' : low' < high'} :
+  Stree α h → Stree α h' → Bool
+  | .empty _, _ => true
+  | _, .empty _ => true
+  | .leaf x _ _, .leaf y _ _ => x ≠ y
+  | .leaf x _ _, .node y l r => x ≠ y && ¬l.elem x && ¬r.elem x
+  | .node x l r, .leaf y _ _ => x ≠ y && ¬l.elem x && ¬r.elem x
+  | .node x l r, .node y l' r' => x ≠ y ∧ l.disjoint l' ∧ l.disjoint r' ∧ r.disjoint l' ∧ r.disjoint r'
+
 -- def Stree.map {α β: Type} [l : LinearOrder α] [l' : LinearOrder β] {f : α → β} {M: Monotone f} {low high : Bounded α} {a : low < high} {b : (↑↑f) low < (↑↑f) high}
 --    : Stree α a → Stree β b
 --   | (Stree.empty _) => Stree.empty _
@@ -406,10 +452,18 @@ lemma Tset.forallIsForall {α : Type} [LinearOrder α] (p : α → Prop) [Decida
 
 def Tset.size {α : Type} [l : LinearOrder α] : Tset α → Nat := @Stree.size α l bottom top (by rfl)
 
--- def Tset.map {α β: Type} [l : LinearOrder α] [l' : LinearOrder β] (f : α → β) : Tset α → Tset β
---   | .empty _ => .empty _
---   | .leaf y _ _ => .leaf (f y) (by rfl) (by rfl)
---   | .node y left right => .node (f y) (Tset.map f (left.toTset)).toStree (_)
+def Tset.disjoint {α : Type} [l : LinearOrder α] : Tset α → Tset α → Bool := 
+  fun s t => @Stree.disjoint α l bottom top bottom top (by rfl) (by rfl) s t
 
--- def Tset.intersection {α : Type} [LinearOrder α] : Tset α → Tset α → Tset α := sorry
+macro s:term "⟂" t:term : term => `(Tset.disjoint $s $t)
+
+def Tset.forall {α : Type} [LinearOrder α] (p : α → Prop) [DecidablePred p] : Tset α → Bool := fun t => Stree.forall p t
+
+def Tset.exists {α : Type} [LinearOrder α] (p : α → Prop) [DecidablePred p] : Tset α → Bool := fun t => Stree.exists t p
+
+def Tset.isSubset {α : Type} [LinearOrder α] : Tset α → Tset α → Bool := fun s t =>
+  Tset.forall (fun x => Tset.mem x t) s
+
+macro s:term "⊂" t:term : term => `(Tset.isSubset $s $t)
+
 end TreeSet

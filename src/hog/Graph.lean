@@ -73,6 +73,12 @@ structure SimpleIrreflexiveGraph : Type :=
   (edgeSizeCorrect : edgeSize = edges.size)
   (neighborhoods : Tmap ℕ (Tset ℕ))
   (neighborhoodsCorrect : decidableNbhdsCondition neighborhoods = true)
+  (minDegree : Option ℕ)
+  (minDegreeCorrect : minDegree = (neighborhoods.map Tset.size).min?)
+  (maxDegree : Option ℕ)
+  (maxDegreeCorrect : maxDegree = (neighborhoods.map Tset.size).max?)
+  (isRegular : Bool)
+  (isRegularCorrect : isRegular = (minDegree = maxDegree))
 
 def edgeRelation (G : SimpleIrreflexiveGraph) : ℕ → ℕ → Prop :=
   fun u v => lt_by_cases u v
