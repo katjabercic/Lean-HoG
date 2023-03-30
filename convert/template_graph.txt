@@ -23,9 +23,15 @@ def ${name} : SimpleIrreflexiveGraph :=
 { vertexSize := $vertex_size,
   edges := ${name}_tset,
   edgeSize := $edge_size,
-  edgeSizeCorrect := by rfl,
+  edgeSizeCorrect := by bool_reflect,
   neighborhoods := nbhds,
-  neighborhoodsCorrect := by rfl
+  neighborhoodsCorrect := by bool_reflect,
+  minDegree := $min_degree,
+  minDegreeCorrect := by bool_reflect,
+  maxDegree := $max_degree,
+  maxDegreeCorrect := by bool_reflect,
+  isRegular := $is_regular,
+  isRegularCorrect := by bool_reflect
 }
 
 end Hog

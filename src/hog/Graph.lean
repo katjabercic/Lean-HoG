@@ -80,6 +80,14 @@ structure SimpleIrreflexiveGraph : Type :=
   (isRegular : Bool)
   (isRegularCorrect : isRegular = (minDegree = maxDegree))
 
+structure GraphInvariants : Type :=
+  (vertexSize : Nat)
+  (edgeSize : Nat)
+  (minDegree : Option Nat)
+  (maxDegree : Option Nat)
+  (isRegular : Bool)
+  (isBipartite : Bool)
+
 def edgeRelation (G : SimpleIrreflexiveGraph) : ℕ → ℕ → Prop :=
   fun u v => lt_by_cases u v
     (fun _ => { edge := (u,v), src_lt_trg := by assumption } ∈ G.edges)
@@ -113,3 +121,9 @@ lemma edgeRelationIsMem {G : SimpleIrreflexiveGraph} :
   intros u v uv euv
   simp [edgeRelation, lt_by_cases, uv] at euv
   exact euv
+
+
+def findGraphSuchThat (p : GraphInvariants → Prop) [DecidablePred p] : 
+  List GraphInvariants → Option GraphInvariants
+  | [] => none
+  | g :: gs => if decide (p g) then g else findGraphSuchThat p gs

@@ -8,4 +8,5 @@ syntax "bool_reflect" : tactic
 macro_rules
 | `(tactic| bool_reflect) => `(tactic| apply Bool.of_decide_true; rfl)
 
+
 end LeanHog.Tactic

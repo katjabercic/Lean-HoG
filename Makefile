@@ -30,7 +30,7 @@ build-lean:
 	echo "(If you want to compile the graphs, use this instead: make build-graphs)"
 
 convert-data: clean-graphs
-	python3 $(CONVERT) --datadir $(DATADIR) --out $(LEANDIR) --limit $(LIMIT) --skip $(SKIP)
+	python3 $(CONVERT) --datadir $(DATADIR) --outdirData $(LEANDIR) --limit $(LIMIT) --skip $(SKIP)
 
 build-graphs:
 	for g in $(LEANDIR)/hog*.lean ; do \

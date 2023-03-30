@@ -3,6 +3,7 @@ import os.path
 import re
 from string import Template
 from argparse import ArgumentParser
+import math
 
 from connected_components import compute_components, h_representation, connect_edges_representation, root_representation, is_root_representation, uniqueness_of_roots_representation, next_representation, height_cond_representation, lean_representation
 
@@ -21,15 +22,15 @@ class Stree:
 
     def __str__(self, subtree = None):
         if self.val is None:
-            return "Stree.empty (by first | bool_reflect | trivial)"
+            return "Stree.empty (by first | bool_reflect | rfl)"
         if self.left is None and self.right is None:
-            return "Stree.leaf " + str(self.val) + " (by first | bool_reflect | trivial) (by first | bool_reflect | trivial)"
+            return "Stree.leaf " + str(self.val) + " (by first | bool_reflect | rfl) (by first | bool_reflect | rfl)"
         if self.left is None:
-            left = "Stree.empty (by first | bool_reflect | trivial)"
+            left = "Stree.empty (by first | bool_reflect | rfl)"
         else:
             left = self.left.__str__("left")
         if self.right is None:
-            right = "Stree.empty (by first | bool_reflect | trivial)"
+            right = "Stree.empty (by first | bool_reflect | rfl)"
         else:
             right = self.right.__str__("right")
         return "Stree.node " + str(self.val) + "\n(" + left + ")\n(" + right + ")"
@@ -43,15 +44,15 @@ class Smap:
 
     def __str__(self, subtree = None):
         if self.val is None:
-            return "Smap.empty (by first | bool_reflect | trivial)"
+            return "Smap.empty (by first | bool_reflect | rfl)"
         if self.left is None and self.right is None:
-            return "Smap.leaf " + str(self.key) + " (" + str(self.val) + ") " + " (by first | bool_reflect | trivial) (by first | bool_reflect | trivial)"
+            return "Smap.leaf " + str(self.key) + " (" + str(self.val) + ") " + " (by first | bool_reflect | rfl) (by first | bool_reflect | rfl)"
         if self.left is None:
-            left = "Smap.empty (by first | bool_reflect | trivial)"
+            left = "Smap.empty (by first | bool_reflect | rfl)"
         else:
             left = self.left.__str__("left")
         if self.right is None:
-            right = "Smap.empty (by first | bool_reflect | trivial)"
+            right = "Smap.empty (by first | bool_reflect | rfl)"
         else:
             right = self.right.__str__("right")
         return "Smap.node " + str(self.key) + " (" + str(self.val) + ") " + "\n(" + left + ")\n(" + right + ")"
@@ -112,7 +113,11 @@ class HoGGraph:
         self.components = compute_components(self.neighborhoods)
         self.connected_components_witness = lean_representation(self.name, self.components[0], self.components[1])
         self.nbhds_smap = self.neighborhoods_to_smap(self.neighborhoods)
-
+        self.min_degree = self.compute_min_degree()
+        self.max_degree = self.compute_max_degree()
+        self.is_regular = (self.min_degree == self.max_degree)
+        self.is_bipartite = self.compute_bipartiteness()[0]
+        self.bipartite_witness = self.compute_bipartiteness()[1]
     def _get_size_edge_list(self, raw_adjacency):
         """Return the number of vertices and the list of edges (i, j), such that i < j."""
 
@@ -177,7 +182,6 @@ class HoGGraph:
         """Return a dictionary with graph data, to be used in a template file."""
 
         name = self.name.replace("_", "")
-        print(name)
         return {
             'name' : name,
             'vertex_size' : self.vertex_size,
@@ -187,7 +191,27 @@ class HoGGraph:
             'stree' : self.stree,
             'edge_size' : self.edge_size,
             'connected_components_witness' : self.connected_components_witness,
-            'nbhds_smap' : self.nbhds_smap
+            'nbhds_smap' : self.nbhds_smap,
+            'min_degree' : f'some {self.min_degree}' if self.min_degree is not None else 'none',
+            'max_degree' : f'some {self.max_degree}' if self.max_degree is not None else 'none',
+            'is_regular' : str(self.is_regular).lower(),
+            'is_bipartite' : str(self.is_bipartite).lower()
+        }
+
+    def get_invariants(self):
+        """Return a dictionary with graph invariants (without proofs that they're correct),
+           to be used in a template file.
+        """
+
+        name = self.name.replace("_", "")
+        return {
+            'name' : name,
+            'vertex_size' : self.vertex_size,
+            'edge_size' : self.edge_size,
+            'min_degree' : self.min_degree,
+            'max_degree' : self.max_degree,
+            'is_regular' : self.is_regular,
+            'is_bipartite' : self.is_bipartite
         }
 
     def edge_list_to_stree(self, edge_list):
@@ -236,6 +260,54 @@ class HoGGraph:
         right = self.neighborhoods_to_smap(nbhds[mid+1:])
         return Smap(root_key, root_val, left, right)
 
+    def compute_min_degree(self):
+        if not self.edge_list or len(self.edge_list) == 0:
+            return None
+        return min([len(nbhd[1]) for nbhd in self.neighborhoods])
+
+    def compute_max_degree(self):
+        if not self.edge_list or len(self.edge_list) == 0:
+            return None
+        return max([len(nbhd[1]) for nbhd in self.neighborhoods])
+
+    def compute_bipartiteness(self):
+        if self.vertex_size == 0 or not self.edge_list or len(self.edge_list) == 0:
+            return (False, ([], []))
+        # Assign a color (0 or 1) to each vertex, starting with None, indicating this vertex is not yet colored
+        colors = [None for _ in range(self.vertex_size)]
+        stack = [(0, 0)] # Put the first vertex on the stack, start with color 0
+        colors[0] = 0 # Color x with the color 0
+        while stack:
+            x, colorWith = stack.pop() # Pop the next vertex off the stack
+            if colors[x]: # The vertex has already been colored, this means we have a cycle, we have to check that the colors match
+                # otherwise we have an odd length cycle
+                if colors[x] != colorWith:
+                    return (False, self.colors_to_partition(colors))
+                else:
+                    continue
+            colors[x] = colorWith # Color the current vertex
+
+            for neighbor in self.neighborhoods[x][1]: # Find neighbors of x
+                if not colors[neighbor]: # This neighbor is not assigned a color yet, put it on the stack
+                    stack.append((neighbor, (colorWith + 1) % 2)) # Put it on the stack with the next color
+
+            if not stack and len(list(filter(lambda x : x == None, colors))) > 0: # There are still uncolored vertices
+                next_vertex = next(i for i,x in enumerate(colors) if x == None)
+                stack.append((next_vertex, 0)) # The start color doesn't matter, since this must be a different component
+
+        return (True, self.colors_to_partition(colors)) # If we made it to the end of the loop, the graph is bipartite and we get a partition
+
+    def colors_to_partition(self, colors):
+        A = []
+        B = []
+        for v in range(self.vertex_size):
+            if colors[v] == 0:
+                A.append(v)
+            else:
+                B.append(v)
+        return (A, B)
+
+
 def hog_generator(datadir, file_prefix):
     """Generate HoG graphs from input files in the given data directory.
        Stop if the limit is given and reached."""
@@ -252,39 +324,59 @@ def hog_generator(datadir, file_prefix):
                 counter += 1
 
 
-def write_lean_files(datadir, outdir, file_prefix, limit=None, skip=0):
+def write_lean_files(datadir, outdirData, file_prefix, limit=None, skip=0):
     """Convert HoG graphs in the datadir to Lean code and save them to destdir.
        If the limit is given, stop afer that many graphs.
        Use the file_prefix to generate the Lean output filename.
        """
 
     # Load the template file
-    with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'template_graph.txt')) as fh, open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'template_connected_components.txt')) as fh_cc:
+    with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'template_graph.txt')) as fh, open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'template_connected_components.txt')) as fh_cc, open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'template_invariants.txt')) as fh_inv:
         template = Template(fh.read())
         templace_cc = Template(fh_cc.read())
+        template_invariants = Template(fh_inv.read())
 
     # Make sure the output directory exists
-    if os.path.exists(outdir):
-        assert os.path.isdir(outdir), "{0} exists but is not a directory".format(outdir)
+    if os.path.exists(outdirData):
+        assert os.path.isdir(outdirData), "{0} exists but is not a directory".format(outdirData)
     else:
-        print ("Creating {0}".format(outdir))
-        os.mkdir(outdir)
+        print ("Creating {0}".format(outdirData))
+        os.mkdir(outdirData)
+
+    with open(os.path.join(outdirData, "invariants.lean"), 'a') as fh:
+        fh.write("import Graph\n\nnamespace Hog\n")
 
     counter = 0
+    names = []
     for graph in hog_generator(datadir, file_prefix=file_prefix):
         if limit is not None and counter >= skip + limit:
             print ("We reached the limit of {0} graphs, skipping the rest.".format(limit))
             break
+        names.append(graph.name)
         if counter < skip:
             print ("Skipping graph {0}".format(graph.name), end='\r')
         else:
             print ("Writing graph {0}".format(graph.name), end='\r')
-            with open(os.path.join(outdir, "{0}.lean".format(graph.name)), 'w') as fh:
+            with open(os.path.join(outdirData, "{0}.lean".format(graph.name)), 'w') as fh:
                 fh.write(template.substitute(graph.get_data()))
-            with open(os.path.join(outdir, "components_{0}.lean".format(graph.name)), 'w') as fh:
+            with open(os.path.join(outdirData, "components_{0}.lean".format(graph.name)), 'w') as fh:
                 fh.write(templace_cc.substitute(graph.get_data()))
+            with open(os.path.join(outdirData, "invariants.lean"), 'a') as fh:
+                fh.write(template_invariants.substitute(graph.get_invariants()))
+
         counter += 1
-    print ("Wrote {0} graphs to {1}".format(counter - skip, outdir))
+
+    with open(os.path.join(outdirData, "invariants.lean"), 'a') as fh:
+        fh.write("\ndef invariants : List GraphInvariants := [")
+        for i, name in enumerate(names):
+            fh.write(name + "_invariants")
+            if i < len(names) - 1:
+                fh.write(",")
+            else:
+                fh.write("]")
+        fh.write("\n\nend Hog")
+
+    print ("Wrote {0} graphs to {1}".format(counter - skip, outdirData))
 
 
 ########################################################
@@ -300,8 +392,8 @@ if __name__ == "__main__":
     arg_parser = ArgumentParser()
     arg_parser.add_argument("--datadir", dest="datadir",
                         help="read HoG graph files from this directory")
-    arg_parser.add_argument("--outdir", default=relative('..', 'src', 'hog', 'data', 'Data'), dest="outdir",
-                        help="output Lean files to this directory")
+    arg_parser.add_argument("--outdirData", default=relative('..', 'src', 'hog', 'data', 'Data'), dest="outdirData",
+                        help="output Lean graph files to this directory")
     arg_parser.add_argument("--limit", type=int, default=0, dest="limit",
                         help="limit the number of graphs to process")
     arg_parser.add_argument("--skip", type=int, required=False, dest="skip",
@@ -311,7 +403,7 @@ if __name__ == "__main__":
     # hog.write_lean_structure()
     write_lean_files(
         datadir=args.datadir,
-        outdir=args.outdir,
+        outdirData=args.outdirData,
         file_prefix='Hog',
         limit=args.limit,
         skip=args.skip
