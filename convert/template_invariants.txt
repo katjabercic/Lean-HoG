@@ -2,8 +2,8 @@
 def ${name}_invariants : GraphInvariants := 
 { vertexSize := $vertex_size,
   edgeSize := $edge_size,
-  minDegree := some $min_degree,
-  maxDegree := some $max_degree,
+  minDegree := $min_degree,
+  maxDegree := $max_degree,
   isRegular := $is_regular,
   isBipartite := $is_bipartite
 }

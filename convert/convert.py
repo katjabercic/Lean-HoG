@@ -208,8 +208,8 @@ class HoGGraph:
             'name' : name,
             'vertex_size' : self.vertex_size,
             'edge_size' : self.edge_size,
-            'min_degree' : self.min_degree,
-            'max_degree' : self.max_degree,
+            'min_degree' : f'some {self.min_degree}' if self.min_degree is not None else 'none',
+            'max_degree' : f'some {self.max_degree}' if self.max_degree is not None else 'none',
             'is_regular' : self.is_regular,
             'is_bipartite' : self.is_bipartite
         }
@@ -343,7 +343,7 @@ def write_lean_files(datadir, outdirData, file_prefix, limit=None, skip=0):
         print ("Creating {0}".format(outdirData))
         os.mkdir(outdirData)
 
-    with open(os.path.join(outdirData, "invariants.lean"), 'a') as fh:
+    with open(os.path.join(outdirData, "Invariants.lean"), 'a') as fh:
         fh.write("import Graph\n\nnamespace Hog\n")
 
     counter = 0
@@ -361,12 +361,12 @@ def write_lean_files(datadir, outdirData, file_prefix, limit=None, skip=0):
                 fh.write(template.substitute(graph.get_data()))
             with open(os.path.join(outdirData, "components_{0}.lean".format(graph.name)), 'w') as fh:
                 fh.write(templace_cc.substitute(graph.get_data()))
-            with open(os.path.join(outdirData, "invariants.lean"), 'a') as fh:
+            with open(os.path.join(outdirData, "Invariants.lean"), 'a') as fh:
                 fh.write(template_invariants.substitute(graph.get_invariants()))
 
         counter += 1
 
-    with open(os.path.join(outdirData, "invariants.lean"), 'a') as fh:
+    with open(os.path.join(outdirData, "Invariants.lean"), 'a') as fh:
         fh.write("\ndef invariants : List GraphInvariants := [")
         for i, name in enumerate(names):
             fh.write(name + "_invariants")

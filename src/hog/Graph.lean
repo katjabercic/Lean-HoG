@@ -137,7 +137,6 @@ open Lean Lean.Elab.Tactic Expr Meta in
 elab "try_add_invariants_to_ctx" : tactic =>
   withMainContext do
       let m1 ← Meta.mkFreshExprMVar list_graphInvariants (userName := `graph_invariants)
-      -- m1.mvarId!.assign (Expr.const `Hog.invariants [])
       m1.mvarId!.withContext do
         let s ← saveState
         try
