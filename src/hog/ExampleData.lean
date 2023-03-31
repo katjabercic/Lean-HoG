@@ -4,8 +4,10 @@ import TreeMap
 import Tactic
 import ConnectedComponents
 import Bipartite
+import Data.Invariants
+import Lean
 
-namespace hog
+namespace Hog
 
 open TreeSet
 open TreeMap
@@ -142,59 +144,13 @@ def bpG₂ : BipartiteGraph := {
   cond3 := by bool_reflect
 }
 
--- def w : numComponentsWitness := {
---   G := G,
---   numComponents := 1,
---   c := fun v =>
---     match v with
---       | 0 => 0
---       | 1 => 0
---       | 2 => 0
---       | _ => 0
---   h := fun v =>
---     match v with
---     | 0 => 0
---     | 1 => 1
---     | 2 => 2
---     | _ => 0
---   connectEdges := by
---       apply Tset.forallIsForall
---       bool_reflect
---   root := fun (v : Fin 1) =>
---     match v with
---     | ⟨ 0, _ ⟩ => 0
---     | _ => 0
---   isRoot := fun i =>
---     match i with
---     | ⟨ 0, _ ⟩ => by bool_reflect
---     | i => sorry
---   uniquenessOfRoots := fun v =>
---     match v with
---     | 0 => by bool_reflect
---     | 1 => by simp
---     | 2 => by simp
---     | _ => sorry
---   next := fun v =>
---     match v with
---     | 0 => 0
---     | 1 => 0
---     | 2 => 1
---     | _ => 0
---   heightCond := fun v =>
---     match v with
---     | 0 => by
---         have nh : ¬ 0 < 0 := irrefl 0
---         simp
---     | 1 => by
---         intro h
---         simp [edgeRelation, lt_by_cases]
---     | 2 => by
---         intro h
---         simp [edgeRelation, lt_by_cases]
---     | _ => sorry
--- }
+open Lean
 
--- lemma wc : numberOfConnectedComponents := witnessComponents w
+def my_p : GraphInvariants → Bool := fun inv => inv.vertexSize == 7
 
-end hog
+theorem thereIsAGraph : ∃ g : GraphInvariants, (g.minDegree = some 2 ∧ g.isRegular = true) := by
+  try_add_invariants_to_ctx
+  try_find_invariant my_p
+  sorry
 
+end Hog
