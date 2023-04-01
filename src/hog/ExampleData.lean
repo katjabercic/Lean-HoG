@@ -1,3 +1,4 @@
+import Lean
 import Graph
 import TreeSet
 import TreeMap
@@ -5,7 +6,6 @@ import Tactic
 import ConnectedComponents
 import Bipartite
 import Data.Invariants
-import Lean
 
 namespace Hog
 
@@ -146,11 +146,28 @@ def bpG₂ : BipartiteGraph := {
 
 open Lean
 
-def my_p : GraphInvariants → Bool := fun inv => inv.vertexSize == 7
+def my_p : GraphInfo → Bool := fun inv => inv.vertexSize == 7
 
-theorem thereIsAGraph : ∃ g : GraphInvariants, (g.minDegree = some 2 ∧ g.isRegular = true) := by
+theorem thereIsAGraph : ∃ g : GraphInfo, (g.minDegree = some 2 ∧ g.isRegular = true) := by
   try_add_invariants_to_ctx
   try_find_invariant my_p
   sorry
+
+def my_path : System.FilePath := { toString := "/home/jure/Documents/source-control/Lean-HoG"}
+
+open Lean Lean.Elab.Tactic Expr Meta in 
+elab "import_graph_for_invariant" : tactic =>
+  withMainContext do
+    let sysRoot ← findSysroot
+    logInfo s!"{sysRoot}"
+    initSearchPath my_path
+    let _ ← importModules [{ module := `Data.hog00001 : Import }] {} 0
+    -- let t ← (Expr.const `Hog.hog00001 [])
+
+
+theorem booga : 1 = 1 := by
+  import_graph_for_invariant
+  let test : SimpleIrreflexiveGraph := Hog.hog00001
+
 
 end Hog
