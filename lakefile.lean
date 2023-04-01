@@ -11,6 +11,7 @@ lean_lib HoG where
 lean_lib TreeSet
 lean_lib TreeMap
 lean_lib Graph
+lean_lib Query
 lean_lib Tactic
 lean_lib ConnectedComponents
 lean_lib Path

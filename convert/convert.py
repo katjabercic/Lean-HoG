@@ -1,5 +1,6 @@
 import os
 import os.path
+import pathlib
 import re
 from string import Template
 from argparse import ArgumentParser
@@ -16,24 +17,40 @@ class Edge:
 
 class Stree:
     def __init__(self, val, left, right):
+        """Stree(None, _, _) creates an empty tree.
+           Stree(v, l, r) creates a non-empty tree.
+           We optimize subtrees by setting left and right to None instead of an empty tree."""
         self.val = val
-        self.left = left
-        self.right = right
+        self.left = None if val is None or (left is None) or left.is_empty() else left
+        self.right = None if val is None or (right is None) or right.is_empty() else right
 
-    def __str__(self, subtree = None):
-        if self.val is None:
+    def is_empty(self):
+        return (self.val is None)
+
+    def has_left(self):
+        return not self.is_empty() and self.left is not None
+
+    def has_right(self):
+        return not self.is_empty() and self.right is not None
+
+    def is_leaf(self):
+        return not self.is_empty() and not self.has_left() and not self.has_right()
+
+    def __str__(self):
+        if self.is_empty():
             return "Stree.empty (by first | bool_reflect | rfl)"
-        if self.left is None and self.right is None:
+        elif self.is_leaf():
             return "Stree.leaf " + str(self.val) + " (by first | bool_reflect | rfl) (by first | bool_reflect | rfl)"
-        if self.left is None:
-            left = "Stree.empty (by first | bool_reflect | rfl)"
         else:
-            left = self.left.__str__("left")
-        if self.right is None:
-            right = "Stree.empty (by first | bool_reflect | rfl)"
-        else:
-            right = self.right.__str__("right")
-        return "Stree.node " + str(self.val) + "\n(" + left + ")\n(" + right + ")"
+            if self.has_left():
+                left = str(self.left)
+            else:
+                left = "Stree.empty (by first | bool_reflect | rfl)"
+            if self.has_right():
+                right = str(self.right)
+            else:
+                right = "Stree.empty (by first | bool_reflect | rfl)"
+            return "Stree.node " + str(self.val) + "\n(" + left + ")\n(" + right + ")"
 
 class Smap:
     def __init__(self, key, val, left, right):
@@ -42,7 +59,7 @@ class Smap:
         self.left = left
         self.right = right
 
-    def __str__(self, subtree = None):
+    def __str__(self):
         if self.val is None:
             return "Smap.empty (by first | bool_reflect | rfl)"
         if self.left is None and self.right is None:
@@ -50,11 +67,11 @@ class Smap:
         if self.left is None:
             left = "Smap.empty (by first | bool_reflect | rfl)"
         else:
-            left = self.left.__str__("left")
+            left = str(self.left)
         if self.right is None:
             right = "Smap.empty (by first | bool_reflect | rfl)"
         else:
-            right = self.right.__str__("right")
+            right = str(self.right)
         return "Smap.node " + str(self.key) + " (" + str(self.val) + ") " + "\n(" + left + ")\n(" + right + ")"
 class HoGGraph:
     """An object representing a single HoG graph"""
@@ -341,10 +358,10 @@ def write_lean_files(datadir, outdirData, file_prefix, limit=None, skip=0):
         assert os.path.isdir(outdirData), "{0} exists but is not a directory".format(outdirData)
     else:
         print ("Creating {0}".format(outdirData))
-        os.mkdir(outdirData)
+        pathlib.Path(outdirData).mkdir(parents=True, exist_ok=True)
 
     with open(os.path.join(outdirData, "Invariants.lean"), 'a') as fh:
-        fh.write("import Graph\n\nnamespace Hog\n")
+        fh.write("import Query\n\nnamespace Hog\n")
 
     counter = 0
     names = []
