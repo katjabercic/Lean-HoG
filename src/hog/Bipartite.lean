@@ -42,6 +42,8 @@ theorem certCorrect {G : SimpleIrreflexiveGraph} (C : BipartiteCertificate G):
   sorry
 
 class Bipartite (G : SimpleIrreflexiveGraph) : Type where
+  asBool : Bool
   cert : BipartiteCertificate G
+  asBoolCorrect : asBool ↔ IsBipartite G
 
 end Bipartite
