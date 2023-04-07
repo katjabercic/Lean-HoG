@@ -6,7 +6,7 @@ import TreeMap
 import Tactic
 import ConnectedComponents
 import Bipartite
-import Path
+import Walk
 import Data.Invariants
 import Data.Imports
 

@@ -1,7 +1,7 @@
 import Mathlib.Algebra.Parity
 
 import Graph
-import Path
+import Walk
 
 namespace Bipartite
 
@@ -29,7 +29,7 @@ class Bipartite (g : SimpleIrreflexiveGraph) : Type where
 
 class NonBipartite (g : SimpleIrreflexiveGraph) : Type where
   u : Nat
-  cycle : Cycle g u
-  isOdd : Odd (cycle.length)
+  closedWalk : ClosedWalk g u
+  isOdd : Odd (closedWalk.length)
 
 end Bipartite

@@ -87,13 +87,15 @@ def edgeRelation (G : SimpleIrreflexiveGraph) : ℕ → ℕ → Prop :=
     (fun _ => False)
     (fun _ => { edge := (v,u), src_lt_trg := by assumption } ∈ G.edges)
 
-lemma edgeRelationIrreflexive {G : SimpleIrreflexiveGraph} : ∀ {v}, ¬ edgeRelation G v v := by
+macro:max g:term:60 " [" u:term:60 " ~~ " v:term:60 "] " : term => `(edgeRelation $g $u $v)
+
+lemma edgeRelationIrreflexive {G : SimpleIrreflexiveGraph} : ∀ {v}, ¬ G[v ~~ v] := by
   intro v
   unfold edgeRelation
   simp [lt_by_cases]
 
 lemma edgeRelationSymmetric {G : SimpleIrreflexiveGraph} :
-  ∀ {u v}, edgeRelation G u v → edgeRelation G v u := by
+  ∀ {u v}, G[u ~~ v] → G[v ~~ u] := by
   intros u v edge_uv
   apply lt_by_cases u v
   · intro h
@@ -110,7 +112,7 @@ lemma edgeRelationSymmetric {G : SimpleIrreflexiveGraph} :
     exact edge_uv
 
 lemma edgeRelationIsMem {G : SimpleIrreflexiveGraph} : 
-  ∀ {u v} {uv : u < v}, edgeRelation G u v → { edge := (u, v), src_lt_trg := uv } ∈ G.edges := by
+  ∀ {u v} {uv : u < v}, G[u ~~ v] → { edge := (u, v), src_lt_trg := uv } ∈ G.edges := by
   intros u v uv euv
   simp [edgeRelation, lt_by_cases, uv] at euv
   exact euv

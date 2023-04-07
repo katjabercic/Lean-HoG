@@ -3,5 +3,5 @@ import TreeMap
 import Graph
 import Tactic
 import ConnectedComponents
-import Path
+import Walk
 import Query

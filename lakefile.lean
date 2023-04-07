@@ -14,7 +14,7 @@ lean_lib Graph
 lean_lib Query
 lean_lib Tactic
 lean_lib ConnectedComponents
-lean_lib Path
+lean_lib Walk
 lean_lib Bipartite
 lean_lib Pickle
 lean_lib Data {
