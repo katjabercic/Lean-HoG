@@ -16,7 +16,7 @@ ${stree}
 
 def ${name}_tset : Tset Edge := ${name}_stree
 
-def nbhds : Tmap ℕ (Tset ℕ) :=
+def ${name}_nbhds : Tmap ℕ (Tset ℕ) :=
 ${nbhds_smap}
 
 def ${name} : SimpleIrreflexiveGraph := 
@@ -24,7 +24,7 @@ def ${name} : SimpleIrreflexiveGraph :=
   edges := ${name}_tset,
   edgeSize := $edge_size,
   edgeSizeCorrect := by bool_reflect,
-  neighborhoods := nbhds,
+  neighborhoods := ${name}_nbhds,
   neighborhoodsCorrect := by bool_reflect,
   minDegree := $min_degree,
   minDegreeCorrect := by bool_reflect,

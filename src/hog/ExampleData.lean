@@ -1,11 +1,14 @@
-import Lean
+import Mathlib.Data.Nat.Parity
+
 import Graph
 import TreeSet
 import TreeMap
 import Tactic
 import ConnectedComponents
 import Bipartite
+import Path
 import Data.Invariants
+import Data.Imports
 
 namespace Hog
 
@@ -28,6 +31,11 @@ lemma helper2 : Bounded.element (Edge.mk (0, 1)) < Bounded.element (Edge.mk (0,2
 lemma helper3 : Bounded.element (Edge.mk (0, 2)) < Bounded.element (Edge.mk (1, 2)) := by bool_reflect
 lemma helper4: Bounded.element (Edge.mk (1, 2)) < Bounded.top := by first | bool_reflect | rfl
 
+-- Graph:
+--      0
+--    /   \
+--   /     \
+--  2 ----- 1
 def example_1: Tset Edge :=
   Stree.node { edge := (0,2) }
     (Stree.leaf { edge := (0,1) } (helper1) (helper2))
@@ -58,8 +66,7 @@ def N₁ : Tmap Nat (Tset Nat) :=
     (Smap.leaf 0 temp0 (by first | bool_reflect | rfl) (by bool_reflect))
     (Smap.leaf 2 temp2 (by bool_reflect) (by first | bool_reflect | rfl))
 
-
-def G : SimpleIrreflexiveGraph := {
+def G₁ : SimpleIrreflexiveGraph := {
   vertexSize := 3,
   edges := example_1,
   edgeSize := 3,
@@ -74,6 +81,11 @@ def G : SimpleIrreflexiveGraph := {
   isRegularCorrect := by bool_reflect
 }
 
+-- Graph:
+--  0 ------ 1
+--  |        |
+--  |        |
+--  3 ------ 2
 def example_2 : Tset Edge :=
   Stree.node (Edge.mk (0,3))
     (Stree.leaf (Edge.mk (0,1)) (by rfl) (by bool_reflect))
@@ -128,46 +140,40 @@ def full : Tmap (Fin 4) Edge :=
       (Smap.leaf 3 (Edge.mk (2,3)) (by bool_reflect) (by rfl))
     )
 
-def bpG₂ : BipartiteGraph := {
-  G := G₂,
-  partition := partition,
-  cond1 := by bool_reflect,
-  full := full,
-  cond2 := by bool_reflect,
-  c := fun v =>
+instance bipartiteG₂ : Bipartite G₂ where
+  partition := fun v =>
     match v with
     | 0 => 0
     | 1 => 1
-    | 2 => 1
-    | 3 => 0
-    | _ => sorry
-  cond3 := by bool_reflect
-}
-
-open Lean
-
-def my_p : GraphInfo → Bool := fun inv => inv.vertexSize == 7
-
-theorem thereIsAGraph : ∃ g : GraphInfo, (g.minDegree = some 2 ∧ g.isRegular = true) := by
-  try_add_invariants_to_ctx
-  try_find_invariant my_p
-  sorry
-
-def my_path : System.FilePath := { toString := "/home/jure/Documents/source-control/Lean-HoG"}
-
-open Lean Lean.Elab.Tactic Expr Meta in 
-elab "import_graph_for_invariant" : tactic =>
-  withMainContext do
-    let sysRoot ← findSysroot
-    logInfo s!"{sysRoot}"
-    initSearchPath my_path
-    let _ ← importModules [{ module := `Data.hog00001 : Import }] {} 0
-    -- let t ← (Expr.const `Hog.hog00001 [])
+    | 2 => 0
+    | 3 => 1
+    | _ => -1
+  cond := by bool_reflect
 
 
-theorem booga : 1 = 1 := by
-  import_graph_for_invariant
-  let test : SimpleIrreflexiveGraph := Hog.hog00001
+def simpleWalk : Walk G₁ 0 1 := (Walk.trivial 0) ~- {0,1}
 
+def exampleWalk : Walk G₁ 0 1 := Walk.right 0 0 1 (by rfl) (Walk.trivial 0)
+def exampleWalk2 : Walk G₁ 0 2 := (⬝ 0) ~- {0,1} ~- {1,2}
+#eval exampleWalk2
+
+def examplePath : Path G₁ 0 2 := Path.right 0 1 2 (by rfl) exampleWalk (by bool_reflect)
+def examplePath2 : Path G₁ 0 0 := (⬝ 0) ~- {0,1} ~- {1,2} ~- {2,0}
+
+def exampleCycle : Cycle G₁ 0 := examplePath2
+#eval exampleCycle
+#eval exampleCycle.length
+
+
+instance foop (n : Nat) : Decidable (Odd n) := by
+  let x : DecidablePred Odd := fun _ => decidable_of_iff _ Nat.odd_iff.symm
+  infer_instance
+
+instance nonBipartiteG₁ : NonBipartite G₁ where
+  u := 0
+  cycle := exampleCycle
+  isOdd := by
+    let x : DecidablePred Odd := foop
+    simp
 
 end Hog

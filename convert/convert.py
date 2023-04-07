@@ -382,9 +382,12 @@ def write_lean_files(datadir, outdirData, file_prefix, limit=None, skip=0):
                 fh.write(template_invariants.substitute(graph.get_invariants()))
 
         counter += 1
-
+    with open (os.path.join(outdirData, "Imports.lean"), 'w') as fh:
+        for name in names:
+            fh.write(f"import Data.{name}\n")
+        fh.write("\ntheorem test : 1 = 1 := by rfl")
     with open(os.path.join(outdirData, "Invariants.lean"), 'a') as fh:
-        fh.write("\ndef invariants : List GraphInvariants := [")
+        fh.write("\ndef invariants : List GraphInfo := [")
         for i, name in enumerate(names):
             fh.write(name + "_invariants")
             if i < len(names) - 1:

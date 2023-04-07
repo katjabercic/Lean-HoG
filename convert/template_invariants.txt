@@ -1,5 +1,5 @@
 
-def ${name}_invariants : GraphInvariants := 
+def ${name}_invariants : GraphInfo := 
 { vertexSize := $vertex_size,
   edgeSize := $edge_size,
   minDegree := $min_degree,

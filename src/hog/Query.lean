@@ -1,7 +1,7 @@
 import Lean
 import TreeSet
 
-structure GraphInvariants : Type :=
+structure GraphInfo : Type :=
   (vertexSize : Nat)
   (edgeSize : Nat)
   (minDegree : Option Nat)
@@ -10,13 +10,13 @@ structure GraphInvariants : Type :=
   (isBipartite : Bool)
 deriving Repr
 
-def findGraphSuchThat (p : GraphInvariants → Bool) : 
-  List GraphInvariants → Option GraphInvariants
+def findGraphSuchThat (p : GraphInfo → Bool) : 
+  List GraphInfo → Option GraphInfo
   | [] => none
   | g :: gs => if p g then g else findGraphSuchThat p gs
 
 open Lean in
-def list_graphInvariants := (Expr.app (Expr.const ``List [levelZero]) (Expr.const ``GraphInvariants []))
+def list_graphInvariants := (Expr.app (Expr.const ``List [levelZero]) (Expr.const ``GraphInfo []))
 
 open Lean Lean.Elab.Tactic Expr Meta in 
 elab "try_add_invariants_to_ctx" : tactic =>
