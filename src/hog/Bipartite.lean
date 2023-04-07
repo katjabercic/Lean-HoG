@@ -23,13 +23,25 @@ open TreeMap
 --   (c : Nat → Fin 2)
 --   (cond3 : Tset.forall (fun e => c e.edge.fst ≠ c e.edge.snd) partition)
 
-class Bipartite (g : SimpleIrreflexiveGraph) : Type where
-  partition : Nat → Fin 2
-  cond : Stree.forall (fun e => partition e.edge.fst ≠ partition e.edge.snd) g.edges
+structure VertexPartition (Label : Type) [DecidableEq Label] (g : SimpleIrreflexiveGraph) : Type where
+  partition : Nat → Label
+  partitionCorrect : Stree.forall (fun e => partition e.edge.fst ≠ partition e.edge.snd) g.edges
 
-class NonBipartite (g : SimpleIrreflexiveGraph) : Type where
-  u : Nat
-  closedWalk : ClosedWalk g u
-  isOdd : Odd (closedWalk.length)
+def IsBipartite (G : SimpleIrreflexiveGraph) := ∃ _ : VertexPartition Bool G, ⊤
+
+inductive BipartiteCertificate (G : SimpleIrreflexiveGraph): Type where
+  | partition : VertexPartition Bool G → BipartiteCertificate G
+  | oddClosedWalk (w : ClosedWalk G) : Odd (w.length) → BipartiteCertificate G
+
+def certToBool {G : SimpleIrreflexiveGraph} : BipartiteCertificate G → Bool
+  | .partition _ => true
+  | .oddClosedWalk _ _ => false
+
+theorem certCorrect {G : SimpleIrreflexiveGraph} (C : BipartiteCertificate G):
+  IsBipartite G ↔ certToBool C = true := by
+  sorry
+
+class Bipartite (G : SimpleIrreflexiveGraph) : Type where
+  cert : BipartiteCertificate G
 
 end Bipartite

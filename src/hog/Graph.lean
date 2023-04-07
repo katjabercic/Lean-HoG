@@ -69,7 +69,10 @@ def decidableNbhdsCondition (nbhds : Tmap ℕ (Tset ℕ)) : Bool :=
 -- The definition of a finite graph that will represent the graphs that we import from House of Graphs
 structure SimpleIrreflexiveGraph : Type :=
   (vertexSize : ℕ)
+  (isVertex := fun (k : ℕ) => k < vertexSize)
   (edges : Tset Edge)
+  (isEdge := fun (e : Edge) => (e.edge.fst < vertexSize) ∧ (e.edge.snd < vertexSize))
+  (edgesCorrect : Stree.forall (fun e => (e.edge.fst < vertexSize) ∧ (e.edge.snd < vertexSize)) edges := by bool_reflect)
   (edgeSize : ℕ)
   (edgeSizeCorrect : edgeSize = edges.size)
   (neighborhoods : Tmap ℕ (Tset ℕ))
@@ -81,13 +84,38 @@ structure SimpleIrreflexiveGraph : Type :=
   (isRegular : Bool)
   (isRegularCorrect : isRegular = (minDegree = maxDegree))
 
+@[reducible, simp]
+instance SimpleIrreflexiveGraph.hasMem : Membership ℕ SimpleIrreflexiveGraph where
+  mem := fun k g => g.isVertex k
+
 def edgeRelation (G : SimpleIrreflexiveGraph) : ℕ → ℕ → Prop :=
   fun u v => lt_by_cases u v
     (fun _ => { edge := (u,v), src_lt_trg := by assumption } ∈ G.edges)
     (fun _ => False)
     (fun _ => { edge := (v,u), src_lt_trg := by assumption } ∈ G.edges)
 
-macro:max g:term:60 " [" u:term:60 " ~~ " v:term:60 "] " : term => `(edgeRelation $g $u $v)
+    macro:max g:term:60 " [" u:term:60 " ~~ " v:term:60 "] " : term => `(edgeRelation $g $u $v)
+
+def endpointIsVertex (G : SimpleIrreflexiveGraph) {u v : ℕ} :
+  G[u ~~ v] -> G.isVertex u ∧ G.isVertex v := by
+    intro e
+    let moo := Stree.forallIsForall (fun e => (e.edge.fst < G.vertexSize) ∧ (e.edge.snd < G.vertexSize)) G.edges G.edgesCorrect
+    apply lt_by_cases u v
+    · sorry
+    · sorry
+    · sorry
+
+def theEdge (g : SimpleIrreflexiveGraph) {u v : ℕ} :
+  edgeRelation g u v → Edge :=
+  by
+    intro e
+    apply lt_by_cases u v
+    · intro uv
+      exact Edge.mk (u, v)
+    · intro uv
+      simp [uv, edgeRelation, lt_by_cases] at e
+    · intro uv
+      exact Edge.mk (v, u)  
 
 lemma edgeRelationIrreflexive {G : SimpleIrreflexiveGraph} : ∀ {v}, ¬ G[v ~~ v] := by
   intro v

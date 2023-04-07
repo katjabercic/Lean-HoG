@@ -8,7 +8,7 @@ import TreeSet
 -- inductive definition of path in a graph
 -- a path is either just an edge or it is constructed from a path and a next edge that fits
 inductive Walk (g : SimpleIrreflexiveGraph) : Nat → Nat → Type
-  | trivial (s : Nat) : Walk g s s
+  | trivial (s : Nat) : g.isVertex s → Walk g s s
   | left {s t u : Nat} : g[s ~~ t] → Walk g t u →  Walk g s u
   | right {s t u : Nat} : Walk g s t → g[t ~~ u] → Walk g s u
 
@@ -18,7 +18,7 @@ macro "{" u:term "," v:term "}" " -~ " walk:term : term => `(Walk.left $u $v _ $
 macro " ⬝ " u:term : term => `(Walk.trivial $u)
 
 def Walk.toString {g : SimpleIrreflexiveGraph} {s t : Nat} : Walk g s t → String
-  | .trivial s => s!"{s}"
+  | .trivial s _ => s!"{s}"
   | .left e w => s!"{s} -> {w.toString}"
   | .right w e => s!"{w.toString} -> {t}"
 
@@ -26,17 +26,17 @@ instance walkToString {g : SimpleIrreflexiveGraph} {s t : Nat} : ToString (Walk 
   toString := fun w => w.toString
 
 def Walk.isNontrivial {g : SimpleIrreflexiveGraph} {s t : Nat} : Walk g s t → Prop
-  | .trivial s => False
+  | .trivial s _ => False
   | .left _ _ => True
   | .right _ _ => True
 
 def Walk.notInWalk {g : SimpleIrreflexiveGraph} {u v a b : Nat} : Walk g u v → edgeRelation g a b → Bool
-  | .trivial s, e => true
+  | .trivial s _, e => true
   | .left (t := t) _ p, e => (a != u || b != t) && (a != t || b != u) && notInWalk p e
   | .right (t := t) p _, e => (a != t || b != v) && (a != v  || b != t) && notInWalk p e
 
 def Walk.reverse {g : SimpleIrreflexiveGraph} {s t : Nat} :  Walk g s t → Walk g t s
-  | .trivial s => .trivial s
+  | .trivial s p => .trivial s p
   | .left e p => Walk.right (reverse p) (edgeRelationSymmetric e) 
   | .right p e => Walk.left (edgeRelationSymmetric e) (reverse p)
 
@@ -44,31 +44,31 @@ macro p:term "↑" : term => `(Walk.reverse $p)
 
 def Walk.concat {g : SimpleIrreflexiveGraph} {s t u : Nat} : Walk g s t → Walk g t u → Walk g s u := fun p q =>
   match p with
-  | .trivial s => q
+  | .trivial s _ => q
   | .left e p' =>
     match q with
-    | .trivial t => Walk.left e p'
+    | .trivial t _ => Walk.left e p'
     | .left r q' => Walk.left e (concat (Walk.right p' r) q')
     | .right q' r => Walk.left e (Walk.right (concat p' q') r)
   | p' =>
     match q with
-    | .trivial t => p'
+    | .trivial t _ => p'
     | .left r q' => concat (Walk.right p' r) q'
     | .right q' r => Walk.right (concat p' q') r
 
 macro p:term "+" q:term : term => `(Walk.concat $p $q)
 
-def Walk.edgeWalk {g : SimpleIrreflexiveGraph} {s t : Nat} : g[s ~~ t] → Walk g s t := fun e =>
-  Walk.left e (Walk.trivial t)
+def Walk.edgeWalk {g : SimpleIrreflexiveGraph} {s t : Nat} (e : g[s ~~ t]) : Walk g s t :=
+  Walk.left e (Walk.trivial t (endpointIsVertex g e).right)
 
 def Walk.length {g : SimpleIrreflexiveGraph} {s t : Nat} : Walk g s t → ℕ
-  | .trivial s => 0
+  | .trivial s _ => 0
   | .left _ p' => length p' + 1
   | .right p' _ => length p' + 1
 
 -- The easy direction, just apply induction on the structure of path
 lemma pathImpliesConnected {g : SimpleIrreflexiveGraph} {s t : Nat} : Walk g s t → connected g s t
-  | .trivial s => connectedRefl
+  | .trivial s _ => connectedRefl
   | .left e p' => (edgeConnected e) ⊕ (pathImpliesConnected p')
   | .right p' e => pathImpliesConnected p' ⊕ (edgeConnected e)
 
@@ -116,8 +116,9 @@ lemma witnessWalkToRoot (w : numComponentsWitnessExact) (s : Fin w.G.vertexSize)
       have h := w.uniquenessOfRoots v H
       rw [←h]
       apply Walk.trivial
+      sorry -- apply v.isLt
   }
 
-def ClosedWalk (g : SimpleIrreflexiveGraph) (u : Nat) : Type := Walk g u u
+def ClosedWalk (g : SimpleIrreflexiveGraph) : Type := Σ u : ℕ, Walk g u u
 
-def ClosedWalk.length {g : SimpleIrreflexiveGraph} {u : Nat} : ClosedWalk g u → Nat := Walk.length
+def ClosedWalk.length {g : SimpleIrreflexiveGraph} (w : ClosedWalk g) : Nat := Walk.length w.snd
