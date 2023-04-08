@@ -16,7 +16,7 @@ structure Edge : Type :=
   edge        : Lex (Nat × Nat)
   src_lt_trg  : edge.fst < edge.snd := by trivial
 
-instance EdgeLinearOrder : LinearOrder Edge := 
+instance EdgeLinearOrder : LinearOrder Edge :=
   LinearOrder.lift' (fun (u : Edge) => u.edge) (fun u v H => by cases u; cases v; simp; assumption)
 
 -- def nbhds_condition (nbhds : tmap ℕ (tset ℕ)) : Prop :=
@@ -38,14 +38,14 @@ instance (nbhds : Tmap ℕ (Tset ℕ)) : DecidablePred fun j => i ∈ Tmap.toMap
 def decidableNbhdsCondition (nbhds : Tmap ℕ (Tset ℕ)) : Bool :=
   Smap.forallKeys (fun i => Stree.optionForall (fun j => i ∈ nbhds.toMap j) (nbhds.toMap i)) nbhds
 
--- def nbhds_describe_edges (nbhds : tmap ℕ (tset ℕ)) (edges : tset edge) : Prop := 
+-- def nbhds_describe_edges (nbhds : tmap ℕ (tset ℕ)) (edges : tset edge) : Prop :=
 --   ∀ i : ℕ, smap.contains_key i nbhds → (∀ j : ℕ, j ∈ nbhds.to_map i → decidable.lt_by_cases i j
 --     (λ _, {edge . edge := (i, j)} ∈ edges)
 --     (λ _, false)
 --     (λ _, {edge . edge := (j, i)} ∈ edges))
 
--- def decidable_nbhds_describe_edges (nbhds : tmap ℕ (tset ℕ)) (edges : tset edge) : bool := 
---   smap.forall_keys (λ i, (@stree.option_forall ℕ (_) (λ j, 
+-- def decidable_nbhds_describe_edges (nbhds : tmap ℕ (tset ℕ)) (edges : tset edge) : bool :=
+--   smap.forall_keys (λ i, (@stree.option_forall ℕ (_) (λ j,
 --     decidable.lt_by_cases i j
 --       (λ _, {edge . edge := (i, j)} ∈ edges)
 --       (λ _, false)
@@ -58,10 +58,10 @@ def decidableNbhdsCondition (nbhds : Tmap ℕ (Tset ℕ)) : Bool :=
 -- def decidable_edges_describe_nbhds (nbhds : tmap ℕ (tset ℕ)) (edges : tset edge) : bool :=
 --   stree.forall (λ e : edge, e.edge.snd ∈ nbhds.to_map e.edge.fst) edges
 
--- def describes_neighborhoods (nbhds : tmap ℕ (tset ℕ)) (edges : tset edge) : Prop := 
+-- def describes_neighborhoods (nbhds : tmap ℕ (tset ℕ)) (edges : tset edge) : Prop :=
 -- nbhds_condition nbhds ∧ nbhds_describe_edges nbhds edges ∧ edges_describe_nbhds nbhds edges
 
--- def decidable_describes_neighborhoods (nbhds : tmap ℕ (tset ℕ)) (edges : tset edge) : bool := 
+-- def decidable_describes_neighborhoods (nbhds : tmap ℕ (tset ℕ)) (edges : tset edge) : bool :=
 -- decidableNbhdsCondition nbhds ∧ decidable_nbhds_describe_edges nbhds edges ∧ decidable_edges_describe_nbhds nbhds edges
 
 
@@ -115,7 +115,7 @@ def theEdge (g : SimpleIrreflexiveGraph) {u v : ℕ} :
     · intro uv
       simp [uv, edgeRelation, lt_by_cases] at e
     · intro uv
-      exact Edge.mk (v, u)  
+      exact Edge.mk (v, u)
 
 lemma edgeRelationIrreflexive {G : SimpleIrreflexiveGraph} : ∀ {v}, ¬ G[v ~~ v] := by
   intro v
@@ -139,7 +139,7 @@ lemma edgeRelationSymmetric {G : SimpleIrreflexiveGraph} :
     simp [edgeRelation, h, lt_by_cases, asymm h] at edge_uv
     exact edge_uv
 
-lemma edgeRelationIsMem {G : SimpleIrreflexiveGraph} : 
+lemma edgeRelationIsMem {G : SimpleIrreflexiveGraph} :
   ∀ {u v} {uv : u < v}, G[u ~~ v] → { edge := (u, v), src_lt_trg := uv } ∈ G.edges := by
   intros u v uv euv
   simp [edgeRelation, lt_by_cases, uv] at euv

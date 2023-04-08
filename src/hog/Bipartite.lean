@@ -23,27 +23,56 @@ open TreeMap
 --   (c : Nat → Fin 2)
 --   (cond3 : Tset.forall (fun e => c e.edge.fst ≠ c e.edge.snd) partition)
 
-structure VertexPartition (Label : Type) [DecidableEq Label] (g : SimpleIrreflexiveGraph) : Type where
-  partition : Nat → Label
-  partitionCorrect : Stree.forall (fun e => partition e.edge.fst ≠ partition e.edge.snd) g.edges
+structure VertexLabeling (Label : Type) [DecidableEq Label] (g : SimpleIrreflexiveGraph) : Type where
+  label : Nat → Label
+  labelCorrect :  ∀ e, e ∈ g.edges → label e.edge.fst ≠ label e.edge.snd
 
-def IsBipartite (G : SimpleIrreflexiveGraph) := ∃ _ : VertexPartition Bool G, ⊤
+def IsBipartite (G : SimpleIrreflexiveGraph) := ∃ _ : VertexLabeling Bool G, ⊤
 
-inductive BipartiteCertificate (G : SimpleIrreflexiveGraph): Type where
-  | partition : VertexPartition Bool G → BipartiteCertificate G
-  | oddClosedWalk (w : ClosedWalk G) : Odd (w.length) → BipartiteCertificate G
+lemma EvenOddWalkEndpointEquality
+  {G : SimpleIrreflexiveGraph}
+  {a b : ℕ}
+  (w : Walk G a b)
+  (p : VertexLabeling Bool G) :
+  (Odd w.length → p.label a ≠ p.label b) ∧
+  (Even w.length → p.label a = p.label b)
+  := by
+  induction w with
+  | trivial s isV =>
+    apply And.intro
+    · intro H
+      cases H with
+      | intro k eq =>
+        simp [Walk.length, Even, Odd] at eq
+        contradiction
+    · intro
+      rfl
+  | @left a b c ab w' ih =>
+    apply And.intro
+    · intro H
+      cases H with
+      | intro k eq =>
+        simp [Walk.length, Even, Odd] at eq
+        have wEv : Even w'.length := by simp [eq]
+        rw [← ih.right wEv]
+        sorry
+    · intro H
+      sorry
+  | right w p =>
+    sorry
 
-def certToBool {G : SimpleIrreflexiveGraph} : BipartiteCertificate G → Bool
-  | .partition _ => true
-  | .oddClosedWalk _ _ => false
-
-theorem certCorrect {G : SimpleIrreflexiveGraph} (C : BipartiteCertificate G):
-  IsBipartite G ↔ certToBool C = true := by
-  sorry
+theorem OddClosedWalkNotBipiartite
+  {G : SimpleIrreflexiveGraph}
+  (w : ClosedWalk G) :
+  Odd w.length → ¬ IsBipartite G := by
+  intros isOdd p
+  cases p with
+  | intro c _ =>
+    let _ := (EvenOddWalkEndpointEquality w.snd c).left isOdd
+    contradiction
 
 class Bipartite (G : SimpleIrreflexiveGraph) : Type where
-  asBool : Bool
-  cert : BipartiteCertificate G
-  asBoolCorrect : asBool ↔ IsBipartite G
+  value : Bool
+  correct : value ↔ IsBipartite G
 
 end Bipartite
