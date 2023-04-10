@@ -16,6 +16,7 @@ structure Edge : Type :=
   edge        : Lex (Nat × Nat)
   src_lt_trg  : edge.fst < edge.snd := by trivial
 
+
 instance EdgeLinearOrder : LinearOrder Edge :=
   LinearOrder.lift' (fun (u : Edge) => u.edge) (fun u v H => by cases u; cases v; simp; assumption)
 
@@ -63,8 +64,6 @@ def decidableNbhdsCondition (nbhds : Tmap ℕ (Tset ℕ)) : Bool :=
 
 -- def decidable_describes_neighborhoods (nbhds : tmap ℕ (tset ℕ)) (edges : tset edge) : bool :=
 -- decidableNbhdsCondition nbhds ∧ decidable_nbhds_describe_edges nbhds edges ∧ decidable_edges_describe_nbhds nbhds edges
-
-
 
 -- The definition of a finite graph that will represent the graphs that we import from House of Graphs
 structure SimpleIrreflexiveGraph : Type :=

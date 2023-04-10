@@ -8,6 +8,7 @@ package «lean-HOG» {
 @[default_target]
 lean_lib HoG where
 
+lean_lib BoundedOrder
 lean_lib TreeSet
 lean_lib TreeMap
 lean_lib Graph
