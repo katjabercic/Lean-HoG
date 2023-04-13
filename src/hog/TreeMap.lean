@@ -1,9 +1,18 @@
 import BoundedOrder
 
+import TreeSet
+
+-- Type of finite maps
 inductive Map (α β : Type) : Type
 | empty : Map α β
 | leaf : α → β → Map α β
 | node : α → β → Map α β → Map α β → Map α β
+
+-- Get the domain of a finite map as a Tree
+def Map.domain {α β : Type} [Ord α] : Map α β → Tree α
+  | empty => Tree.empty
+  | leaf x _ => Tree.leaf x
+  | node x _ left right => Tree.node x (left.domain) (right.domain)
 
 @[simp]
 def Map.correctBound {α β : Type} [Ord α] (low high : Bounded α) : Map α β → Bool
@@ -56,3 +65,51 @@ def Map.hasKey {α β : Type} [Ord α] (x : α) : Map α β → Bool
     | .lt => hasKey x left
     | .eq => true
     | .gt => hasKey y right
+
+def Map.hasVal {α β : Type} [Ord α] [DecidableEq β] (x : β) : Map α β → Bool
+  | empty => false
+  | leaf _ y => x == y
+  | node _ y left right => x == y || left.hasVal x || right.hasVal x
+
+def Map.forallKeys {α β : Type} [Ord α] (p : α → Prop) [DecidablePred p] : Map α β → Bool
+  | empty => true
+  | leaf x _ => p x
+  | node x _ left right =>
+    p x && left.forallKeys p && right.forallKeys p
+
+def Map.forall {α β : Type} [Ord α] (p : β → Prop) [DecidablePred p] : Map α β → Bool
+  | empty => true
+  | leaf _ y => p y
+  | node _ y left right =>
+    p y && left.forall p && right.forall p
+
+theorem Map.all_forall {α β: Type} [Ord α] [DecidableEq β] (p : β → Prop) [DecidablePred p] (m : Map α β) : 
+  Map.forall p m → (∀ x : β, Map.hasVal x m → p x) := by
+  induction m
+  case empty => simp [Map.hasVal]
+  case leaf _ x =>
+    intros ih x' ih'
+    simp [Map.forall] at ih
+    simp [Map.hasVal] at ih'
+    rw [ih']
+    assumption
+  case node a y left right ihl ihr =>
+    intros h x ih
+    simp [Map.forall] at h
+    simp [Map.hasVal] at ih
+    cases ih with
+    | inl l =>
+      cases l with
+      | inl ll => simp [h, ll]
+      | inr lr => simp [h, ihl, lr]
+    | inr r => simp [ihr, h, r]
+      
+def Map.exi {α β : Type} [Ord α] (p : β → Prop) [DecidablePred p] : Map α β → Bool
+  | empty => false
+  | leaf _ x => p x
+  | node _ x left right => p x || left.exi p || right.exi p
+
+theorem Map.exists_exi {α β: Type} [Ord α] [DecidableEq β] (p : β → Prop) [DecidablePred p] (m : Map α β) : 
+  (∃ (x : β), Map.hasVal x m → p x) → Map.exi p m := sorry
+
+
