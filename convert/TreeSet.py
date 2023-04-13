@@ -4,9 +4,8 @@ T = TypeVar("T")
 
 class Tree(Generic[T]):
     val : Optional[T]
-    # These should be included when mypy recursive types work
-    # left : Optional[Tree[T]]
-    # right : Optional[Tree[T]]
+    left : Optional["Tree[T]"] # quotation marks needed with slighly older versions of Python
+    right : Optional["Tree[T]"]
 
     def __init__(self, val : Optional[T], left : Optional[Any], right : Optional[Any]):
         """Tree(None, _, _) creates an empty tree.
