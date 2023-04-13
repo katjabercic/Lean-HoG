@@ -42,7 +42,7 @@ instance Edge_Ord (m : ℕ): Ord (Edge m) where
 structure Graph : Type :=
   vertexSize : ℕ
   edgeTree : Tree (Edge vertexSize)
-  -- edgeCorrect : edgeTree.correct := by rfl
+  edgeCorrect : edgeTree.correct := by rfl
 
 -- the type of graph vertices
 @[simp, reducible]

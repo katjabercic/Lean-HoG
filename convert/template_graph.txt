@@ -1,37 +1,13 @@
 import Graph
-import ConnectedComponents
-import TreeSet
-import TreeMap
-
-open TreeSet
-open TreeMap
+import EdgeSize
 
 namespace Hog
 
--- set_option class.instance_max_depth 5000
--- set_option eqn_compiler.max_steps 100000
-
-def ${name}_stree : Stree Edge (by { trivial } : Bounded.bottom < Bounded.top) :=
-${stree}
-
-def ${name}_tset : Tset Edge := ${name}_stree
-
-def ${name}_nbhds : Tmap ℕ (Tset ℕ) :=
-${nbhds_smap}
-
-def ${name} : SimpleIrreflexiveGraph := 
+def ${name} : Graph := 
 { vertexSize := $vertex_size,
-  edges := ${name}_tset,
-  edgeSize := $edge_size,
-  edgeSizeCorrect := by bool_reflect,
-  neighborhoods := ${name}_nbhds,
-  neighborhoodsCorrect := by bool_reflect,
-  minDegree := $min_degree,
-  minDegreeCorrect := by bool_reflect,
-  maxDegree := $max_degree,
-  maxDegreeCorrect := by bool_reflect,
-  isRegular := $is_regular,
-  isRegularCorrect := by bool_reflect
+  edgeTree := $edge_tree
 }
+
+instance : EdgeSize ${name} where val := ${edge_size}
 
 end Hog
