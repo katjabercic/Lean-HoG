@@ -3,7 +3,7 @@ import Mathlib.Tactic.Basic
 
 import BoundedOrder
 
--- A set represented as a search tree
+-- A finite set represented as a search tree
 
 inductive Tree (α : Type) : Type
   | empty : Tree α
@@ -13,7 +13,7 @@ inductive Tree (α : Type) : Type
 open Tree
 
 @[simp]
-def Tree.isSearchBound {α : Type} [Ord α] (low high : Bounded α) : Tree α → Bool
+def Tree.correctBound {α : Type} [Ord α] (low high : Bounded α) : Tree α → Bool
   | empty => true
   | leaf x =>
     match compare low (.element x) with
@@ -26,18 +26,21 @@ def Tree.isSearchBound {α : Type} [Ord α] (low high : Bounded α) : Tree α �
     match compare low x with
     | .lt =>
       match compare (.element x) high with
-      | .lt => isSearchBound low (.element x) left && isSearchBound (.element x) high right
+      | .lt => correctBound low (.element x) left && correctBound (.element x) high right
       | _ => false
     | _ => false
 
 @[simp]
-def Tree.isSearch {α : Type} [Ord α] (t : Tree α) : Bool :=
-  isSearchBound .bottom .top t
+def Tree.correct {α : Type} [Ord α] (t : Tree α) : Bool :=
+  correctBound .bottom .top t
 
 @[simp]
-def Tree.mem {α : Type} [Ord α] [DecidableEq α] (x : α) : Tree α → Bool
+def Tree.mem {α : Type} [Ord α] (x : α) : Tree α → Bool
   | empty => false
-  | leaf y => x == y
+  | leaf y =>
+    match compare x y with
+    | .eq => true
+    | _ => false
   | node y left right =>
     match compare x y with
     | .lt => mem x left
@@ -45,11 +48,11 @@ def Tree.mem {α : Type} [Ord α] [DecidableEq α] (x : α) : Tree α → Bool
     | .gt => mem x right
 
 @[simp]
-instance hasMem {α : Type} [Ord α] [DecidableEq α] : Membership α (Tree α) where
+instance hasMem {α : Type} [Ord α] : Membership α (Tree α) where
   mem := (fun x t => ↑ (Tree.mem x t))
 
 @[simp]
-def sizeBounded {α : Type} [Ord α] (low high : Bounded α) : Tree α → Nat
+def Tree.sizeBounded {α : Type} [Ord α] (low high : Bounded α) : Tree α → Nat
   | empty => 0
   | leaf x  =>
     match compare low (.element x) with
@@ -62,7 +65,7 @@ def sizeBounded {α : Type} [Ord α] (low high : Bounded α) : Tree α → Nat
     1 + sizeBounded low x left + sizeBounded x high right
 
 @[simp]
-def size {α : Type} [Ord α] (t : Tree α) : Nat :=
+def Tree.size {α : Type} [Ord α] (t : Tree α) : Nat :=
   sizeBounded .bottom .top t
 
 @[simp]
@@ -76,7 +79,15 @@ theorem all_forall {α : Type} [l : LinearOrder α] (p : α → Prop) [Decidable
   intro t
   induction t
   case empty => simp
-  case leaf y => simp
+  case leaf y =>
+    simp
+    intros py x
+    simp [l.compare_eq_compareOfLessAndEq, compareOfLessAndEq]
+    apply lt_by_cases x y
+    · intro x_lt_y ; simp [x_lt_y]
+    · intro x_eq_y ; simp [x_eq_y] ; assumption
+    · intro y_lt_x
+      simp [not_lt_of_gt y_lt_x, ne_iff_lt_or_gt.mpr (Or.inr y_lt_x)]
   case node y left right ihl ihr =>
     simp
     intros px all_left all_right x
@@ -90,8 +101,7 @@ theorem all_forall {α : Type} [l : LinearOrder α] (p : α → Prop) [Decidable
       intros
       exact px
     · intros y_lt_x
-      have x_neq_y : x ≠ y := ne_iff_lt_or_gt.mpr (Or.inr y_lt_x)
-      simp [not_lt_of_gt y_lt_x, x_neq_y]
+      simp [not_lt_of_gt y_lt_x, ne_iff_lt_or_gt.mpr (Or.inr y_lt_x)]
       intro
       apply ihr <;> assumption
 
@@ -106,7 +116,15 @@ theorem exists_exi {α : Type} [l : LinearOrder α] (p : α → Prop) [Decidable
   intro t
   induction t
   case empty => intro q ; simp at q
-  case leaf y => simp
+  case leaf y =>
+    simp
+    simp [l.compare_eq_compareOfLessAndEq, compareOfLessAndEq]
+    intro x
+    apply lt_by_cases x y
+    · intro x_lt_y ; simp [x_lt_y]
+    · intro x_eq_y ; simp [x_eq_y]
+    · intro y_lt_x
+      simp [not_lt_of_gt y_lt_x, ne_iff_lt_or_gt.mpr (Or.inr y_lt_x)]
   case node y left right ihl ihr =>
     simp [l.compare_eq_compareOfLessAndEq, compareOfLessAndEq]
     intros x q px

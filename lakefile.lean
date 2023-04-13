@@ -13,6 +13,7 @@ lean_lib TreeSet
 lean_lib TreeMap
 lean_lib Graph
 lean_lib Query
+lean_lib NeighborMap
 lean_lib Tactic
 lean_lib ConnectedComponents
 lean_lib Walk

@@ -4,142 +4,68 @@ import Mathlib.Order.Synonym
 import Mathlib.Data.Prod.Lex
 import Mathlib.Init.Algebra.Order
 import Init.Prelude
-import TreeSet
-import TreeMap
 import Tactic
 
-open TreeSet
-open TreeMap
+import TreeSet
+import TreeMap
 
--- The type of edges
-structure Edge : Type :=
-  edge        : Lex (Nat × Nat)
-  src_lt_trg  : edge.fst < edge.snd := by trivial
+-- The endpoints of an edge must be sorted
+structure Edge (vertexSize : ℕ) : Type :=
+  fst : Fin vertexSize
+  snd : Fin fst
 
+macro "Edge[" n:term "," i:term "," j:term "]" : term =>
+ `(@Edge.mk $n (@Fin.mk $n $i (by trivial)) (@Fin.mk $i $j (by trivial)))
 
-instance EdgeLinearOrder : LinearOrder Edge :=
-  LinearOrder.lift' (fun (u : Edge) => u.edge) (fun u v H => by cases u; cases v; simp; assumption)
+@[simp]
+def nat_compare (i j : ℕ) : Ordering :=
+  if i < j then .lt else (if i = j then .eq else .gt)
 
--- def nbhds_condition (nbhds : tmap ℕ (tset ℕ)) : Prop :=
---   ∀ i : ℕ, smap.contains_key i nbhds → (∀ j : ℕ, j ∈ nbhds.to_map i → i ∈ nbhds.to_map j)
+@[simp]
+def Edge.compare {m : ℕ} (u v : Edge m) : Ordering :=
+  match nat_compare u.fst v.fst with
+  | .lt => .lt
+  | .eq => nat_compare u.snd v.snd
+  | .gt => .gt
 
--- theorem test (nbhds : Tmap ℕ (Tset ℕ)) : DecidablePred (fun j => i ∈ nbhds.toMap j) := by
---   intro j
+@[simp]
+instance Edge_Ord (m : ℕ): Ord (Edge m) where
+  compare := Edge.compare
 
-instance (nbhds : Tmap ℕ (Tset ℕ)) : DecidablePred fun j => i ∈ Tmap.toMap nbhds j := by
-  intro j
-  let d : Decidable (i ∈ Tmap.toMap nbhds j) := by
-    cases (Smap.valAt j nbhds)
-    · simp [Tset.optionMem, Tset.optionHasMem]
-      infer_instance
-    · simp [Tset.optionMem, Tset.optionHasMem]
-      infer_instance
-  trivial
+structure Graph : Type :=
+  vertexSize : ℕ
+  edgeTree : Tree (Edge vertexSize)
+  edgeCorrect : edgeTree.correct := by rfl
 
-def decidableNbhdsCondition (nbhds : Tmap ℕ (Tset ℕ)) : Bool :=
-  Smap.forallKeys (fun i => Stree.optionForall (fun j => i ∈ nbhds.toMap j) (nbhds.toMap i)) nbhds
+@[simp, reducible]
+def Graph.vertex (G : Graph) := Fin G.vertexSize
 
--- def nbhds_describe_edges (nbhds : tmap ℕ (tset ℕ)) (edges : tset edge) : Prop :=
---   ∀ i : ℕ, smap.contains_key i nbhds → (∀ j : ℕ, j ∈ nbhds.to_map i → decidable.lt_by_cases i j
---     (λ _, {edge . edge := (i, j)} ∈ edges)
---     (λ _, false)
---     (λ _, {edge . edge := (j, i)} ∈ edges))
+instance Graph_vertex_LinearOrder (G : Graph) : LinearOrder (Graph.vertex G) :=
+  by simp ; infer_instance -- this seems suboptimal
 
--- def decidable_nbhds_describe_edges (nbhds : tmap ℕ (tset ℕ)) (edges : tset edge) : bool :=
---   smap.forall_keys (λ i, (@stree.option_forall ℕ (_) (λ j,
---     decidable.lt_by_cases i j
---       (λ _, {edge . edge := (i, j)} ∈ edges)
---       (λ _, false)
---       (λ _, {edge . edge := (j, i)} ∈ edges))
---     ) (begin simp [decidable.lt_by_cases], apply_instance end) (_) (_) (_) (nbhds.to_map i)) nbhds
+@[simp]
+def Graph.edgeType (G : Graph) := Edge G.vertexSize
 
--- def edges_describe_nbhds (nbhds : tmap ℕ (tset ℕ)) (edges : tset edge) : Prop :=
---   ∀ e : edge, e ∈ edges → e.edge.snd ∈ nbhds.to_map e.edge.fst
+@[simp]
+def Graph.edge (G : Graph) := { e : G.edgeType | e ∈ G.edgeTree }
 
--- def decidable_edges_describe_nbhds (nbhds : tmap ℕ (tset ℕ)) (edges : tset edge) : bool :=
---   stree.forall (λ e : edge, e.edge.snd ∈ nbhds.to_map e.edge.fst) edges
+@[simp]
+def Graph.neighbor {G : Graph} : G.vertex → G.vertex → Bool :=
+  fun u v =>
+    lt_by_cases u v
+      (fun u_lt_v => G.edgeTree.mem (Edge.mk v (Fin.mk u u_lt_v)))
+      (fun _ => false)
+      (fun v_lt_u => G.edgeTree.mem (Edge.mk u (Fin.mk v v_lt_u)))
 
--- def describes_neighborhoods (nbhds : tmap ℕ (tset ℕ)) (edges : tset edge) : Prop :=
--- nbhds_condition nbhds ∧ nbhds_describe_edges nbhds edges ∧ edges_describe_nbhds nbhds edges
+lemma Graph.irreflexiveNeighbor (G : Graph) :
+  ∀ (v : G.vertex), ¬ neighbor v v := by simp [lt_by_cases]
 
--- def decidable_describes_neighborhoods (nbhds : tmap ℕ (tset ℕ)) (edges : tset edge) : bool :=
--- decidableNbhdsCondition nbhds ∧ decidable_nbhds_describe_edges nbhds edges ∧ decidable_edges_describe_nbhds nbhds edges
-
--- The definition of a finite graph that will represent the graphs that we import from House of Graphs
-structure SimpleIrreflexiveGraph : Type :=
-  (vertexSize : ℕ)
-  (isVertex := fun (k : ℕ) => k < vertexSize)
-  (edges : Tset Edge)
-  (isEdge := fun (e : Edge) => (e.edge.fst < vertexSize) ∧ (e.edge.snd < vertexSize))
-  (edgesCorrect : Stree.forall (fun e => (e.edge.fst < vertexSize) ∧ (e.edge.snd < vertexSize)) edges := by bool_reflect)
-  (edgeSize : ℕ)
-  (edgeSizeCorrect : edgeSize = edges.size)
-  (neighborhoods : Tmap ℕ (Tset ℕ))
-  (neighborhoodsCorrect : decidableNbhdsCondition neighborhoods = true)
-  (minDegree : Option ℕ)
-  (minDegreeCorrect : minDegree = (neighborhoods.map Tset.size).min?)
-  (maxDegree : Option ℕ)
-  (maxDegreeCorrect : maxDegree = (neighborhoods.map Tset.size).max?)
-  (isRegular : Bool)
-  (isRegularCorrect : isRegular = (minDegree = maxDegree))
-
-@[reducible, simp]
-instance SimpleIrreflexiveGraph.hasMem : Membership ℕ SimpleIrreflexiveGraph where
-  mem := fun k g => g.isVertex k
-
-def edgeRelation (G : SimpleIrreflexiveGraph) : ℕ → ℕ → Prop :=
-  fun u v => lt_by_cases u v
-    (fun _ => { edge := (u,v), src_lt_trg := by assumption } ∈ G.edges)
-    (fun _ => False)
-    (fun _ => { edge := (v,u), src_lt_trg := by assumption } ∈ G.edges)
-
-    macro:max g:term:60 " [" u:term:60 " ~~ " v:term:60 "] " : term => `(edgeRelation $g $u $v)
-
-def endpointIsVertex (G : SimpleIrreflexiveGraph) {u v : ℕ} :
-  G[u ~~ v] -> G.isVertex u ∧ G.isVertex v := by
-    intro e
-    let moo := Stree.forallIsForall (fun e => (e.edge.fst < G.vertexSize) ∧ (e.edge.snd < G.vertexSize)) G.edges G.edgesCorrect
-    apply lt_by_cases u v
-    · sorry
-    · sorry
-    · sorry
-
-def theEdge (g : SimpleIrreflexiveGraph) {u v : ℕ} :
-  edgeRelation g u v → Edge :=
-  by
-    intro e
-    apply lt_by_cases u v
-    · intro uv
-      exact Edge.mk (u, v)
-    · intro uv
-      simp [uv, edgeRelation, lt_by_cases] at e
-    · intro uv
-      exact Edge.mk (v, u)
-
-lemma edgeRelationIrreflexive {G : SimpleIrreflexiveGraph} : ∀ {v}, ¬ G[v ~~ v] := by
-  intro v
-  unfold edgeRelation
-  simp [lt_by_cases]
-
-lemma edgeRelationSymmetric {G : SimpleIrreflexiveGraph} :
-  ∀ {u v}, G[u ~~ v] → G[v ~~ u] := by
-  intros u v edge_uv
-  apply lt_by_cases u v
-  · intro h
-    simp [edgeRelation, h, lt_by_cases, asymm h]
-    simp [edgeRelation, h, lt_by_cases] at edge_uv
-    exact edge_uv
-  · intro h
-    rw [h] at edge_uv
-    have irr := @edgeRelationIrreflexive G v
-    contradiction
-  · intro h
-    simp [edgeRelation, h, lt_by_cases]
-    simp [edgeRelation, h, lt_by_cases, asymm h] at edge_uv
-    exact edge_uv
-
-lemma edgeRelationIsMem {G : SimpleIrreflexiveGraph} :
-  ∀ {u v} {uv : u < v}, G[u ~~ v] → { edge := (u, v), src_lt_trg := uv } ∈ G.edges := by
-  intros u v uv euv
-  simp [edgeRelation, lt_by_cases, uv] at euv
-  exact euv
+lemma Graph.symmetricNeighbor (G : Graph) :
+  ∀ (u v : G.vertex), neighbor u v → neighbor v u := by
+    intros u v
+    cases lt_trichotomy u v with
+    | inl u_lt_v => simp [lt_by_cases, not_lt_of_lt, u_lt_v]
+    | inr h =>
+      cases h with
+      | inl u_eq_v => rw [u_eq_v] ; intro ; assumption
+      | inr v_lt_u => simp [lt_by_cases, not_lt_of_lt, v_lt_u]
