@@ -12,13 +12,13 @@ lean_lib BoundedOrder
 lean_lib TreeSet
 lean_lib TreeMap
 lean_lib Graph
-lean_lib Query
-lean_lib NeighborMap
-lean_lib Tactic
-lean_lib ConnectedComponents
-lean_lib Walk
-lean_lib Bipartite
-lean_lib Pickle
+lean_lib EdgeSize
+-- lean_lib Query
+-- lean_lib NeighborMap
+-- lean_lib Tactic
+-- lean_lib ConnectedComponents
+-- lean_lib Walk
+-- lean_lib Bipartite
 lean_lib Data {
   srcDir := "data"
 }
