@@ -1,10 +1,4 @@
-import Lean
-import Mathlib.Order.Basic
-import Mathlib.Order.Synonym
-import Mathlib.Data.Prod.Lex
-import Mathlib.Init.Algebra.Order
-import Init.Prelude
-import Tactic
+import Mathlib.Data.Fintype.Sigma
 
 import TreeSet
 import TreeMap
@@ -13,9 +7,22 @@ import TreeMap
 structure Edge (vertexSize : ℕ) : Type :=
   fst : Fin vertexSize
   snd : Fin fst
+  deriving Repr
+  -- uncomment once https://github.com/leanprover-community/mathlib4/pull/3198 is merged
+  -- deriving Fintype
 
-macro "Edge[" n:term "," i:term "," j:term "]" : term =>
- `(@Edge.mk $n (@Fin.mk $n $i (by trivial)) (@Fin.mk $i $j (by trivial)))
+-- Get rid of this stuff once the above "deriving Fintype" works
+def Graph.edgeEquiv (vertexSize : ℕ) : (fst : Fin vertexSize) × Fin fst ≃ Edge vertexSize where
+  toFun z := ⟨z.1, z.2⟩
+  invFun c := ⟨c.fst, c.snd⟩
+  left_inv := fun _ => rfl
+  right_inv := fun _ => rfl
+
+instance Edge_Fintype (vertexSize : ℕ): Fintype (Edge vertexSize) :=
+  Fintype.ofEquiv _ (Graph.edgeEquiv vertexSize)
+
+macro "Edge[" i:term "," j:term "]" : term =>
+ `(Edge.mk (Fin.mk $i (by trivial)) (@Fin.mk $i $j (by trivial)))
 
 @[simp]
 def nat_compare (i j : ℕ) : Ordering :=
@@ -35,22 +42,35 @@ instance Edge_Ord (m : ℕ): Ord (Edge m) where
 structure Graph : Type :=
   vertexSize : ℕ
   edgeTree : Tree (Edge vertexSize)
-  edgeCorrect : edgeTree.correct := by rfl
+  -- edgeCorrect : edgeTree.correct := by rfl
 
+-- the type of graph vertices
 @[simp, reducible]
 def Graph.vertex (G : Graph) := Fin G.vertexSize
 
 instance Graph_vertex_LinearOrder (G : Graph) : LinearOrder (Graph.vertex G) :=
   by simp ; infer_instance -- this seems suboptimal
 
+-- the underlying type of edges (pairs (i,j) such that j < i < G.vertexSize)
 @[simp]
 def Graph.edgeType (G : Graph) := Edge G.vertexSize
 
-@[simp]
-def Graph.edge (G : Graph) := { e : G.edgeType | e ∈ G.edgeTree }
+instance Graph_edgeType_Finset (G : Graph) : Finset G.edgeType :=
+  (Edge_Fintype G.vertexSize).elems
 
+-- the type of edges
 @[simp]
-def Graph.neighbor {G : Graph} : G.vertex → G.vertex → Bool :=
+def Graph.edge (G : Graph) := { e : G.edgeType // e ∈ G.edgeTree }
+
+instance Graph_edge_Fintype (G : Graph) : Fintype (Graph.edge G) := by
+  sorry
+
+-- the number of eges in a graph
+def Graph.edgeSize (G : Graph) := Fintype.card G.edge
+
+-- the vertex adjacency relation
+@[simp]
+def Graph.adjacent {G : Graph} : G.vertex → G.vertex → Bool :=
   fun u v =>
     lt_by_cases u v
       (fun u_lt_v => G.edgeTree.mem (Edge.mk v (Fin.mk u u_lt_v)))
@@ -58,14 +78,9 @@ def Graph.neighbor {G : Graph} : G.vertex → G.vertex → Bool :=
       (fun v_lt_u => G.edgeTree.mem (Edge.mk u (Fin.mk v v_lt_u)))
 
 lemma Graph.irreflexiveNeighbor (G : Graph) :
-  ∀ (v : G.vertex), ¬ neighbor v v := by simp [lt_by_cases]
+  ∀ (v : G.vertex), ¬ adjacent v v := by simp [lt_by_cases]
 
 lemma Graph.symmetricNeighbor (G : Graph) :
-  ∀ (u v : G.vertex), neighbor u v → neighbor v u := by
+  ∀ (u v : G.vertex), adjacent u v → adjacent v u := by
     intros u v
-    cases lt_trichotomy u v with
-    | inl u_lt_v => simp [lt_by_cases, not_lt_of_lt, u_lt_v]
-    | inr h =>
-      cases h with
-      | inl u_eq_v => rw [u_eq_v] ; intro ; assumption
-      | inr v_lt_u => simp [lt_by_cases, not_lt_of_lt, v_lt_u]
+    apply lt_by_cases u v <;> (intro h ; simp [lt_by_cases, not_lt_of_lt, h])

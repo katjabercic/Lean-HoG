@@ -30,6 +30,7 @@ def Tree.correctBound {α : Type} [Ord α] (low high : Bounded α) : Tree α →
       | _ => false
     | _ => false
 
+-- The tree is a search tree
 @[simp]
 def Tree.correct {α : Type} [Ord α] (t : Tree α) : Bool :=
   correctBound .bottom .top t
