@@ -1,4 +1,4 @@
-from typing import Optional, Generic, TypeVar, Any
+from typing import Optional, Generic, TypeVar, Any, List
 
 T = TypeVar("T")
 
@@ -17,6 +17,21 @@ class Tree(Generic[T]):
         self.left = None if val is None or (left is None) or left.is_empty() else left
         self.right = None if val is None or (right is None) or right.is_empty() else right
 
+    @classmethod
+    def fromList(cls, lst : List[T]):
+        def build(lst : List[T]):
+            n = len(lst)
+            if n == 0:
+                return Tree(None, None, None)
+            else:
+                mid = n // 2
+                root = lst[mid]
+                left = cls.fromList(lst[0:mid])
+                right = cls.fromList(lst[mid+1:])
+                return Tree(root,left, right)
+            
+        return build(sorted(lst)) # type: ignore
+
     def is_empty(self) -> bool:
         return (self.val is None)
 
@@ -30,6 +45,16 @@ class Tree(Generic[T]):
 
     def is_leaf(self) -> bool:
         return not (self.is_empty() or self.has_left() or self.has_right())
+
+    def to_json(self):
+        if self.is_empty():
+            return []
+        elif self.is_leaf():
+            return [self.val]
+        else:
+            left = self.left.to_json() if self.left else []
+            right = self.right.to_json() if self.right else []
+            return [self.val, left, right]
 
     def __str__(self):
         if self.is_empty():

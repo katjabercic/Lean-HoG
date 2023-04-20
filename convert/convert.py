@@ -2,6 +2,7 @@ import os
 import os.path
 import pathlib
 import re
+import json
 from string import Template
 from argparse import ArgumentParser
 import math
@@ -11,6 +12,9 @@ from TreeSet import *
 from TreeMap import *
 
 from connected_components import compute_components, h_representation, connect_edges_representation, root_representation, is_root_representation, uniqueness_of_roots_representation, next_representation, height_cond_representation, lean_representation
+
+def jsonObj(kv : dict[str,Any]) -> str:
+    return "{" + ", ".join([f"'{k}' : {v}" for (k,v) in kv.items()]) + "}"
 
 class Edge:
     fst : int
@@ -35,7 +39,6 @@ class Graph:
     
     vertex_size : int
     adjacency_list : List[Tuple[int, int]]
-    edge_tree : Tree[Edge]
 
     # Invariant names in the HoG data, with their declared types
     # NB: The invariants should have the same order as in the input file.
@@ -85,12 +88,10 @@ class Graph:
         assert m, "Could not parse HoG data:\n{0}".format(txt)
         self.vertex_size, self.adjacency_list = self._get_size_and_adjacency_list(m.group('adjacency'))
         self.invariants = self._get_invariants(m.group('invariants'))
-        self.edge_tree = self.adjacency_list_to_edge_tree(self.adjacency_list)
         self.edgeSize = len(self.adjacency_list)
-        self.neighborhoods = self.adjacency_list_to_neighborhoods(self.adjacency_list)
-        self.components = compute_components(self.neighborhoods)
+        self.components = compute_components(self.neighborhoods())
         self.connected_components_witness = lean_representation(self.name, self.components[0], self.components[1])
-        self.nbhds_smap = self.neighborhoods_to_smap(self.neighborhoods)
+        self.nbhds_smap = self._neighborhoods_to_smap()
         self.min_degree = self.compute_min_degree()
         self.max_degree = self.compute_max_degree()
         self.is_regular = (self.min_degree == self.max_degree)
@@ -193,66 +194,44 @@ class Graph:
             'is_bipartite' : self.is_bipartite
         }
 
-    def adjacency_list_to_edge_tree(self, adjacency_list : List[Tuple[int, int]]) -> Tree[Edge]:
-        def build_tree(lst : List[Edge]) -> Tree[Edge]:
-            n = len(lst)
-            if n == 0:
-                return Tree(None, None, None)
-            else:
-                mid = n // 2
-                root = lst[mid]
-                left = build_tree(lst[0:mid])
-                right = build_tree(lst[mid+1:])
-                return Tree(root,left, right)
+    def edge_tree(self) -> Tree[Edge]:
+        return Tree.fromList([Edge(*ij) for ij in self.adjacency_list])
 
-        return build_tree(sorted([Edge(*ij) for ij in adjacency_list]))
-
-
-    def list_to_edge_tree(self, l):
-        n = len(l)
-        if n == 0:
-            return Tree(None, None, None)
-        mid = n // 2
-        root = l[mid]
-        left = self.list_to_edge_tree(l[0:mid])
-        right = self.list_to_edge_tree(l[mid+1:])
-        total = Tree(root, left, right)
-        return total
-
-    def adjacency_list_to_neighborhoods(self, adjacency_list):
-        if not self.vertex_size:
-            raise RuntimeError("You have to compute vertex_size before computing neighborhoods!")
+    def neighborhoods(self):
         nbhds = [(i, []) for i in range(self.vertex_size)]
-        for u, v in adjacency_list:
+        for u, v in self.adjacency_list:
             nbhds[u][1].append(v)
             nbhds[v][1].append(u)
         return nbhds
 
-    def neighborhoods_to_smap(self, nbhds):
-        if not self.vertex_size:
-            raise RuntimeError("You have to compute vertex_size before computing neighborhoods!")
-        n = len(nbhds)
-        if n == 0:
-            return None
-        if n == 1:
-            vals = self.list_to_edge_tree(nbhds[0][1])
-            return Smap(nbhds[0][0], vals, None, None)
-        mid = n // 2
-        root_key = nbhds[mid][0]
-        root_val = self.list_to_edge_tree(nbhds[mid][1])
-        left = self.neighborhoods_to_smap(nbhds[0:mid])
-        right = self.neighborhoods_to_smap(nbhds[mid+1:])
-        return Smap(root_key, root_val, left, right)
+    def _neighborhoods_to_smap(self):
+        def build(nbhds):
+            n = len(nbhds)
+            if n == 0:
+                return None
+            if n == 1:
+                vals = Tree.fromList(nbhds[0][1])
+                return Smap(nbhds[0][0], vals, None, None)
+            else:
+                mid = n // 2
+                root_key = nbhds[mid][0]
+                root_val = Tree.fromList(nbhds[mid][1])
+                left = build(nbhds[0:mid])
+                right = build(nbhds[mid+1:])
+                return Smap(root_key, root_val, left, right)
+
+        return build(self.neighborhoods())
+
 
     def compute_min_degree(self):
         if not self.adjacency_list or len(self.adjacency_list) == 0:
             return None
-        return min([len(nbhd[1]) for nbhd in self.neighborhoods])
+        return min([len(nbhd[1]) for nbhd in self.neighborhoods()])
 
     def compute_max_degree(self):
         if not self.adjacency_list or len(self.adjacency_list) == 0:
             return None
-        return max([len(nbhd[1]) for nbhd in self.neighborhoods])
+        return max([len(nbhd[1]) for nbhd in self.neighborhoods()])
 
     def compute_bipartiteness(self):
         if self.vertex_size == 0 or not self.adjacency_list or len(self.adjacency_list) == 0:
@@ -261,6 +240,7 @@ class Graph:
         colors = [None for _ in range(self.vertex_size)]
         stack = [(0, 0)] # Put the first vertex on the stack, start with color 0
         colors[0] = 0 # Color x with the color 0
+        neighborhoods = self.neighborhoods()
         while stack:
             x, colorWith = stack.pop() # Pop the next vertex off the stack
             if colors[x]: # The vertex has already been colored, this means we have a cycle, we have to check that the colors match
@@ -271,7 +251,7 @@ class Graph:
                     continue
             colors[x] = colorWith # Color the current vertex
 
-            for neighbor in self.neighborhoods[x][1]: # Find neighbors of x
+            for neighbor in neighborhoods[x][1]: # Find neighbors of x
                 if not colors[neighbor]: # This neighbor is not assigned a color yet, put it on the stack
                     stack.append((neighbor, (colorWith + 1) % 2)) # Put it on the stack with the next color
 
@@ -291,6 +271,19 @@ class Graph:
                 B.append(v)
         return (A, B)
 
+class GraphEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Edge):
+            return (obj.fst, obj.snd)
+        elif isinstance(obj, Graph):
+            lst = [Edge(*e) for e in obj.adjacency_list]
+            return {
+                "vertexSize" : obj.vertex_size,
+                "edges" : obj.edge_tree().to_json()
+            }
+        else:
+            # Let the base class default method raise the TypeError
+            return json.JSONEncoder.default(self, obj)
 
 def hog_generator(datadir, file_prefix):
     """Generate HoG graphs from input files in the given data directory.
@@ -345,12 +338,12 @@ def write_lean_files(datadir, outdirData, file_prefix, limit : Optional[int] = N
             print ("Skipping graph {0}".format(graph.name), end='\r')
         else:
             print ("Writing graph {0}".format(graph.name), end='\r')
-            with open(os.path.join(outdirData, "{0}.lean".format(graph.name)), 'w') as fh:
-                fh.write(template.substitute(graph.get_data()))
-            with open(os.path.join(outdirData, "components_{0}.lean".format(graph.name)), 'w') as fh:
-                fh.write(templace_cc.substitute(graph.get_data()))
-            with open(os.path.join(outdirData, "Invariants.lean"), 'a') as fh:
-                fh.write(template_invariants.substitute(graph.get_invariants()))
+            with open(os.path.join(outdirData, "{0}.json".format(graph.name)), 'w') as fh:
+                json.dump(graph, fh, cls=GraphEncoder)
+            # with open(os.path.join(outdirData, "components_{0}.lean".format(graph.name)), 'w') as fh:
+            #     fh.write(templace_cc.substitute(graph.get_data()))
+            # with open(os.path.join(outdirData, "Invariants.lean"), 'a') as fh:
+            #     fh.write(template_invariants.substitute(graph.get_invariants()))
 
         counter += 1
     with open (os.path.join(outdirData, "Imports.lean"), 'w') as fh:

@@ -13,6 +13,8 @@ lean_lib TreeSet
 lean_lib TreeMap
 lean_lib Graph
 lean_lib EdgeSize
+lean_lib GraphJson
+lean_lib OneGraph
 -- lean_lib Query
 -- lean_lib NeighborMap
 -- lean_lib Tactic
