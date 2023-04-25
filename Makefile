@@ -1,13 +1,13 @@
 ### Configuration
 
 # Folder with original HoG data file (if you do not have it, comment this out)
-DATADIR=data/raw-hog
+DATADIR=input-data/raw-hog
 
 # Use this instead if you don't have the real HoG data
 # DATADIR=sample-data
 
-# Folder where generated Lean files are placed
-LEANDIR=src/hog/data
+# Folder where generated JSON files are placed
+JSONDIR=pigpen
 
 # The script that converts HoG data files to Lean files
 CONVERT=convert/convert.py
@@ -18,25 +18,20 @@ LAKE=lake
 LIMIT=100
 SKIP=0
 
-.PHONY: convert-data build-lean build-graphs clean-data clean-lean
+.PHONY: build-lean build-graphs clean-data clean-lean
 
-all: convert build
+all: build-graphs build-lean
+
+clean: clean-graphs clean-lean
 
 clean-lean:
 	$(LAKE) clean
 
 build-lean:
 	$(LAKE) build
-	echo "(If you want to compile the graphs, use this instead: make build-graphs)"
 
-convert-data: clean-graphs
-	python3 $(CONVERT) --datadir $(DATADIR) --outdirData $(LEANDIR) --limit $(LIMIT) --skip $(SKIP)
-
-build-graphs:
-	for g in $(LEANDIR)/hog*.lean ; do \
-	  echo "Compiling $$g." ; \
-          $(LAKE) build Data.`basename "$$g" .lean` ; \
-        done
+build-graphs: clean-graphs
+	python3 $(CONVERT) --datadir $(DATADIR) --outdirData $(JSONDIR) --limit $(LIMIT) --skip $(SKIP)
 
 clean-graphs:
 	/bin/rm -rf $(LEANDIR)

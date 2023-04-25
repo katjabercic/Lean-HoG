@@ -1,7 +1,7 @@
 import Lake
 open Lake DSL
 
-package «lean-HOG» {
+package «LeanHoG» {
   srcDir := "src/hog"
 }
 
@@ -21,9 +21,6 @@ lean_lib OneGraph
 -- lean_lib ConnectedComponents
 -- lean_lib Walk
 -- lean_lib Bipartite
-lean_lib Data {
-  srcDir := "data"
-}
 
 require mathlib from git
   "https://github.com/leanprover-community/mathlib4.git"

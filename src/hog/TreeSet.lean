@@ -3,17 +3,19 @@ import Mathlib.Tactic.Basic
 
 import BoundedOrder
 
+namespace HoG
+
 -- A finite set represented as a search tree
+-- (There is already Mathlib.Data.Tree that defines Tree, so we use STree for "set tree")
+inductive STree .{u} (α : Type u) : Type u
+  | empty : STree α
+  | leaf : α → STree α
+  | node : α → STree α → STree α → STree α
 
-inductive Tree (α : Type) : Type
-  | empty : Tree α
-  | leaf : α → Tree α
-  | node : α → Tree α → Tree α → Tree α
-
-open Tree
+open STree
 
 @[simp]
-def Tree.correctBound {α : Type} [Ord α] (low high : Bounded α) : Tree α → Bool
+def STree.correctBound {α : Type} [Ord α] (low high : Bounded α) : STree α → Bool
   | empty => true
   | leaf x =>
     match compare low (.element x) with
@@ -32,11 +34,11 @@ def Tree.correctBound {α : Type} [Ord α] (low high : Bounded α) : Tree α →
 
 -- The tree is a search tree
 @[simp]
-def Tree.correct {α : Type} [Ord α] (t : Tree α) : Bool :=
+def STree.correct {α : Type} [Ord α] (t : STree α) : Bool :=
   correctBound .bottom .top t
 
 @[simp]
-def Tree.mem {α : Type} [Ord α] (x : α) : Tree α → Bool
+def STree.mem {α : Type} [Ord α] (x : α) : STree α → Bool
   | empty => false
   | leaf y =>
     match compare x y with
@@ -49,11 +51,11 @@ def Tree.mem {α : Type} [Ord α] (x : α) : Tree α → Bool
     | .gt => mem x right
 
 @[simp]
-instance hasMem {α : Type} [Ord α] : Membership α (Tree α) where
-  mem := (fun x t => ↑ (Tree.mem x t))
+instance hasMem {α : Type} [Ord α] : Membership α (STree α) where
+  mem := (fun x t => ↑ (STree.mem x t))
 
 @[simp]
-def Tree.sizeBounded {α : Type} [Ord α] (low high : Bounded α) : Tree α → Nat
+def STree.sizeBounded {α : Type} [Ord α] (low high : Bounded α) : STree α → Nat
   | empty => 0
   | leaf x  =>
     match compare low (.element x) with
@@ -66,17 +68,17 @@ def Tree.sizeBounded {α : Type} [Ord α] (low high : Bounded α) : Tree α → 
     1 + sizeBounded low x left + sizeBounded x high right
 
 @[simp]
-def Tree.size {α : Type} [Ord α] (t : Tree α) : Nat :=
+def STree.size {α : Type} [Ord α] (t : STree α) : Nat :=
   sizeBounded .bottom .top t
 
 @[simp]
-def all {α : Type} [Ord α] (p : α → Prop) [DecidablePred p] : Tree α → Bool
+def all {α : Type} [Ord α] (p : α → Prop) [DecidablePred p] : STree α → Bool
   | empty => true
   | leaf x => p x
   | node x left right => p x && all p left && all p right
 
 theorem all_forall {α : Type} [l : LinearOrder α] (p : α → Prop) [DecidablePred p] :
-  ∀ (t : Tree α), all p t → ∀ x, Tree.mem x t → p x := by
+  ∀ (t : STree α), all p t → ∀ x, STree.mem x t → p x := by
   intro t
   induction t
   case empty => simp
@@ -107,13 +109,13 @@ theorem all_forall {α : Type} [l : LinearOrder α] (p : α → Prop) [Decidable
       apply ihr <;> assumption
 
 @[simp]
-def exi {α : Type} [Ord α] (p : α → Prop) [DecidablePred p] : Tree α → Bool
+def exi {α : Type} [Ord α] (p : α → Prop) [DecidablePred p] : STree α → Bool
   | empty => false
   | leaf x => p x
   | node x left right => p x || exi p left || exi p right
 
 theorem exists_exi {α : Type} [l : LinearOrder α] (p : α → Prop) [DecidablePred p] :
-  ∀ (t : Tree α), (∃ x, Tree.mem x t ∧ p x) → exi p t := by
+  ∀ (t : STree α), (∃ x, STree.mem x t ∧ p x) → exi p t := by
   intro t
   induction t
   case empty => intro q ; simp at q
@@ -147,3 +149,5 @@ theorem exists_exi {α : Type} [l : LinearOrder α] (p : α → Prop) [Decidable
       apply Or.inr
       apply ihr
       exists x
+
+end HoG

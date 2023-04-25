@@ -3,6 +3,8 @@ import Mathlib.Data.Fintype.Sigma
 import TreeSet
 import TreeMap
 
+namespace HoG
+
 -- The endpoints of an edge must be sorted
 structure Edge (vertexSize : ℕ) : Type :=
   fst : Fin vertexSize
@@ -10,6 +12,10 @@ structure Edge (vertexSize : ℕ) : Type :=
   deriving Repr
   -- uncomment once https://github.com/leanprover-community/mathlib4/pull/3198 is merged
   -- deriving Fintype
+
+-- smart constructor used to load JSON files
+def Edge.mk' (n a b : Nat) (H : Nat.blt a n = true) (H2 : Nat.blt b a = true) : Edge n :=
+  ⟨⟨a, by simp_all⟩, ⟨b, (by simp_all : b < a)⟩⟩
 
 -- Get rid of this stuff once the above "deriving Fintype" works
 def Graph.edgeEquiv (vertexSize : ℕ) : (fst : Fin vertexSize) × Fin fst ≃ Edge vertexSize where
@@ -20,9 +26,6 @@ def Graph.edgeEquiv (vertexSize : ℕ) : (fst : Fin vertexSize) × Fin fst ≃ E
 
 instance Edge_Fintype (vertexSize : ℕ): Fintype (Edge vertexSize) :=
   Fintype.ofEquiv _ (Graph.edgeEquiv vertexSize)
-
-macro "Edge[" i:term "," j:term "]" : term =>
- `(Edge.mk (Fin.mk $i (by trivial)) (@Fin.mk $i $j (by trivial)))
 
 @[simp]
 def nat_compare (i j : ℕ) : Ordering :=
@@ -41,8 +44,8 @@ instance Edge_Ord (m : ℕ): Ord (Edge m) where
 
 structure Graph : Type :=
   vertexSize : ℕ
-  edgeTree : Tree (Edge vertexSize)
-  edgeCorrect : edgeTree.correct := by rfl
+  edgeTree : STree (Edge vertexSize)
+  -- edgeCorrect : edgeTree.correct := by rfl
 
 -- the type of graph vertices
 @[simp, reducible]
@@ -84,3 +87,5 @@ lemma Graph.symmetricNeighbor (G : Graph) :
   ∀ (u v : G.vertex), adjacent u v → adjacent v u := by
     intros u v
     apply lt_by_cases u v <;> (intro h ; simp [lt_by_cases, not_lt_of_lt, h])
+
+end HoG
