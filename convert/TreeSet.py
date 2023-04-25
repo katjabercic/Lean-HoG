@@ -46,24 +46,25 @@ class Tree(Generic[T]):
     def is_leaf(self) -> bool:
         return not (self.is_empty() or self.has_left() or self.has_right())
 
+    def get_left(self):
+        return self.left if self.left else Set()
+    
+    def get_right(self):
+        return self.left if self.left else Set()
+
     def to_json(self):
         if self.is_empty():
             return []
         elif self.is_leaf():
-            return [self.val]
+            return [[self.val]]
         else:
-            left = self.left.to_json() if self.left else []
-            right = self.right.to_json() if self.right else []
-            return [self.val, left, right]
+            return [self.val, self.get_left().to_json(), self.get_right().to_json()]
 
     def __str__(self):
         if self.is_empty():
-            return ".empty"
+            return "Set()"
         elif self.is_leaf():
-            return f".leaf {self.val}"
+            return "Set({0})".format(self.val)
         else:
-            # not a leaf
-            left = str(self.left) if self.left else ".empty"
-            right = str(self.right) if self.right else ".empty"
-            return f".node {self.val} ({left}) ({right})"
+            return "Set({0}, {1}, {2})".format(self.val, self.get_left(), self.get_right())
 
