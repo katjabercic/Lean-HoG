@@ -1,4 +1,4 @@
-from typing import Optional, Generic, TypeVar, Any, List
+from typing import Optional, Generic, TypeVar, Any, List, Set
 
 T = TypeVar("T")
 
@@ -8,29 +8,34 @@ class Tree(Generic[T]):
     # left : Optional[Tree[T]]
     # right : Optional[Tree[T]]
 
-    def __init__(self, val : Optional[T], left : Optional[Any], right : Optional[Any]):
+    def __init__(self, val : Optional[T] = None, left: Optional[Any] = None , right : Optional[Any] = None):
         """Tree(None, _, _) creates an empty tree.
            Tree(v, None, None) creates a leaf.
            Tree(v, l, r) creates a non-empty tree if l or r is None.
            We optimize subtrees by setting left and right to None instead of an empty tree."""
-        self.val = val
-        self.left = None if val is None or (left is None) or left.is_empty() else left
-        self.right = None if val is None or (right is None) or right.is_empty() else right
+        if val is None:
+            self.val = None
+            self.left = None
+            self.right = None
+        else:
+            self.val = val
+            self.left = None if (left is None) or left.is_empty() else left
+            self.right = None if (right is None) or right.is_empty() else right
 
     @classmethod
-    def fromList(cls, lst : List[T]):
+    def fromSet(cls, edges : Set[T]):
         def build(lst : List[T]):
-            n = len(lst)
+            n : int = len(lst)
             if n == 0:
-                return Tree(None, None, None)
+                return Tree()
             else:
                 mid = n // 2
                 root = lst[mid]
-                left = cls.fromList(lst[0:mid])
-                right = cls.fromList(lst[mid+1:])
-                return Tree(root,left, right)
+                left = build(lst[0:mid])
+                right = build(lst[mid+1:])
+                return Tree(root,left,right)
             
-        return build(sorted(lst)) # type: ignore
+        return build(sorted(edges)) # type: ignore
 
     def is_empty(self) -> bool:
         return (self.val is None)
@@ -56,7 +61,7 @@ class Tree(Generic[T]):
         if self.is_empty():
             return []
         elif self.is_leaf():
-            return [[self.val]]
+            return [self.val]
         else:
             return [self.val, self.get_left().to_json(), self.get_right().to_json()]
 

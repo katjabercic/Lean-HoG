@@ -7,7 +7,7 @@ DATADIR=data/raw-hog
 # DATADIR=sample-data
 
 # Folder where generated Lean files are placed
-LEANDIR=src/hog/data/Data
+LEANDIR=src/hog/data
 
 # The script that converts HoG data files to Lean files
 CONVERT=convert/convert.py

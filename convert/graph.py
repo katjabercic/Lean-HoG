@@ -3,12 +3,12 @@
 
 import re
 import json
-from typing import Tuple, List
+from typing import Tuple, List, Set, Dict, Any, AnyStr
 from connected_components import *
 from treeSet import Tree
 from treeMap import Map
  
-class Edge:
+class Edge():
     fst : int
     snd : int
 
@@ -18,7 +18,10 @@ class Edge:
         self.snd = min(fst, snd)
 
     def __str__(self) -> str:
-        return f'Edge[{self.fst},{self.snd}]'
+        return f'Edge({self.fst},{self.snd})'
+
+    def to_json(self):
+        return (self.fst, self.snd)
 
     def __lt__(self, other) -> bool:
         return (self.fst, self.snd) < (other.fst, other.snd)
@@ -26,15 +29,20 @@ class Edge:
     def __eq__(self, other) -> bool:
         return (self.fst, self.snd) < (other.fst, other.snd)
 
+    def __hash__(self) -> int:
+        return hash((self.fst, self.snd))
+
 class Graph:
     """An object representing a single HoG graph"""
     
+    name : str
     vertex_size : int
-    adjacency_list : List[Tuple[int, int]]
+    edges : Set[Edge]
+    invariants : Dict[str, Any]
 
     # Invariant names in the HoG data, with their declared types
     # NB: The invariants should have the same order as in the input file.
-    _structure = {
+    _invariants = {
         "Acyclic": "bool",
         "Algebraic Connectivity": "float",
         "Average Degree": "float",
@@ -74,205 +82,199 @@ class Graph:
     }
 
     def __init__(self, name : str, txt : str):
-        self.name = name.replace("_", "")
+        self.name = name
         m = re.fullmatch(r'(?P<adjacency>(?:[0-9]+:[0-9 ]*\n)*)(?P<invariants>.*)',
                          txt, flags=re.MULTILINE+re.DOTALL)
-        assert m, "Could not parse HoG data:\n{0}".format(txt)
-        self.vertex_size, self.adjacency_list = self._get_size_and_adjacency_list(m.group('adjacency'))
-        self.invariants = self._get_invariants(m.group('invariants'))
-        self.edgeSize = len(self.adjacency_list)
-        self.components = compute_components(self.neighborhoods())
-        self.connected_components_witness = lean_representation(self.name, self.components[0], self.components[1])
-        self.nbhds_smap = self._neighborhoods_to_smap()
-        self.min_degree = self.compute_min_degree()
-        self.max_degree = self.compute_max_degree()
-        self.is_regular = (self.min_degree == self.max_degree)
-        self.is_bipartite = self.compute_bipartiteness()[0]
-        self.bipartite_witness = self.compute_bipartiteness()[1]
+        assert m, "invalid hog data:\n{0}".format(txt)
+        adjacency = Graph._parse_adjacency(m.group('adjacency'))
+        self.vertex_size = len(adjacency)
+        # the following will symmetrize the graph in case it isn't already symmetric
+        self.edges = set(Edge(u, v) for u in adjacency for v in adjacency[u])
+        # store the invariants in a dictionary
+        self.invariants = Graph._parse_invariants(m.group('invariants'))
 
-    def _get_size_and_adjacency_list(self, raw_adjacency : str):
-        """Return the number of vertices and the list of edges (i, j), such that i < j."""
+    @staticmethod
+    def _parse_adjacency(adj_string : str) -> Dict[int, Set[int]]:
+        """Return dictionary mapping each vertex to the set of its neighbors."""
 
         # HoG vertices start at 1
-        def to_int_minus1(x : int) -> int:
-            """Convert a vertex label of type 1--n to one of type 0--(n-1)"""
-            assert int(x) > 0
-            return int(x) - 1
+        def normalize(v) -> int:
+            w = int(v)
+            assert w > 0
+            return w-1
 
-        def parse_vertex(match) -> List[Tuple[int, int]]:
-            """Given a match group for a list of neighbors of a vertex, return a list of edges"""
-            vertex = to_int_minus1(match.group('vertex'))
-            # sort and filter the neighbors of vertex
-            neighbors = sorted(filter(lambda x: vertex < x, map(to_int_minus1, match.group('neighbors').split())))
-            return list(map(lambda x: (vertex, x), neighbors))
+        def parse_vertex(m : re.Match[AnyStr]) -> Tuple[int, Set[int]]:
+            """Given a match group for a list of neighbors of a vertex, return the vertex and its neighbors"""
+            return (normalize(m.group('vertex')), set(normalize(v) for v in m.group('neighbors').split()))
 
-        adjacency_list : List[Tuple[int,int]]= []
-        vertex_size = 0
-        for m in re.finditer(r'(?P<vertex>[0-9]+):(?P<neighbors>[0-9 ]*)\n', raw_adjacency):
-            vertex_size += 1
-            adjacency_list += parse_vertex(m)
+        adjacency : Dict[int, Set[int]]= {}
+        for m in re.finditer(r'(?P<vertex>[0-9]+):(?P<neighbors>[0-9 ]*)\n', adj_string):
+            (v, nbhs) = parse_vertex(m)
+            adjacency[v] = nbhs
 
-        # Sanity checks
-        for p in adjacency_list:
-            assert p[0] >= 0 and p[1] >= 0
+        # sanity check: no missing or extraneous vertices or neighbors
+        vs : Set[int] = set(adjacency.keys())
+        n = len(vs)
+        assert vs == set(range(n)), "invalid vertices in an adjancency list"
+        assert (all((0 <= w < n and v != w) for v in vs for w in adjacency[v])), "invalid neighbors in an adjacency list"
+        return adjacency
 
-        return vertex_size, adjacency_list
-
-    def _get_invariants(self, txt):
+    @staticmethod
+    def _parse_invariants(txt:str) -> Dict[str, Any]:
         """Convert an iterator of invariant strings into a list of tuples (name, type, value)"""
 
-        def checked_invariant_value(inv_type, val_str):
+        def normalize(inv_type:str, val:str) -> Any:
             """Validate and convert a string to given value type."""
-            value = None
-            if val_str in ['undefined', 'Computation time out', 'Computing']:
-                value = None
+            if val in ['undefined', 'Computation time out', 'Computing']:
+                return None
             else:
                 if inv_type == 'bool':
-                    if val_str in ['Yes', 'No']: # valid bool values
-                        value = val_str == 'Yes'
+                    if val in ['Yes', 'No']: # valid bool values
+                        return (val == 'Yes')
                     else:
-                        raise ValueError # fail early
-                elif val_str == 'infinity': # for now, ok for ints and floats
-                    value = 'infinity'
+                        raise ValueError
+                elif val == 'infinity': # for now, ok for ints and floats
+                    return float('inf')
                 elif inv_type == 'int':
-                    value = int(val_str)
+                    return int(val)
                 elif inv_type == 'float':
-                    value = float(val_str)
+                    return float(val)
                 else:
                     raise ValueError # fail early
-            return value
 
-        inv_list = {}
+        invs = {}
         for m in re.finditer(r'(?:(?P<invariant>[a-zA-Z- ]+): (?P<value>.+))', txt):
             name = m.group('invariant')
-            inv_type = self._structure[name]
-            value = checked_invariant_value(inv_type, m.group('value'))
-            inv_list[name] = { 'type': inv_type, 'value': value }
-        return inv_list
+            assert (name in Graph._invariants), "unknown invariant {0}".format(name)
+            ty = Graph._invariants[name]
+            invs[name] = normalize(ty, m.group('value'))
+        return invs
 
-    def get_data(self):
-        """Return a dictionary with graph data, to be used in a template file."""
-
-        name = self.name.replace("_", "")
+    def to_json(self):
         return {
-            'name' : name,
-            'vertex_size' : self.vertex_size,
-            'adjacency_list' : self.adjacency_list,
-            'planar' : self.invariants['Planar']['value'],
-            'chromatic_number' : self.invariants['Chromatic Number']['value'],
-            'edge_tree' : self.edge_tree,
-            'edge_size' : self.edgeSize,
-            'connected_components_witness' : self.connected_components_witness,
-            'nbhds_smap' : self.nbhds_smap,
-            'min_degree' : f'some {self.min_degree}' if self.min_degree is not None else 'none',
-            'max_degree' : f'some {self.max_degree}' if self.max_degree is not None else 'none',
-            'is_regular' : str(self.is_regular).lower(),
-            'is_bipartite' : str(self.is_bipartite).lower()
+            "vertexSize" : self.vertex_size,
+            "edges" : self.edge_tree().to_json()
         }
 
-    def get_invariants(self):
-        """Return a dictionary with graph invariants (without proofs that they're correct),
-           to be used in a template file.
-        """
+    # def get_data(self):
+    #     """Return a dictionary with graph data, to be used in a template file."""
 
-        name = self.name.replace("_", "")
-        return {
-            'name' : name,
-            'vertex_size' : self.vertex_size,
-            'edge_size' : self.edgeSize,
-            'min_degree' : f'some {self.min_degree}' if self.min_degree is not None else 'none',
-            'max_degree' : f'some {self.max_degree}' if self.max_degree is not None else 'none',
-            'is_regular' : self.is_regular,
-            'is_bipartite' : self.is_bipartite
-        }
+    #     name = self.name.replace("_", "")
+    #     return {
+    #         'name' : name,
+    #         'vertex_size' : self.vertex_size,
+    #         'adjacency_list' : self.adjacency_list,
+    #         'planar' : self.invariants['Planar']['value'],
+    #         'chromatic_number' : self.invariants['Chromatic Number']['value'],
+    #         'edge_tree' : self.edge_tree,
+    #         'edge_size' : self.edgeSize,
+    #         'connected_components_witness' : self.connected_components_witness,
+    #         'nbhds_smap' : self.nbhds_smap,
+    #         'min_degree' : f'some {self.min_degree}' if self.min_degree is not None else 'none',
+    #         'max_degree' : f'some {self.max_degree}' if self.max_degree is not None else 'none',
+    #         'is_regular' : str(self.is_regular).lower(),
+    #         'is_bipartite' : str(self.is_bipartite).lower()
+    #     }
+
+    # def get_invariants(self):
+    #     """Return a dictionary with graph invariants (without proofs that they're correct),
+    #        to be used in a template file.
+    #     """
+
+    #     name = self.name.replace("_", "")
+    #     return {
+    #         'name' : name,
+    #         'vertex_size' : self.vertex_size,
+    #         'edge_size' : self.edgeSize,
+    #         'min_degree' : f'some {self.min_degree}' if self.min_degree is not None else 'none',
+    #         'max_degree' : f'some {self.max_degree}' if self.max_degree is not None else 'none',
+    #         'is_regular' : self.is_regular,
+    #         'is_bipartite' : self.is_bipartite
+    #     }
 
     def edge_tree(self) -> Tree[Edge]:
-        return Tree.fromList([Edge(*ij) for ij in self.adjacency_list])
+        return Tree.fromSet(self.edges)
 
-    def neighborhoods(self):
-        nbhds = [(i, []) for i in range(self.vertex_size)]
-        for u, v in self.adjacency_list:
-            nbhds[u][1].append(v)
-            nbhds[v][1].append(u)
-        return nbhds
+    # def neighborhoods(self):
+    #     nbhds = [(i, []) for i in range(self.vertex_size)]
+    #     for u, v in self.adjacency_list:
+    #         nbhds[u][1].append(v)
+    #         nbhds[v][1].append(u)
+    #     return nbhds
 
-    def _neighborhoods_to_smap(self):
-        def build(nbhds):
-            n = len(nbhds)
-            if n == 0:
-                return None
-            if n == 1:
-                vals = Tree.fromList(nbhds[0][1])
-                return Map(nbhds[0][0], vals, None, None)
-            else:
-                mid = n // 2
-                root_key = nbhds[mid][0]
-                root_val = Tree.fromList(nbhds[mid][1])
-                left = build(nbhds[0:mid])
-                right = build(nbhds[mid+1:])
-                return Map(root_key, root_val, left, right)
+    # def _neighborhoods_to_smap(self):
+    #     def build(nbhds):
+    #         n = len(nbhds)
+    #         if n == 0:
+    #             return None
+    #         if n == 1:
+    #             vals = Tree.fromList(nbhds[0][1])
+    #             return Map(nbhds[0][0], vals, None, None)
+    #         else:
+    #             mid = n // 2
+    #             root_key = nbhds[mid][0]
+    #             root_val = Tree.fromList(nbhds[mid][1])
+    #             left = build(nbhds[0:mid])
+    #             right = build(nbhds[mid+1:])
+    #             return Map(root_key, root_val, left, right)
 
-        return build(self.neighborhoods())
+    #     return build(self.neighborhoods())
 
 
-    def compute_min_degree(self):
-        if not self.adjacency_list or len(self.adjacency_list) == 0:
-            return None
-        return min([len(nbhd[1]) for nbhd in self.neighborhoods()])
+    # def compute_min_degree(self):
+    #     if not self.adjacency_list or len(self.adjacency_list) == 0:
+    #         return None
+    #     return min([len(nbhd[1]) for nbhd in self.neighborhoods()])
 
-    def compute_max_degree(self):
-        if not self.adjacency_list or len(self.adjacency_list) == 0:
-            return None
-        return max([len(nbhd[1]) for nbhd in self.neighborhoods()])
+    # def compute_max_degree(self):
+    #     if not self.adjacency_list or len(self.adjacency_list) == 0:
+    #         return None
+    #     return max([len(nbhd[1]) for nbhd in self.neighborhoods()])
 
-    def compute_bipartiteness(self):
-        if self.vertex_size == 0 or not self.adjacency_list or len(self.adjacency_list) == 0:
-            return (False, ([], []))
-        # Assign a color (0 or 1) to each vertex, starting with None, indicating this vertex is not yet colored
-        colors = [None for _ in range(self.vertex_size)]
-        stack = [(0, 0)] # Put the first vertex on the stack, start with color 0
-        colors[0] = 0 # Color x with the color 0
-        neighborhoods = self.neighborhoods()
-        while stack:
-            x, colorWith = stack.pop() # Pop the next vertex off the stack
-            if colors[x]: # The vertex has already been colored, this means we have a cycle, we have to check that the colors match
-                # otherwise we have an odd length cycle
-                if colors[x] != colorWith:
-                    return (False, self.colors_to_partition(colors))
-                else:
-                    continue
-            colors[x] = colorWith # Color the current vertex
+    # def compute_bipartiteness(self):
+    #     if self.vertex_size == 0 or not self.adjacency_list or len(self.adjacency_list) == 0:
+    #         return (False, ([], []))
+    #     # Assign a color (0 or 1) to each vertex, starting with None, indicating this vertex is not yet colored
+    #     colors = [None for _ in range(self.vertex_size)]
+    #     stack = [(0, 0)] # Put the first vertex on the stack, start with color 0
+    #     colors[0] = 0 # Color x with the color 0
+    #     neighborhoods = self.neighborhoods()
+    #     while stack:
+    #         x, colorWith = stack.pop() # Pop the next vertex off the stack
+    #         if colors[x]: # The vertex has already been colored, this means we have a cycle, we have to check that the colors match
+    #             # otherwise we have an odd length cycle
+    #             if colors[x] != colorWith:
+    #                 return (False, self.colors_to_partition(colors))
+    #             else:
+    #                 continue
+    #         colors[x] = colorWith # Color the current vertex
 
-            for neighbor in neighborhoods[x][1]: # Find neighbors of x
-                if not colors[neighbor]: # This neighbor is not assigned a color yet, put it on the stack
-                    stack.append((neighbor, (colorWith + 1) % 2)) # Put it on the stack with the next color
+    #         for neighbor in neighborhoods[x][1]: # Find neighbors of x
+    #             if not colors[neighbor]: # This neighbor is not assigned a color yet, put it on the stack
+    #                 stack.append((neighbor, (colorWith + 1) % 2)) # Put it on the stack with the next color
 
-            if not stack and len(list(filter(lambda x : x == None, colors))) > 0: # There are still uncolored vertices
-                next_vertex = next(i for i,x in enumerate(colors) if x == None)
-                stack.append((next_vertex, 0)) # The start color doesn't matter, since this must be a different component
+    #         if not stack and len(list(filter(lambda x : x == None, colors))) > 0: # There are still uncolored vertices
+    #             next_vertex = next(i for i,x in enumerate(colors) if x == None)
+    #             stack.append((next_vertex, 0)) # The start color doesn't matter, since this must be a different component
 
-        return (True, self.colors_to_partition(colors)) # If we made it to the end of the loop, the graph is bipartite and we get a partition
+    #     return (True, self.colors_to_partition(colors)) # If we made it to the end of the loop, the graph is bipartite and we get a partition
 
-    def colors_to_partition(self, colors):
-        A = []
-        B = []
-        for v in range(self.vertex_size):
-            if colors[v] == 0:
-                A.append(v)
-            else:
-                B.append(v)
-        return (A, B)
+    # def colors_to_partition(self, colors):
+    #     A = []
+    #     B = []
+    #     for v in range(self.vertex_size):
+    #         if colors[v] == 0:
+    #             A.append(v)
+    #         else:
+    #             B.append(v)
+    #     return (A, B)
 
 class GraphEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Edge):
-            return (obj.fst, obj.snd)
+            return obj.to_json()
         elif isinstance(obj, Graph):
-            lst = [Edge(*e) for e in obj.adjacency_list]
-            return {
-                "vertexSize" : obj.vertex_size,
-                "edges" : obj.edge_tree().to_json()
-            }
+            return obj.to_json()
         else:
             # Let the base class default method raise the TypeError
             return json.JSONEncoder.default(self, obj)
