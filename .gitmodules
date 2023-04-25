@@ -1,5 +1,5 @@
 [submodule "data"]
-	path = data
+	path = input-data
 	url = git@github.com:katjabercic/Lean-HoG-data.git
 [submodule "process_io"]
 	path = process_io
