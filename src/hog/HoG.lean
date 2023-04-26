@@ -1,4 +1,4 @@
-import GraphJson
+import JsonDecoder
 
 namespace HoG
 

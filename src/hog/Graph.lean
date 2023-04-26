@@ -9,7 +9,6 @@ namespace HoG
 structure Edge (vertexSize : ℕ) : Type :=
   fst : Fin vertexSize
   snd : Fin fst
-  deriving Repr
   -- uncomment once https://github.com/leanprover-community/mathlib4/pull/3198 is merged
   -- deriving Fintype
 

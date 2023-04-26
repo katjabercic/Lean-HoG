@@ -29,7 +29,29 @@ partial def graphOfJson (j : Lean.Json) : Except String Q(Graph) := do
     let edges : Q(STree (Edge $n)) ← (treeOfJson n (← j.getObjVal? "edges"))
     pure q(Graph.mk $n $edges) -- here it dies with: reduceEval: failed to evaluate argument __do_lift✝¹
 
-elab "getHog" hogId:str : command => do
+-- The Lean name generated from a string
+def hogName (hogId : String) : Lean.Name := (.str (.str .anonymous "HoG") hogId)
+
+-- loading a hog as a function
+-- def loadHog (hogId : String) : IO Unit  := do
+--   let packageDir ← Mathlib.getPackageDir "HoG"
+--   let dataDir := ((packageDir.join "..").join "..").join "pigpen" -- folder with the JSON files
+--   let fileName := (dataDir.join hogId).withExtension "json"
+--   let file ← IO.FS.readFile fileName
+--   let graph : Except String (Q(Graph)) := do
+--     let json ← Lean.Json.parse file 
+--     graphOfJson json
+--   let .ok value := graph | throw (IO.userError "could not load the JSON file")
+--   whatToDoHere <| Lean.addAndCompile <| .defnDecl {
+--     name := hogName hogId
+--     levelParams := []
+--     type := q(Graph)
+--     value
+--     hints := .regular 0
+--     safety := .safe
+--   }
+
+elab "loadHog" hogId:str : command => do
   let packageDir ← Mathlib.getPackageDir "HoG"
   let dataDir := ((packageDir.join "..").join "..").join "pigpen" -- folder with the JSON files
   let fileName := (dataDir.join hogId.getString).withExtension "json"
@@ -38,15 +60,20 @@ elab "getHog" hogId:str : command => do
     let json ← Lean.Json.parse file 
     graphOfJson json
   let .ok value := graph | throwError "could not load the JSON file"
-  Lean.Elab.Command.liftCoreM <| Lean.addDecl <| .defnDecl {
-    name := (.str (.str .anonymous "HoG") hogId.getString)
+  Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
+    name := hogName hogId.getString
     levelParams := []
     type := q(Graph)
     value
     hints := .regular 0
     safety := .safe
   }
-  
--- getHog "hog00000"
+
+-- elab "getHog" hogId:str : term => do
+--   let hog := hogName hogId.getString
+--   let env ← Lean.getEnv
+--   match env.contains hog with
+--   | true => pure (Lean.mkConst hog [])
+--   | false => loadHog hogId ; pure (Lean.mkConst hog [])
 
 end HoG
