@@ -24,6 +24,7 @@ class Tree(Generic[T]):
 
     @classmethod
     def fromSet(cls, edges : Set[T]):
+        print ("Bulding from {0}".format(str(sorted(edges)))) # type: ignore
         def build(lst : List[T]):
             n : int = len(lst)
             if n == 0:
@@ -34,7 +35,7 @@ class Tree(Generic[T]):
                 left = build(lst[0:mid])
                 right = build(lst[mid+1:])
                 return Tree(root,left,right)
-            
+
         return build(sorted(edges)) # type: ignore
 
     def is_empty(self) -> bool:
@@ -52,10 +53,10 @@ class Tree(Generic[T]):
         return not (self.is_empty() or self.has_left() or self.has_right())
 
     def get_left(self):
-        return self.left if self.left else Set()
-    
+        return self.left if self.has_left() else Tree()
+
     def get_right(self):
-        return self.left if self.left else Set()
+        return self.right if self.has_right() else Tree()
 
     def to_json(self):
         if self.is_empty():
@@ -72,4 +73,3 @@ class Tree(Generic[T]):
             return "Set({0})".format(self.val)
         else:
             return "Set({0}, {1}, {2})".format(self.val, self.get_left(), self.get_right())
-

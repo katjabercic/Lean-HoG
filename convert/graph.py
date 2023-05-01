@@ -4,10 +4,10 @@
 import re
 import json
 from typing import Tuple, List, Set, Dict, Any, AnyStr
-from connected_components import *
+# from connected_components import *
 from treeSet import Tree
 from treeMap import Map
- 
+
 class Edge():
     fst : int
     snd : int
@@ -20,6 +20,9 @@ class Edge():
     def __str__(self) -> str:
         return f'Edge({self.fst},{self.snd})'
 
+    def __repr__(self) -> str:
+        return f'Edge({self.fst},{self.snd})'
+
     def to_json(self):
         return (self.fst, self.snd)
 
@@ -27,14 +30,14 @@ class Edge():
         return (self.fst, self.snd) < (other.fst, other.snd)
 
     def __eq__(self, other) -> bool:
-        return (self.fst, self.snd) < (other.fst, other.snd)
+        return (self.fst, self.snd) == (other.fst, other.snd)
 
     def __hash__(self) -> int:
         return hash((self.fst, self.snd))
 
 class Graph:
     """An object representing a single HoG graph"""
-    
+
     name : str
     vertex_size : int
     edges : Set[Edge]
@@ -150,10 +153,15 @@ class Graph:
             invs[name] = normalize(ty, m.group('value'))
         return invs
 
+    def edge_size(self) -> int:
+        """Number of edges."""
+        return len(self.edges)
+
     def to_json(self):
         return {
             "vertexSize" : self.vertex_size,
-            "edges" : self.edge_tree().to_json()
+            "edges" : self.edge_tree().to_json(),
+            "edgeSize" : self.edge_size()
         }
 
     # def get_data(self):
