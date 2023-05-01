@@ -24,7 +24,6 @@ class Tree(Generic[T]):
 
     @classmethod
     def fromSet(cls, edges : Set[T]):
-        print ("Bulding from {0}".format(str(sorted(edges)))) # type: ignore
         def build(lst : List[T]):
             n : int = len(lst)
             if n == 0:

@@ -3,7 +3,7 @@
 
 import re
 import json
-from typing import Tuple, List, Set, Dict, Any, AnyStr
+from typing import Tuple, List, Set, Dict, Any, AnyStr, Optional, Union
 # from connected_components import *
 from treeSet import Tree
 from treeMap import Map
@@ -35,53 +35,79 @@ class Edge():
     def __hash__(self) -> int:
         return hash((self.fst, self.snd))
 
-class Graph:
+def norm_bool(b : str) -> Optional[bool]:
+    if b in ['undefined', 'Computation time out', 'Computing']:
+        return None
+    else:
+        assert (b in ['Yes', 'No']), "invalid boolean invariant {0}".format(b)
+        return (b == 'Yes')
+
+def norm_nat(k : str) -> Optional[Union[int,float]]:
+    if k in ['undefined', 'Computation time out', 'Computing']:
+        return None
+    elif k == "infinity":
+        return float('inf')
+    else:
+        n = int(k)
+        assert (n >= 0), "negative natural number {0}".format(k)
+        return n
+
+def norm_float(x : str) -> Optional[float]:
+    if x in ['undefined', 'Computation time out', 'Computing']:
+        return None
+    else:
+        if x == 'infinity':
+            return float('inf')
+        else:
+            return float(x)
+
+class Graph():
     """An object representing a single HoG graph"""
 
     name : str
     vertex_size : int
     edges : Set[Edge]
-    invariants : Dict[str, Any]
+    invariants : Dict[str, Any] # invariants as loaded from JSON
 
     # Invariant names in the HoG data, with their declared types
     # NB: The invariants should have the same order as in the input file.
     _invariants = {
-        "Acyclic": "bool",
-        "Algebraic Connectivity": "float",
-        "Average Degree": "float",
-        "Bipartite": "bool",
-        "Chromatic Index": "int",
-        "Chromatic Number": "int",
-        "Circumference": "int",
-        "Claw-Free": "bool",
-        "Clique Number": "int",
-        "Connected": "bool",
-        "Density": "float",
-        "Diameter": "int",
-        "Edge Connectivity": "int",
-        "Eulerian": "bool",
-        "Genus": "int",
-        "Girth": "int",
-        "Hamiltonian": "bool",
-        "Independence Number": "int",
-        "Index": "float",
-        "Laplacian Largest Eigenvalue": "float",
-        "Longest Induced Cycle": "int",
-        "Longest Induced Path": "int",
-        "Matching Number": "int",
-        "Maximum Degree": "int",
-        "Minimum Degree": "int",
-        "Minimum Dominating Set": "int",
-        "Number of Components": "int",
-        "Number of Edges": "int",
-        "Number of Triangles": "int",
-        "Number of Vertices": "int",
-        "Planar": "bool",
-        "Radius": "int",
-        "Regular": "bool",
-        "Second Largest Eigenvalue": "float",
-        "Smallest Eigenvalue": "float",
-        "Vertex Connectivity": "int"
+        "Acyclic" : norm_bool,
+        "Algebraic Connectivity" : norm_float,
+        "Average Degree" : norm_float,
+        "Bipartite" : norm_bool,
+        "Chromatic Index" : norm_nat,
+        "Chromatic Number" : norm_nat,
+        "Circumference" : norm_nat,
+        "Claw-Free" : norm_bool,
+        "Clique Number" : norm_nat,
+        "Connected" : norm_bool,
+        "Density" : norm_float,
+        "Diameter" : norm_nat,
+        "Edge Connectivity" : norm_nat,
+        "Eulerian" : norm_bool,
+        "Genus" : norm_nat,
+        "Girth" : norm_nat,
+        "Hamiltonian" : norm_bool,
+        "Independence Number" : norm_nat,
+        "Index" : norm_float,
+        "Laplacian Largest Eigenvalue" : norm_float,
+        "Longest Induced Cycle" : norm_nat,
+        "Longest Induced Path" : norm_nat,
+        "Matching Number" : norm_nat,
+        "Maximum Degree" : norm_nat,
+        "Minimum Degree" : norm_nat,
+        "Minimum Dominating Set" : norm_nat,
+        "Number of Components" : norm_nat,
+        "Number of Edges" : norm_nat,
+        "Number of Triangles" : norm_nat,
+        "Number of Vertices" : norm_nat,
+        "Planar" : norm_bool,
+        "Radius" : norm_nat,
+        "Regular" : norm_bool,
+        "Second Largest Eigenvalue" : norm_float,
+        "Smallest Eigenvalue" : norm_float,
+        "Vertex Connectivity" : norm_nat
     }
 
     def __init__(self, name : str, txt : str):
@@ -95,6 +121,7 @@ class Graph:
         self.edges = set(Edge(u, v) for u in adjacency for v in adjacency[u])
         # store the invariants in a dictionary
         self.invariants = Graph._parse_invariants(m.group('invariants'))
+        self._validate_invariants()
 
     @staticmethod
     def _parse_adjacency(adj_string : str) -> Dict[int, Set[int]]:
@@ -126,32 +153,20 @@ class Graph:
     def _parse_invariants(txt:str) -> Dict[str, Any]:
         """Convert an iterator of invariant strings into a list of tuples (name, type, value)"""
 
-        def normalize(inv_type:str, val:str) -> Any:
-            """Validate and convert a string to given value type."""
-            if val in ['undefined', 'Computation time out', 'Computing']:
-                return None
-            else:
-                if inv_type == 'bool':
-                    if val in ['Yes', 'No']: # valid bool values
-                        return (val == 'Yes')
-                    else:
-                        raise ValueError
-                elif val == 'infinity': # for now, ok for ints and floats
-                    return float('inf')
-                elif inv_type == 'int':
-                    return int(val)
-                elif inv_type == 'float':
-                    return float(val)
-                else:
-                    raise ValueError # fail early
-
         invs = {}
         for m in re.finditer(r'(?:(?P<invariant>[a-zA-Z- ]+): (?P<value>.+))', txt):
             name = m.group('invariant')
             assert (name in Graph._invariants), "unknown invariant {0}".format(name)
-            ty = Graph._invariants[name]
-            invs[name] = normalize(ty, m.group('value'))
+            normalizer = Graph._invariants[name]
+            invs[name] = normalizer(m.group('value'))
         return invs
+
+    def _validate_invariants(self):
+        """Validate invariants that can be easily invalidated."""
+        assert (self.get_invariant('Number of Edges') == len(self.edges)), "invariant validation: Number of Edgess̄"
+
+    def get_invariant(self, inv):
+        return self.invariants[inv]
 
     def edge_size(self) -> int:
         """Number of edges."""

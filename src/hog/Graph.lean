@@ -1,5 +1,3 @@
-import Mathlib.Data.Fintype.Sigma
-
 import TreeSet
 import TreeMap
 
