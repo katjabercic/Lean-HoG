@@ -7,16 +7,12 @@ lemma Graph.edgeTreeSize_is_edgeSize (G : Graph) :
 
 class EdgeSize (G : Graph) : Type :=
   val : ℕ
-  correct : G.edgeTree.size = val := by rfl
+  correct : G.edgeSize = val
 
 -- smart constructor used to load JSON files
 def EdgeSize.mk' (G : Graph) (e : Nat) (H : Nat.beq G.edgeTree.size e = true) : EdgeSize G :=
-  ⟨e, (by simp_all : G.edgeTree.size = e)⟩
-
--- TODO improve naming
-lemma Graph.edgeSize_is (G : Graph) [es : EdgeSize G] : G.edgeSize = es.val := by
-  apply Eq.trans (b := G.edgeTree.size)
-  · apply edgeTreeSize_is_edgeSize
-  · apply es.correct
+  ⟨ e , (by apply Eq.trans (b := G.edgeTree.size)
+            · apply Graph.edgeTreeSize_is_edgeSize
+            · simp_all)⟩
 
 end HoG

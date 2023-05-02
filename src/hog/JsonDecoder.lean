@@ -39,6 +39,9 @@ def edgeSizeOfJson (G : Q(Graph)) (j : Lean.Json) : Except String Q(EdgeSize $G)
 -- The Lean name generated from a string
 def hogName (hogId : String) : Lean.Name := (.str (.str .anonymous "HoG") hogId)
 
+def hogInstanceName (hogId : String) (inst : String) : Lean.Name :=
+  (.str (hogName hogId) inst)
+
 -- loading a hog as a function
 -- def loadHog (hogId : String) : IO Unit  := do
 --   let packageDir ← Mathlib.getPackageDir "HoG"
@@ -82,19 +85,21 @@ elab "loadHog" hogId:str : command => do
   }
   have graph : Q(Graph) := Lean.mkConst graphName []
   -- load the edgeSize instance
+  let edgeSizeName := hogInstanceName hogId.getString "edgeSizeI"
   let edgeSizeQ : Q(EdgeSize $graph) ← liftExcept <| edgeSizeOfJson graph json
   Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
-    name := hogName (hogId.getString ++ "_edgeSize")
+    name := edgeSizeName
     levelParams := []
     type := q(EdgeSize $graph)
     value := edgeSizeQ
     hints := .regular 0
     safety := .safe
   }
-  -- how do declare the instance?
+  Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance edgeSizeName .scoped 42
 
 loadHog "hog00000"
--- #check hog00000.edgeSize_is
+#eval (hog00000.edgeSizeI.val)
+
 
 -- elab "getHog" hogId:str : term => do
 --   let hog := hogName hogId.getString
