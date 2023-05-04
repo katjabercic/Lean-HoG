@@ -1,7 +1,7 @@
 ### Configuration
 
 # Folder with original HoG data file (if you do not have it, comment this out)
-SRCDIR=data/raw-hog
+SRCDIR=input-data/raw-hog
 
 # Use this instead if you don't have the real HoG data
 # SRCDIR=sample-data
