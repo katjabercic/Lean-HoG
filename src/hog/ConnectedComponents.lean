@@ -5,99 +5,127 @@ import Mathlib.Init.Function
 import Init.WF
 import Graph
 import TreeSet
+set_option autoImplicit false
 
-@[simp, reducible]
-def connected (G : SimpleIrreflexiveGraph) : Nat → Nat → Prop := EqvGen (edgeRelation G)
-
-macro g:term "|-" v:term "≈" u:term : term => `(connected $g $v $u)
+namespace HoG
 
 @[simp]
-lemma edgeConnected {G : SimpleIrreflexiveGraph} {u v : Nat} (e : (edgeRelation G) u v) : 
-  connected G u v := EqvGen.rel u v e
+def Graph.connected {G : Graph} : G.vertex → G.vertex → Prop := EqvGen G.adjacent
 
-@[simp]
-lemma connectedRefl {G : SimpleIrreflexiveGraph} {v : Nat} : connected G v v := EqvGen.refl v
+-- Neighbors are connected
+lemma Graph.adjacentConected {G : Graph} {u v : G.vertex} : G.adjacent u v → G.connected u v :=
+  EqvGen.rel u v
 
-@[simp]
-lemma connectedTrans {G : SimpleIrreflexiveGraph} {u v w : Nat} (cuv : connected G u v) (cvw : connected G v w) : 
-  connected G u w := EqvGen.trans u v w cuv cvw
-
-notation p "⊕" q => connectedTrans p q
-
-@[simp]
-lemma connectedSymm {G : SimpleIrreflexiveGraph} {u v : Nat} (cuv : connected G u v) : 
-  connected G v u := EqvGen.symm u v cuv
-
-notation p "↑" => connectedSymm p
-
--- -- because connectedness if defined as an equivalence relation, two connected vertices cannot be equal
-@[simp]
-lemma notConnectedNotEqual {G : SimpleIrreflexiveGraph} {u v : Nat} : ¬connected G u v → ¬u = v := by
-  intro h
-  by_contra
-  suffices h' : connected G u v
-  contradiction
-  have eq : u = v := by trivial
+-- Equal vertices are connected
+lemma Graph.connectedEq {G : Graph} (u v : G.vertex) : u = v → G.connected u v := by
+  intro eq
   rw [eq]
-  apply connectedRefl
+  apply EqvGen.refl
 
-def connectedGraph : SimpleIrreflexiveGraph → Prop := fun G => ∀ (u v : Nat), connected G u v
+-- Connectedness is transitive
+@[simp]
+lemma Graph.connectedTrans {G : Graph} (u v w : G.vertex) :
+  G.connected u v → G.connected v w → G.connected u w :=
+  EqvGen.trans u v w
 
-structure numberOfConnectedComponents : Type :=
-  (G : SimpleIrreflexiveGraph)
-  (numComponents : Nat)
-  (c : Nat → Fin numComponents)
-  (hasEnough : ∀ (i : Fin numComponents), ∃ u, c u = i)
-  (conn : ∀ u v, c u = c v ↔ connected G u v)
+lemma Graph.adjacentConnected {G : Graph} (u v w : G.vertex) :
+  G.adjacent u v → G.connected v w → G.connected u w := by
+  intros uv vw
+  apply connectedTrans (v := v)
+  · apply EqvGen.rel ; assumption
+  · exact vw
 
-structure numComponentsWitnessLoose : Type :=
-  (G : SimpleIrreflexiveGraph)
-  (numComponents : Nat)
-  (c : Nat → Fin numComponents)
-  (h : Nat → Nat)
-  (connectEdges : ∀ (e : Edge), (e ∈ G.edges) → c e.edge.fst = c e.edge.snd)
-  (root : Fin numComponents → Fin G.vertexSize)
-  (isRoot :  ∀ i, c (root i) = i ∧ h (root i) = 0)
-  (uniquenessOfRoots : ∀ v, h v = 0 → v = root (c v))
-  (next : Nat → Nat) -- for each vertex with height > 0, give a neighbor with lower height
-  (heightCond : ∀ v, (0 < h v) → (edgeRelation G) (next v) v ∧ h (next v) < h v)
+@[simp]
+lemma Graph.connectedSymm {G : Graph} (u v : G.vertex) :
+  G.connected u v → G.connected v u :=
+  EqvGen.symm u v
 
-structure numComponentsWitnessExact : Type :=
-  (G : SimpleIrreflexiveGraph)
-  (numComponents : Nat)
-  (c : Nat → Fin numComponents)
-  (h : Fin G.vertexSize → Nat)
-  (connectEdges : ∀ (e : Edge), (e ∈ G.edges) → c e.edge.fst = c e.edge.snd)
-  (root : Fin numComponents → Fin G.vertexSize)
-  (isRoot :  ∀ i, c (root i) = i ∧ h (root i) = 0)
-  (uniquenessOfRoots : ∀ v, h v = 0 → v = root (c v))
-  (next : Nat → Fin G.vertexSize) -- for each vertex with height > 0, give a neighbor with lower height
-  (heightCond : ∀ v, (0 < h v) → (edgeRelation G) (next v) v ∧ h (next v) < h v)
+def Graph.is_connected (G : Graph) := ∀ (u v : G.vertex), G.connected u v
 
--- def transformWitness : numComponentsWitnessExact → numComponentsWitnessLoose := fun w =>
---   {
---     G := w.G
---     numComponents := w.numComponents
---     c := w.c
---     h := fun v => by
---       by_cases (v < w.G.vertexSize)
---       · apply w.h (Fin.mk v h)
---       · exact 0
---     connectEdges := w.connectEdges
---     root := w.root
---     isRoot := fun v => by simp; apply w.isRoot
---     uniquenessOfRoots := fun v => sorry
---     next := sorry
---     heightCond := sorry
---   }
+-- Connected components of a graph
+class ConnectedComponents (G : Graph) : Type :=
+  val : Nat -- number of components
+  component : G.vertex → Fin val -- assigns a component to each vertex
+  componentInhabited : ∀ (i : Fin val), ∃ u, component u = i -- each component is inhabited
+  correct : ∀ u v, component u = component v ↔ G.connected u v
 
-theorem foo (α : Type) (f : α → Nat) (P : α → Prop)
-  (base : ∀ a, f a = 0 → P a)
-  (ind : ∀ a, (∀ b, f b < f a → P b) → P a) :
-  ∀ a, P a := by
-  intro a
+-- Is this silly lemma somewhere in the prelude?
+lemma zero_or_lt : ∀ (n : Nat), n = 0 ∨ 0 < n := by
+  intro n
+  cases n
+  · apply Or.inl ; simp
+  · apply Or.inr ; simp
+
+-- A certificate for connected components:
+class ComponentsCertificate (G : Graph) : Type :=
+  -- number of components
+  val : Nat
+  -- assignment of components to each vertex
+  component : G.vertex → Fin val
+  -- the endpoints of an edge are in the same component
+  componentEdge : ∀ e, component (G.fst e) = component (G.snd e)
+  -- for each component, a chosen representative, called "the component root"
+  root : Fin val → G.vertex
+  -- each root is in the correct component
+  rootCorrect : ∀ i, component (root i) = i
+
+  -- For each component we give a directed spanning tree rooted at its component root.
+  -- We call this tree the "component tree". All the component trees form a spanning forest.
+
+  -- for each vertex that is not a root, the next step of the path leading to its root
+  next : G.vertex → G.vertex
+  -- To ensure that next is cycle-free, we witness the fact that it takes us closer to the root.
+  -- the distance of a vertex to its component root
+  distToRoot : G.vertex → Nat
+  -- a root is at distance 0 from itself
+  distRootZero : ∀ i, distToRoot (root i) = 0
+  -- a vertex is a root if its distance to a root is 0
+  distZeroRoot : ∀ v, distToRoot v = 0 → v = root (component v)
+  -- a root is a fixed point of next
+  nextRoot : ∀ i, next (root i) = root i
+  -- each vertex that is not a root is adjacent to the next one
+  nextAdjacent : forall v, 0 < distToRoot v → G.adjacent v (next v)
+  -- distance to root decreases as we travel along the path given by next
+  distNext : ∀ v, 0 < distToRoot v → distToRoot (next v) < distToRoot v
+
+
+-- adjacent vertices are in the same component
+lemma ComponentsCertificate.componentAdjacent {G} [C : ComponentsCertificate G] :
+  ∀ u v, G.adjacent u v → component u = component v := by
+  intros u v uv
+  let e := G.adjacentEdge uv
+  let ce := C.componentEdge e
+  simp at ce
+
+
+
+-- the root of the component of a given vertex
+@[simp]
+def ComponentsCertificate.rootOf {G} [C : ComponentsCertificate G] : G.vertex → G.vertex :=
+  (fun (v : G.vertex) => C.root (C.component v))
+
+def ComponentsCertificate.rootOfNext {G} [C : ComponentsCertificate G] (v : G.vertex) :
+  C.rootOf (C.next v) = C.rootOf v := by
+  apply congrArg C.root
+  cases zero_or_lt (C.distToRoot v)
+  case inl eq =>
+    apply congrArg
+    apply Eq.symm
+    rw [C.distZeroRoot v eq]
+    apply Eq.symm
+    apply C.nextRoot
+  case inr _ =>
+    apply Eq.symm
+    apply C.componentAdjacent
+    apply C.nextAdjacent
+    assumption
+
+-- Auxuliary induction principle (think of f x as a "height" of x)
+theorem heightInduction {α : Type} (f : α → Nat) (P : α → Prop) :
+  (∀ x, (∀ y, f y < f x → P y) → P x) → ∀ x, P x := by
+  intros ind a
   let Q := fun n => ∀ a, f a = n → P a
-  have Qstep : ∀ (n : Nat), (∀ (m : Nat), m < n → Q m) → Q n
+  have Qstep : ∀ n, (∀ m, m < n → Q m) → Q n
   { intros n h a ξ
     apply (ind a)
     intros b fb_lt_fa
@@ -107,169 +135,43 @@ theorem foo (α : Type) (f : α → Nat) (P : α → Prop)
   }
   exact @WellFounded.fix _ Q Nat.lt (Nat.lt_wfRel.wf) Qstep (f a) a rfl
 
--- Different proof of foo using strong induction
--- theorem bar (α : Type) (f : α → Nat) (P : α → Prop)
---   (ind : ∀ a, (∀ b, f b < f a → P b) → P a) :
---   ∀ a, P a :=
--- begin
---   intro a,
---   induction hn : f a using nat.strong_induction_on with n ih generalizing a,
---   apply ind,
---   intros b fb_lt_fa,
---   rw hn at fb_lt_fa,
---   exact ih _ fb_lt_fa _ rfl,
--- end
-
-lemma connectedToRoot (w : numComponentsWitnessLoose) : 
-  ∀ v : Nat, connected w.G v (w.root (w.c v)) := by
-  fapply @foo Nat (w.h) (fun u => connected w.G u (w.root (w.c u)))
-  { intros v h
-    have h := w.uniquenessOfRoots v h
-    rw [←h]
-    apply connectedRefl
-  }
-  { intros v h
-    by_cases H : (0 < w.h v)
-    { let u := w.next v
-      have hyp := w.heightCond v H
-      have H' : connected w.G u (w.root (w.c u)) := by apply h; cases hyp; assumption
-      have same_c : w.c u = w.c v := 
-        by
-          apply lt_by_cases u v
-          { intros uv -- u < v
-            let e : Edge := { edge := (u, v), src_lt_trg := uv }
-            have euv : e ∈ w.G.edges
-            cases hyp
-            apply edgeRelationIsMem (by assumption)
-            apply w.connectEdges e euv
-          }
-          { intros uv -- u = v
-            rw [uv]
-          }
-          { intros vu -- v < u
-            let e : Edge := { edge := (v, u), src_lt_trg := vu }
-            have evu : e ∈ w.G.edges
-            cases hyp
-            apply edgeRelationIsMem (edgeRelationSymmetric (by assumption))
-            apply symm
-            apply w.connectEdges e evu
-          }
-      rw [←same_c]
-      have cuv : connected w.G u v := by
-        apply edgeConnected; cases hyp; assumption
-      exact cuv↑ ⊕ H'
-    }
-    { simp at H
-      have h := w.uniquenessOfRoots v H
-      rw [←h]
-      apply connectedRefl
-    }
-  }
-
-lemma connectedToRootExact (w : numComponentsWitnessExact) : 
-  ∀ v : (Fin w.G.vertexSize), connected w.G v (w.root (w.c v)) := by
-  fapply @foo (Fin w.G.vertexSize) (w.h) (fun u => connected w.G u (w.root (w.c u)))
-  { intros v h
-    have h := w.uniquenessOfRoots v h
-    rw [←h]
-    apply connectedRefl
-  }
-  { intros v h
-    by_cases H : (0 < w.h v)
-    { let u := w.next v
-      have hyp := w.heightCond v H
-      have H' : connected w.G u (w.root (w.c u)) := by apply h; cases hyp; assumption
-      have same_c : w.c u = w.c v := 
-        by
-          apply lt_by_cases u v
-          { intros uv -- u < v
-            let e : Edge := { edge := (u, v), src_lt_trg := uv }
-            have euv : e ∈ w.G.edges
-            cases hyp
-            apply edgeRelationIsMem (by assumption)
-            apply w.connectEdges e euv
-          }
-          { intros uv -- u = v
-            rw [uv]
-          }
-          { intros vu -- v < u
-            let e : Edge := { edge := (v, u), src_lt_trg := vu }
-            have evu : e ∈ w.G.edges
-            cases hyp
-            apply edgeRelationIsMem (edgeRelationSymmetric (by assumption))
-            apply symm
-            apply w.connectEdges e evu
-          }
-      rw [←same_c]
-      have cuv : connected w.G u v := by
-        apply edgeConnected; cases hyp; assumption
-      exact cuv↑ ⊕ H'
-    }
-    { simp at H
-      have h := w.uniquenessOfRoots v H
-      rw [←h]
-      apply connectedRefl
-    }
-  }
-
-lemma witnessConnectedCondition (w : numComponentsWitnessLoose) : ∀ u v, w.c u = w.c v ↔ connected w.G u v := by
-  intros u v
-  apply Iff.intro
-  · intro H
-    have connectedToRoot : ∀ x : Nat, connected w.G x (w.root (w.c x))
-    { intro x
-      apply connectedToRoot
-    }
-    { have h : connected w.G u (w.root (w.c u)) := connectedToRoot u
-      have h' : connected w.G v (w.root (w.c v)) := connectedToRoot v
-      have h'' : w.root (w.c u) = w.root (w.c v) := by rw [H]
-      rw [h''] at h
-      exact h ⊕ (h' ↑)
-    }
-  · intro h
-    induction h with
-    | rel u v rel_uv =>
-      {
-        apply lt_by_cases u v
-        · intro uv
-          let e : Edge := { edge := (u, v), src_lt_trg := uv }
-          have euv : e ∈ w.G.edges
-          apply edgeRelationIsMem rel_uv
-          apply w.connectEdges e euv
-        · intro uv
-          rw [uv]
-        · intro vu
-          let e : Edge := { edge := (v, u), src_lt_trg := vu }
-          have evu : e ∈ w.G.edges
-          apply edgeRelationIsMem (edgeRelationSymmetric rel_uv)
-          apply symm
-          apply w.connectEdges e evu
-      }
-    | refl u => rfl
-    | symm u v =>
-      apply symm
-      assumption
-    | trans u v w =>
-      trans
-      assumption
+-- Given a component certificate, each vertex is connected to its root
+lemma connectedToRoot (G : Graph) [C : ComponentsCertificate G] :
+  ∀ v, G.connected v (C.rootOf v) := by
+  apply heightInduction C.distToRoot (fun v => G.connected v (C.rootOf v))
+  intros v ih
+  cases (zero_or_lt (C.distToRoot v))
+  · apply G.connectedEq
+    apply C.distZeroRoot v
+    assumption
+  · apply G.adjacentConnected v (C.next v) (C.rootOf v)
+    · apply C.nextAdjacent ; assumption
+    · rw [Eq.symm (C.rootOfNext v)]
+      apply ih
+      apply C.distNext
       assumption
 
-theorem witnessComponents : numComponentsWitnessLoose → numberOfConnectedComponents :=
-  fun w =>
-    {
-      G := w.G,
-      numComponents := w.numComponents,
-      c := w.c,
-      hasEnough := by
-        have h : Function.HasRightInverse w.c
-        unfold Function.HasRightInverse
-        apply Exists.intro
-        unfold Function.RightInverse
-        unfold Function.LeftInverse
-        intro x
-        have isRoot := w.isRoot x
-        apply isRoot.left
-        apply Iff.mpr Function.surjective_iff_hasRightInverse
-        assumption
-      conn := by apply witnessConnectedCondition,
-    }
+-- From a components certificate we can derive the connected components
+instance {G : Graph} [C : ComponentsCertificate G] : ConnectedComponents G :=
+  { val := C.val ,
+    component := C.component,
+    componentInhabited := by { intro i ; exists (C.root i) ; apply C.rootCorrect },
+    correct := by
+      intros u v
+      apply Iff.intro
+      · intro eq
+        apply G.connectedTrans u (C.rootOf u) v
+        · apply connectedToRoot
+        · apply Graph.connectedSymm
+          unfold ComponentsCertificate.rootOf
+          rw [eq]
+          apply connectedToRoot
+      · intro uv
+        induction uv
+        case mpr.rel => apply C.componentAdjacent ; assumption
+        case mpr.refl => rfl
+        case mpr.symm => apply Eq.symm ; assumption
+        case mpr.trans eq₁ eq₂ => apply Eq.trans eq₁ eq₂
+  }
+
+end HoG

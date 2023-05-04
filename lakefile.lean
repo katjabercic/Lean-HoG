@@ -8,6 +8,9 @@ package «LeanHoG» {
 @[default_target]
 lean_lib HoG where
 
+-- the default setting of autoImplicit is insane
+moreLeanArgs := #["-DautoImplicit=false"]
+
 lean_lib BoundedOrder
 lean_lib TreeSet
 lean_lib TreeMap
@@ -18,7 +21,7 @@ lean_lib JsonDecoder
 -- lean_lib Query
 -- lean_lib NeighborMap
 -- lean_lib Tactic
--- lean_lib ConnectedComponents
+lean_lib ConnectedComponents
 -- lean_lib Walk
 -- lean_lib Bipartite
 

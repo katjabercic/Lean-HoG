@@ -48,9 +48,6 @@ structure Graph : Type :=
 @[simp, reducible]
 def Graph.vertex (G : Graph) := Fin G.vertexSize
 
-instance Graph_vertex_LinearOrder (G : Graph) : LinearOrder (Graph.vertex G) :=
-  by simp ; infer_instance -- this seems suboptimal
-
 -- the underlying type of edges (pairs (i,j) such that j < i < G.vertexSize)
 @[simp]
 def Graph.edgeType (G : Graph) := Edge G.vertexSize
@@ -62,7 +59,14 @@ instance Graph_edgeType_Finset (G : Graph) : Finset G.edgeType :=
 @[simp]
 def Graph.edge (G : Graph) := { e : G.edgeType // e ∈ G.edgeTree }
 
-instance Graph_edge_Fintype (G : Graph) : Fintype (Graph.edge G) := by
+@[simp]
+def Graph.fst {G : Graph} (e : G.edge) : G.vertex := e.val.fst
+
+@[simp]
+def Graph.snd {G : Graph} (e : G.edge) : G.vertex :=
+  ⟨e.val.snd, by transitivity e.val.fst <;> simp⟩
+
+instance Graph_edge_Fintype (G : Graph) : Fintype G.edge := by
   sorry
 
 -- the number of eges in a graph
@@ -70,12 +74,44 @@ def Graph.edgeSize (G : Graph) := Fintype.card G.edge
 
 -- the vertex adjacency relation
 @[simp]
-def Graph.adjacent {G : Graph} : G.vertex → G.vertex → Bool :=
+def Graph.badjacent {G : Graph} : G.vertex → G.vertex → Bool :=
   fun u v =>
     lt_by_cases u v
       (fun u_lt_v => G.edgeTree.mem (Edge.mk v (Fin.mk u u_lt_v)))
       (fun _ => false)
       (fun v_lt_u => G.edgeTree.mem (Edge.mk u (Fin.mk v v_lt_u)))
+
+@[simp]
+def Graph.adjacent {G : Graph} : G.vertex → G.vertex → Prop :=
+  fun u v => G.badjacent u v
+
+-- adjacent vertices induce an edge
+@[simp]
+def Graph.adjacentEdge {G : Graph} {u v : G.vertex} :
+  G.adjacent u v → G.edge := by
+  apply lt_by_cases u v
+  · intro u_lt_v
+    simp [u_lt_v, lt_by_cases]
+    intro
+    constructor
+    case val => exact Edge.mk v ⟨u, u_lt_v⟩
+    case property => assumption
+  · intro u_eq_v
+    simp [u_eq_v, lt_by_cases]
+    intro H
+    contradiction
+  · intro v_lt_u
+    simp [v_lt_u, not_lt_of_lt, lt_by_cases]
+    intro
+    constructor
+    case val => exact Edge.mk u ⟨v, v_lt_u⟩
+    case property => assumption
+
+def Graph.adjacentEdgeFst {G : Graph} {u v : G.vertex} {uv : G.adjacent u v} :
+  G.fst (G.adjacentEdge uv) = u := by
+  apply lt_by_cases u v
+  · intro u_lt_v
+    simp [u_lt_v, lt_by_cases]
 
 lemma Graph.irreflexiveNeighbor (G : Graph) :
   ∀ (v : G.vertex), ¬ adjacent v v := by simp [lt_by_cases]
