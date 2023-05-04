@@ -1,5 +1,7 @@
 import BoundedOrder
 
+namespace HoG
+
 inductive Map (α β : Type) : Type
 | empty : Map α β
 | leaf : α → β → Map α β
@@ -27,7 +29,7 @@ def Map.correctBound {α β : Type} [Ord α] (low high : Bounded α) : Map α β
 def Map.correct {α β : Type} [Ord α] (m : Map α β) : Bool :=
   correctBound .bottom .top m
 
-def Map.get {α β : Type} [Ord α] (m : Map α β) (x : α) : Option β :=
+def Map.get? {α β : Type} [Ord α] (m : Map α β) (x : α) : Option β :=
   match m with
   | .empty => none
   | .leaf y vy =>
@@ -36,12 +38,12 @@ def Map.get {α β : Type} [Ord α] (m : Map α β) (x : α) : Option β :=
     | _ => none
   | .node y vy left right =>
     match compare x y with
-    | .lt => get left x
+    | .lt => get? left x
     | .eq => some vy
-    | .gt => get right x
+    | .gt => get? right x
 
 def Map.mapsTo {α β} [Ord α] (m : Map α β) (x :α) (y : β) : Prop :=
-  match m.get x with
+  match m.get? x with
   | none => false
   | some z => y = z
 
@@ -56,3 +58,11 @@ def Map.hasKey {α β : Type} [Ord α] (x : α) : Map α β → Bool
     | .lt => hasKey x left
     | .eq => true
     | .gt => hasKey y right
+
+def Map.get {α β : Type} [Ord α] (m : Map α β) (x : α) : m.hasKey x → β :=
+  sorry
+
+def Map.total {α β : Type} [Ord α] (m : Map α β) (t : ∀ x, m.hasKey x) (x : α) : β :=
+  m.get x (t x)
+
+end HoG

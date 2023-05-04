@@ -5,6 +5,7 @@ import Mathlib.Init.Function
 import Init.WF
 import Graph
 import TreeSet
+import TreeMap
 set_option autoImplicit false
 
 namespace HoG
@@ -73,6 +74,7 @@ class ComponentsCertificate (G : Graph) : Type :=
   -- We call this tree the "component tree". All the component trees form a spanning forest.
 
   -- for each vertex that is not a root, the next step of the path leading to its root
+  -- (and roots map to themselves)
   next : G.vertex → G.vertex
   -- To ensure that next is cycle-free, we witness the fact that it takes us closer to the root.
   -- the distance of a vertex to its component root
@@ -88,16 +90,25 @@ class ComponentsCertificate (G : Graph) : Type :=
   -- distance to root decreases as we travel along the path given by next
   distNext : ∀ v, 0 < distToRoot v → distToRoot (next v) < distToRoot v
 
+-- smart constructor for generating a certificate from json
+-- def ComponentsCertificate.mk' (G : Graph) (val : Nat) (componentMap : M)
 
 -- adjacent vertices are in the same component
 lemma ComponentsCertificate.componentAdjacent {G} [C : ComponentsCertificate G] :
   ∀ u v, G.adjacent u v → component u = component v := by
   intros u v uv
-  let e := G.adjacentEdge uv
-  let ce := C.componentEdge e
-  simp at ce
-
-
+  let ce := C.componentEdge (G.adjacentEdge uv).val
+  apply lt_by_cases u v
+  · intro u_lt_v
+    rw [Graph.adjacentEdge_lt_fst uv u_lt_v, Graph.adjacentEdge_lt_snd uv u_lt_v] at ce
+    symm
+    assumption
+  · intro eq
+    apply congrArg
+    assumption
+  · intro v_lt_u
+    rw [Graph.adjacentEdge_gt_fst uv v_lt_u, Graph.adjacentEdge_gt_snd uv v_lt_u] at ce
+    assumption
 
 -- the root of the component of a given vertex
 @[simp]
@@ -168,7 +179,7 @@ instance {G : Graph} [C : ComponentsCertificate G] : ConnectedComponents G :=
           apply connectedToRoot
       · intro uv
         induction uv
-        case mpr.rel => apply C.componentAdjacent ; assumption
+        case mpr.rel x y xy => apply C.componentAdjacent ; assumption
         case mpr.refl => rfl
         case mpr.symm => apply Eq.symm ; assumption
         case mpr.trans eq₁ eq₂ => apply Eq.trans eq₁ eq₂

@@ -16,7 +16,8 @@ def hog_generator(datadir, prefix:str, skip=0, limit=None):
     """Generate HoG graphs from input files datadir, skipping the first
        skip files, and generating at most limit graphs."""
 
-    
+    if skip > 0: logging.info (f"skipping {skip} graphs")    
+    if limit is not None: logging.info (f"limitting to {limit} graphs")    
     files = sorted(f for f in os.listdir(datadir) if f.endswith('.txt'))
     if len(files) == 0:
         logging.warning("no data files found (hint: git submodule init && git submodule update)")
@@ -26,13 +27,16 @@ def hog_generator(datadir, prefix:str, skip=0, limit=None):
         with open(os.path.join(datadir, fh), 'r') as fh:
             # Iterate through all graphs in the file
             for txt in re.finditer(r'^1:.+?^Vertex Connectivity: .+?\n', fh.read(), flags=re.DOTALL+re.MULTILINE):
+                k += 1
                 if k < skip:
+                    logging.debug (f"skipping graph {k}")
                     continue
                 elif limit is not None and k >= skip + limit:
+                    logging.debug (f"limit reached at graph {k}")
                     return
                 else:
+                    logging.debug (f"processing graph {k}")
                     yield Graph("{0}{1:05d}".format(prefix, k), txt.group(0))
-                k += 1
         
 def write_json_files(datadir, outdirData, prefix, skip : int = 0, limit : Optional[int] = None):
     """Convert HoG graphs in the datadir to JSON and save them to destdir.
@@ -57,7 +61,7 @@ def write_json_files(datadir, outdirData, prefix, skip : int = 0, limit : Option
     #     fh.write("import Query\n\nnamespace Hog\n")
 
     names = []
-    counter = 0
+    counter = 1 # the first graph has serial number 1
     for graph in hog_generator(datadir, prefix=prefix, skip=skip, limit=limit):
         names.append(graph.name)
         with open(os.path.join(outdirData, "{0}.json".format(graph.name)), 'w') as fh:
@@ -78,16 +82,20 @@ if __name__ == "__main__":
         return os.path.join(mydir, *fs)
 
     arg_parser = ArgumentParser()
-    arg_parser.add_argument("--datadir", dest="datadir", required=True,
+    arg_parser.add_argument("--srcdir", dest="datadir", required=True,
                         help="read HoG graph files from this directory")
-    arg_parser.add_argument("--outdirData", default=relative('..', 'src', 'hog', 'data', 'Data'), dest="outdirData",
+    arg_parser.add_argument("--destdir", default=relative('..', 'src', 'hog', 'data', 'Data'), dest="outdirData",
                         help="output JSON graph files to this directory")
     arg_parser.add_argument("--limit", type=int, default=None, dest="limit",
                         help="limit the number of graphs to process")
     arg_parser.add_argument("--skip", type=int, default=0, dest="skip",
                         help="skip this many graphs initially")
+    arg_parser.add_argument("--loglevel", type=int, default=30, dest="loglevel",
+                        help="set logging level (0 to 50)")
     args = arg_parser.parse_args()
 
+    # set logging level
+    logging.getLogger().setLevel(args.loglevel)
     # hog.write_lean_structure()
     write_json_files(
         datadir=args.datadir,

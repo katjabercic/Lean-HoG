@@ -11,8 +11,8 @@ structure Edge (vertexSize : ℕ) : Type :=
   -- deriving Fintype
 
 -- smart constructor used to load JSON files
-def Edge.mk' (n a b : Nat) (H : Nat.blt a n = true) (H2 : Nat.blt b a = true) : Edge n :=
-  ⟨⟨a, by simp_all⟩, ⟨b, (by simp_all : b < a)⟩⟩
+def Edge.mk' (n a b : Nat) (H1 : Nat.blt a n = true) (H2 : Nat.blt b a = true) : Edge n :=
+  ⟨⟨a, Nat.le_of_ble_eq_true H1⟩, ⟨b, Nat.le_of_ble_eq_true H2⟩⟩
 
 -- Get rid of this stuff once the above "deriving Fintype" works
 def Graph.edgeEquiv (vertexSize : ℕ) : (fst : Fin vertexSize) × Fin fst ≃ Edge vertexSize where
@@ -60,11 +60,11 @@ instance Graph_edgeType_Finset (G : Graph) : Finset G.edgeType :=
 def Graph.edge (G : Graph) := { e : G.edgeType // e ∈ G.edgeTree }
 
 @[simp]
-def Graph.fst {G : Graph} (e : G.edge) : G.vertex := e.val.fst
+def Graph.fst {G : Graph} (e : G.edgeType) : G.vertex := e.fst
 
 @[simp]
-def Graph.snd {G : Graph} (e : G.edge) : G.vertex :=
-  ⟨e.val.snd, by transitivity e.val.fst <;> simp⟩
+def Graph.snd {G : Graph} (e : G.edgeType) : G.vertex :=
+  ⟨e.snd, lt_trans e.snd.isLt e.fst.isLt⟩
 
 instance Graph_edge_Fintype (G : Graph) : Fintype G.edge := by
   sorry
@@ -90,28 +90,38 @@ def Graph.adjacent {G : Graph} : G.vertex → G.vertex → Prop :=
 def Graph.adjacentEdge {G : Graph} {u v : G.vertex} :
   G.adjacent u v → G.edge := by
   apply lt_by_cases u v
-  · intro u_lt_v
-    simp [u_lt_v, lt_by_cases]
-    intro
+  · intros u_lt_v uv
     constructor
     case val => exact Edge.mk v ⟨u, u_lt_v⟩
-    case property => assumption
+    case property => simp_all [u_lt_v, lt_by_cases]
   · intro u_eq_v
-    simp [u_eq_v, lt_by_cases]
     intro H
-    contradiction
-  · intro v_lt_u
-    simp [v_lt_u, not_lt_of_lt, lt_by_cases]
-    intro
+    simp [u_eq_v, lt_by_cases] at H
+  · intros v_lt_u uv
     constructor
     case val => exact Edge.mk u ⟨v, v_lt_u⟩
-    case property => assumption
+    case property => simp_all [v_lt_u, not_lt_of_lt, lt_by_cases]
 
-def Graph.adjacentEdgeFst {G : Graph} {u v : G.vertex} {uv : G.adjacent u v} :
-  G.fst (G.adjacentEdge uv) = u := by
-  apply lt_by_cases u v
-  · intro u_lt_v
-    simp [u_lt_v, lt_by_cases]
+lemma Graph.adjacentEdge_lt_fst {G : Graph} {u v : G.vertex} (uv : G.adjacent u v):
+  u < v -> G.fst (G.adjacentEdge uv).val = v := by
+  intro u_lt_v
+  simp [u_lt_v, lt_by_cases]
+
+lemma Graph.adjacentEdge_gt_fst {G : Graph} {u v : G.vertex} (uv : G.adjacent u v):
+  v < u -> G.fst (G.adjacentEdge uv).val = u := by
+  intro v_lt_u
+  simp [v_lt_u, not_lt_of_lt, lt_by_cases]
+
+lemma Graph.adjacentEdge_lt_snd {G : Graph} {u v : G.vertex} (uv : G.adjacent u v):
+  u < v -> G.snd (G.adjacentEdge uv).val = u := by
+  intro u_lt_v
+  apply Fin.eq_of_val_eq
+  simp [u_lt_v, lt_by_cases]
+  sorry
+
+lemma Graph.adjacentEdge_gt_snd {G : Graph} {u v : G.vertex} (uv : G.adjacent u v):
+  v < u -> G.snd (G.adjacentEdge uv).val = v := by
+  sorry
 
 lemma Graph.irreflexiveNeighbor (G : Graph) :
   ∀ (v : G.vertex), ¬ adjacent v v := by simp [lt_by_cases]

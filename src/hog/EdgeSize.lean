@@ -11,8 +11,6 @@ class EdgeSize (G : Graph) : Type :=
 
 -- smart constructor used to load JSON files
 def EdgeSize.mk' (G : Graph) (e : Nat) (H : Nat.beq G.edgeTree.size e = true) : EdgeSize G :=
-  ⟨ e , (by apply Eq.trans (b := G.edgeTree.size)
-            · apply Graph.edgeTreeSize_is_edgeSize
-            · simp_all)⟩
+  ⟨ e , Eq.trans G.edgeTreeSize_is_edgeSize (Nat.eq_of_beq_eq_true H) ⟩
 
 end HoG
