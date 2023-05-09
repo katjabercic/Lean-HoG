@@ -6,7 +6,6 @@ import Init.WF
 import Graph
 import TreeSet
 import TreeMap
-set_option autoImplicit false
 
 namespace HoG
 

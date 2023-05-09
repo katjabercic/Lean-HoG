@@ -15,6 +15,7 @@ lean_lib BoundedOrder
 lean_lib OrdEq
 lean_lib TreeSet
 lean_lib TreeMap
+lean_lib Edge
 lean_lib Graph
 lean_lib EdgeSize
 lean_lib JsonDecoder

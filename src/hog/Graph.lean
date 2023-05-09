@@ -1,79 +1,9 @@
 import OrdEq
 import TreeSet
 import TreeMap
+import Edge
 
 namespace HoG
-
--- The endpoints of an edge must be sorted
-structure Edge (vertexSize : Nat) : Type :=
-  fst : Fin vertexSize
-  snd : Fin fst
-  -- uncomment once https://github.com/leanprover-community/mathlib4/pull/3198 is merged
-  -- deriving Fintype
-
--- smart constructor used to load JSON files
-def Edge.mk' (n a b : Nat) (H1 : Nat.blt a n = true) (H2 : Nat.blt b a = true) : Edge n :=
-  ⟨⟨a, Nat.le_of_ble_eq_true H1⟩, ⟨b, Nat.le_of_ble_eq_true H2⟩⟩
-
--- Get rid of this stuff once the above "deriving Fintype" works
-def Graph.edgeEquiv (vertexSize : Nat) : (fst : Fin vertexSize) × Fin fst ≃ Edge vertexSize where
-  toFun z := ⟨z.1, z.2⟩
-  invFun c := ⟨c.fst, c.snd⟩
-  left_inv := fun _ => rfl
-  right_inv := fun _ => rfl
-
-instance Edge_Fintype (vertexSize : Nat): Fintype (Edge vertexSize) :=
-  Fintype.ofEquiv _ (Graph.edgeEquiv vertexSize)
-
-def Edge.compare {m : Nat} (u v : Edge m) : Ordering :=
-  match Ord.compare u.fst.val v.fst.val with
-  | .lt => .lt
-  | .eq => Ord.compare u.snd.val v.snd.val
-  | .gt => .gt
-
-instance Edge_Ord (m : Nat): Ord (Edge m) where
-  compare := Edge.compare
-
-instance Edge_OrdEq (m : Nat) : OrdEq (Edge m) := by
-  constructor
-  intros u v
-  simp [compare, Edge_Ord, Edge.compare, compareOfLessAndEq]
-  cases (lt_trichotomy u.fst v.fst) with
-  | inl H =>
-    simp [H]
-    intro u_eq_v
-    rw [u_eq_v] at H
-    apply lt_irrefl v.fst
-    assumption
-  | inr G =>
-    cases G with
-    | inl H =>
-      cases (lt_trichotomy u.snd.val v.snd.val) with
-      | inl u_lt_v =>
-        simp [H, u_lt_v]
-        intro u_eq_v
-        rw [u_eq_v] at u_lt_v
-        apply lt_irrefl v.snd.val u_lt_v
-      | inr G' =>
-        cases G' with
-        | inl u_eq_v =>
-          simp [H, u_eq_v]
-          revert H ; revert u_eq_v
-          cases u <;> cases v <;> simp
-          intros eq₂ eq₁
-          simp [eq₁]
-          have foo := heq_iff_eq.mp
-
-
-
-
-    | inr H =>
-      simp [H, not_lt_of_lt]
-
-
-
-
-
 
 structure Graph : Type :=
   vertexSize : Nat
