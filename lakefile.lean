@@ -12,6 +12,7 @@ lean_lib HoG where
 moreLeanArgs := #["-DautoImplicit=false"]
 
 lean_lib BoundedOrder
+lean_lib OrdEq
 lean_lib TreeSet
 lean_lib TreeMap
 lean_lib Graph

@@ -1,4 +1,5 @@
 import BoundedOrder
+import OrdEq
 
 namespace HoG
 
@@ -42,7 +43,20 @@ def Map.get? {α β : Type} [Ord α] (m : Map α β) (x : α) : Option β :=
     | .eq => some vy
     | .gt => get? right x
 
-def Map.mapsTo {α β} [Ord α] (m : Map α β) (x :α) (y : β) : Prop :=
+def Map.get {α β : Type} [Ord α] [Inhabited β] (m : Map α β) (x : α) : β :=
+  match m with
+  | .empty => default
+  | .leaf y vy =>
+    match compare x y with
+    | .eq => vy
+    | _ => default
+  | .node y vy left right =>
+    match compare x y with
+    | .lt => get left x
+    | .eq => vy
+    | .gt => get right x
+
+def Map.mapsTo {α β} [Ord α] (m : Map α β) (x : α) (y : β) : Prop :=
   match m.get? x with
   | none => false
   | some z => y = z
@@ -58,11 +72,5 @@ def Map.hasKey {α β : Type} [Ord α] (x : α) : Map α β → Bool
     | .lt => hasKey x left
     | .eq => true
     | .gt => hasKey y right
-
-def Map.get {α β : Type} [Ord α] (m : Map α β) (x : α) : m.hasKey x → β :=
-  sorry
-
-def Map.total {α β : Type} [Ord α] (m : Map α β) (t : ∀ x, m.hasKey x) (x : α) : β :=
-  m.get x (t x)
 
 end HoG

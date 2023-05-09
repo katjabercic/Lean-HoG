@@ -2,6 +2,7 @@ import Mathlib.Init.Algebra.Order
 import Mathlib.Tactic.Basic
 
 import BoundedOrder
+import OrdEq
 
 namespace HoG
 
@@ -77,7 +78,7 @@ def all {α : Type} [Ord α] (p : α → Prop) [DecidablePred p] : STree α → 
   | leaf x => p x
   | node x left right => p x && all p left && all p right
 
-theorem all_forall {α : Type} [l : LinearOrder α] (p : α → Prop) [DecidablePred p] :
+theorem all_forall {α : Type} [Ord α] [OrdEq α] (p : α → Prop) [DecidablePred p] :
   ∀ (t : STree α), all p t → ∀ x, STree.mem x t → p x := by
   intro t
   induction t
@@ -85,28 +86,21 @@ theorem all_forall {α : Type} [l : LinearOrder α] (p : α → Prop) [Decidable
   case leaf y =>
     simp
     intros py x
-    simp [l.compare_eq_compareOfLessAndEq, compareOfLessAndEq]
-    apply lt_by_cases x y
-    · intro x_lt_y ; simp [x_lt_y]
-    · intro x_eq_y ; simp [x_eq_y] ; assumption
-    · intro y_lt_x
-      simp [not_lt_of_gt y_lt_x, ne_iff_lt_or_gt.mpr (Or.inr y_lt_x)]
+    cases (OrdEq_cases x y) with
+    | inl H => simp [H]
+    | inr G =>
+      cases G with
+      | inl H => simp [H.left] ; rw [H.right] ; assumption
+      | inr H => simp [H]
   case node y left right ihl ihr =>
     simp
     intros px all_left all_right x
-    simp [l.compare_eq_compareOfLessAndEq, compareOfLessAndEq]
-    apply lt_by_cases x y
-    · intros x_lt_y
-      simp [x_lt_y]
-      apply ihl ; assumption
-    · intros x_eq_y
-      simp [x_eq_y]
-      intros
-      exact px
-    · intros y_lt_x
-      simp [not_lt_of_gt y_lt_x, ne_iff_lt_or_gt.mpr (Or.inr y_lt_x)]
-      intro
-      apply ihr <;> assumption
+    cases (OrdEq_cases x y) with
+    | inl H => simp [H.left] ; apply ihl all_left
+    | inr G =>
+      cases G with
+      | inl H => simp [H.left] ; rw [H.right] ; assumption
+      | inr H => simp [H.left] ; apply ihr all_right
 
 @[simp]
 def exi {α : Type} [Ord α] (p : α → Prop) [DecidablePred p] : STree α → Bool
@@ -114,40 +108,27 @@ def exi {α : Type} [Ord α] (p : α → Prop) [DecidablePred p] : STree α → 
   | leaf x => p x
   | node x left right => p x || exi p left || exi p right
 
-theorem exists_exi {α : Type} [l : LinearOrder α] (p : α → Prop) [DecidablePred p] :
-  ∀ (t : STree α), (∃ x, STree.mem x t ∧ p x) → exi p t := by
+theorem exists_exi {α : Type} [Ord α] [OrdEq α] (p : α → Prop) [DecidablePred p] :
+  ∀ (t : STree α), (∃ x, STree.mem x t ∧ p x) → exi p t = true := by
   intro t
   induction t
-  case empty => intro q ; simp at q
+  case empty => simp
   case leaf y =>
     simp
-    simp [l.compare_eq_compareOfLessAndEq, compareOfLessAndEq]
     intro x
-    apply lt_by_cases x y
-    · intro x_lt_y ; simp [x_lt_y]
-    · intro x_eq_y ; simp [x_eq_y]
-    · intro y_lt_x
-      simp [not_lt_of_gt y_lt_x, ne_iff_lt_or_gt.mpr (Or.inr y_lt_x)]
+    cases (OrdEq_cases x y) with
+    | inl H => simp [H.left]
+    | inr G =>
+      cases G with
+      | inl H => simp [H.left] ; rw [H.right] ; intro ; assumption
+      | inr H => simp [H.left]
   case node y left right ihl ihr =>
-    simp [l.compare_eq_compareOfLessAndEq, compareOfLessAndEq]
-    intros x q px
-    apply lt_by_cases x y
-    ·  intros x_lt_y
-       simp [x_lt_y] at q
-       apply Or.inl
-       apply Or.inr
-       apply ihl
-       exists x
-    · intros x_eq_y
-      apply Or.inl
-      apply Or.inl
-      rw [x_eq_y] at px
-      assumption
-    · intros y_lt_x
-      have x_neq_y : x ≠ y := ne_iff_lt_or_gt.mpr (Or.inr y_lt_x)
-      simp [not_lt_of_gt y_lt_x, x_neq_y] at q
-      apply Or.inr
-      apply ihr
-      exists x
-
+    simp
+    intro x
+    cases (OrdEq_cases x y) with
+    | inl H => simp [H.left] ; intros ; apply Or.inl ; apply Or.inr ; apply ihl ; exists x
+    | inr G =>
+      cases G with
+      | inl H => simp [H.left] ; rw [H.right] ; intro ; apply Or.inl ; apply Or.inl ; assumption
+      | inr H => simp [H.left] ; intros ; apply Or.inr ; apply ihr ; exists x
 end HoG
