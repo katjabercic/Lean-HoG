@@ -5,8 +5,11 @@ namespace HoG
 -- For the purposes of binary search trees we don't need a linear order.
 -- It suffices to have a class [Ord] which correctly classifies equality,
 -- defined here.
-class OrdEq (α: Type) [Ord α] where
+class OrdEq (α : Type) [Ord α] where
   equiv : ∀ (x y : α), compare x y = .eq ↔ x = y
+
+instance (α : Type) [LinearOrder α] : OrdEq α where
+  equiv := fun x y => compare_eq_iff_eq (a := x) (b := y)
 
 -- Helpful lemma for splitting into cases according to the result of Ord.compare
 lemma OrdEq_cases {α : Type} [Ord α] [OrdEq α] (x y : α):

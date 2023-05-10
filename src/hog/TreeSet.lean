@@ -73,14 +73,14 @@ def STree.size {α : Type} [Ord α] (t : STree α) : Nat :=
   sizeBounded .bottom .top t
 
 @[simp]
-def all {α : Type} [Ord α] (p : α → Prop) [DecidablePred p] : STree α → Bool
+def STree.all {α : Type} [Ord α] (t : STree α) (p : α → Prop) [DecidablePred p] : Bool :=
+  match t with
   | empty => true
   | leaf x => p x
-  | node x left right => p x && all p left && all p right
+  | node x left right => p x && left.all p && right.all p
 
-theorem all_forall {α : Type} [Ord α] [OrdEq α] (p : α → Prop) [DecidablePred p] :
-  ∀ (t : STree α), all p t → ∀ x, STree.mem x t → p x := by
-  intro t
+theorem STree.all_forall {α : Type} [Ord α] [OrdEq α] (t : STree α) (p : α → Prop) [DecidablePred p] :
+  t.all p → ∀ x, STree.mem x t → p x := by
   induction t
   case empty => simp
   case leaf y =>
@@ -103,13 +103,14 @@ theorem all_forall {α : Type} [Ord α] [OrdEq α] (p : α → Prop) [DecidableP
       | inr H => simp [H.left] ; apply ihr all_right
 
 @[simp]
-def exi {α : Type} [Ord α] (p : α → Prop) [DecidablePred p] : STree α → Bool
+def STree.exi {α : Type} [Ord α] (t : STree α) (p : α → Prop) [DecidablePred p] : Bool :=
+  match t with
   | empty => false
   | leaf x => p x
-  | node x left right => p x || exi p left || exi p right
+  | node x left right => p x || left.exi p || right.exi p
 
-theorem exists_exi {α : Type} [Ord α] [OrdEq α] (p : α → Prop) [DecidablePred p] :
-  ∀ (t : STree α), (∃ x, STree.mem x t ∧ p x) → exi p t = true := by
+theorem STree.exists_exi {α : Type} [Ord α] [OrdEq α] (p : α → Prop) [DecidablePred p] :
+  ∀ (t : STree α), (∃ x, STree.mem x t ∧ p x) → t.exi p = true := by
   intro t
   induction t
   case empty => simp
