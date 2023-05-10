@@ -2,7 +2,7 @@ import json
 
 from graph import Edge, Graph
 from treeSet import Tree
-from treeMap import Map
+from treeMap import Map, TreeMap
 from components_certificate import ComponentsCertificate
 
 class GraphWithInvariants():
@@ -25,6 +25,8 @@ class GraphEncoder(json.JSONEncoder):
         elif isinstance(obj, Graph):
             return obj.to_json()
         elif isinstance(obj, Tree):
+            return obj.to_json()
+        elif isinstance(obj, TreeMap):
             return obj.to_json()
         elif isinstance(obj, Map):
             return obj.to_json()

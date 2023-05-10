@@ -67,7 +67,7 @@ class ComponentsCertificate (G : Graph) : Type :=
   -- for each component, a chosen representative, called "the component root"
   root : Fin val → G.vertex
   -- each root is in the correct component
-  rootCorrect : (∀ i, component (root i) = i) = true
+  rootCorrect : ∀ i, component (root i) = i
 
   -- For each component we give a directed spanning tree rooted at its component root.
   -- We call this tree the "component tree". All the component trees form a spanning forest.
@@ -79,15 +79,15 @@ class ComponentsCertificate (G : Graph) : Type :=
   -- the distance of a vertex to its component root
   distToRoot : G.vertex → Nat
   -- a root is at distance 0 from itself
-  distRootZero : (∀ i, distToRoot (root i) = 0) = true
+  distRootZero : ∀ (i : Fin val), distToRoot (root i) = 0
   -- a vertex is a root if its distance to a root is 0
-  distZeroRoot : (∀ v, distToRoot v = 0 → v = root (component v)) = true
+  distZeroRoot : ∀ (v : G.vertex), distToRoot v = 0 → v = root (component v)
   -- a root is a fixed point of next
-  nextRoot : (∀ i, next (root i) = root i) = true
+  nextRoot : ∀ i, next (root i) = root i
   -- each vertex that is not a root is adjacent to the next one
-  nextAdjacent : (forall v, 0 < distToRoot v → G.adjacent v (next v)) = true
+  nextAdjacent : forall v, 0 < distToRoot v → G.adjacent v (next v)
   -- distance to root decreases as we travel along the path given by next
-  distNext : (∀ v, 0 < distToRoot v → distToRoot (next v) < distToRoot v) = true
+  distNext : ∀ v, 0 < distToRoot v → distToRoot (next v) < distToRoot v
 
 def ComponentsCertificate.componentEdge' {G : Graph} [C : ComponentsCertificate G] :
   ∀ (e : G.edge), component (G.fst e.val) = component (G.snd e.val) := by
@@ -99,7 +99,7 @@ def ComponentsCertificate.componentEdge' {G : Graph} [C : ComponentsCertificate 
 lemma ComponentsCertificate.componentAdjacent {G} [C : ComponentsCertificate G] :
   ∀ u v, G.adjacent u v → component u = component v := by
   intros u v uv
-  let ce := C.componentEdge' (G.adjacentEdge uv).val
+  let ce := C.componentEdge' (G.adjacentEdge uv)
   apply lt_by_cases u v
   · intro u_lt_v
     rw [Graph.adjacentEdge_lt_fst uv u_lt_v, Graph.adjacentEdge_lt_snd uv u_lt_v] at ce

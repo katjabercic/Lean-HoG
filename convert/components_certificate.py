@@ -1,7 +1,7 @@
 from typing import Tuple, List, Set, Dict, Any, AnyStr, Optional, Union
 
 from graph import Graph
-from treeMap import Map
+from treeMap import Map, TreeMap
 
 class ComponentsCertificate():
     """A computational certificate for the connected components of a graph."""
@@ -13,7 +13,8 @@ class ComponentsCertificate():
     nextVertex : Dict[int, int] # next vertex on the path to the root
     distToRoot : Dict[int, int] # distance to the component root
     
-    def __init__(self, g : Graph):
+    def __init__(self, graph : Graph):
+        self.graph = graph
         self.val = 0
         self.component = {}
         self.root = {}
@@ -21,7 +22,7 @@ class ComponentsCertificate():
         self.distToRoot = {}
 
         def sweep(v : int):
-            for w in g.neighbors(v):
+            for w in graph.neighbors(v):
                 if w in self.component: continue
                 else:
                     self.component[w] = self.component[v]
@@ -30,7 +31,7 @@ class ComponentsCertificate():
                     self.distToRoot[w] = self.distToRoot[v] + 1
                     sweep(w)
 
-        for v in range(g.vertex_size):
+        for v in range(graph.vertex_size):
             if v in self.component:
                 # we processed this one before
                 continue
@@ -46,14 +47,14 @@ class ComponentsCertificate():
                 self.val += 1
 
     def to_json(self):
+        emptyGraph = (self.graph.vertex_size == 0)
         return {
             "val" : self.val,
-            "component" : Map.from_dict(self.component),
-            "root" : Map.from_dict(self.root),
-            "next" : Map.from_dict(self.nextVertex),
-            "distToRoot" : Map.from_dict(self.distToRoot),
+            "component" : Map(emptyDomain=emptyGraph, defaultValue = 0, tree=TreeMap.from_dict(self.component)),
+            "root" : Map(emptyDomain=emptyGraph, defaultValue=0, tree=TreeMap.from_dict(self.root)),
+            "next" : Map(emptyDomain=emptyGraph, defaultValue=0, tree=TreeMap.from_dict(self.nextVertex)),
+            "distToRoot" : Map(emptyDomain=emptyGraph, defaultValue=0, tree=TreeMap.from_dict(self.distToRoot)),
         }
-
 
     def compute_components(neighborhoods):
         n = len(neighborhoods)

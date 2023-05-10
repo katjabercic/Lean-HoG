@@ -1,6 +1,6 @@
-from typing import Dict, List
+from typing import Dict, List, Any, Optional
 
-class Map:
+class TreeMap():
     """A map (dictionary) represented as a binary search tree."""
 
     def __init__(self, key=None, val=None, left=None, right=None):
@@ -21,13 +21,13 @@ class Map:
         def build(lst : List):
             n : int = len(lst)
             if n == 0:
-                return Map()
+                return TreeMap()
             else:
                 mid = n // 2
                 (key, val) = lst[mid]
                 left = build(lst[0:mid])
                 right = build(lst[mid+1:])
-                return Map(key=key, val=val, left=left, right=right)
+                return TreeMap(key=key, val=val, left=left, right=right)
 
         return build(sorted(list(d.items()))) # type: ignore
 
@@ -40,10 +40,10 @@ class Map:
                 (self.right is None or self.right.is_empty()))
 
     def get_left(self):
-        return self.left if self.left else Map()
+        return self.left if self.left else TreeMap()
 
     def get_right(self):
-        return self.right if self.right else Map()
+        return self.right if self.right else TreeMap()
 
     def __str__(self):
         if self.is_empty():
@@ -58,6 +58,27 @@ class Map:
         if self.is_empty():
             return []
         elif self.is_leaf():
-            return [[self.key, self.val]]
+            return [self.key, self.val]
         else:
             return [self.key, self.val, self.get_left().to_json(), self.get_right().to_json()]
+
+class Map():
+    emptyDomain : bool # is this a map on an empty domain?
+    defaultValue : Any # if the codomain is not empty, this holds a default value
+    tree : TreeMap  # the underlying tree
+
+    def __init__(self, emptyDomain : bool, defaultValue : Optional[Any] = None, tree : TreeMap = TreeMap()):
+        self.emptyDomain = emptyDomain
+        if self.emptyDomain:
+            self.defaultValue = None
+            self.tree = TreeMap()
+        else:
+           self.defaultValue = defaultValue
+           self.tree = tree
+
+    def to_json(self):
+        """The map in JSON format."""
+        if self.emptyDomain:
+            return []
+        else:
+            return [self.tree, self.defaultValue]

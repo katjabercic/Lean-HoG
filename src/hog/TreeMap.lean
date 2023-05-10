@@ -43,18 +43,18 @@ def Map.get? {α β : Type} [Ord α] (m : Map α β) (x : α) : Option β :=
     | .eq => some vy
     | .gt => get? right x
 
-def Map.get {α β : Type} [Ord α] [Inhabited β] (m : Map α β) (x : α) : β :=
+def Map.getD {α β : Type} [Ord α] (m : Map α β) (y₀ : β) (x : α) : β :=
   match m with
-  | .empty => default
+  | .empty => y₀
   | .leaf y vy =>
     match compare x y with
     | .eq => vy
-    | _ => default
+    | _ => y₀
   | .node y vy left right =>
     match compare x y with
-    | .lt => get left x
+    | .lt => getD left y₀ x
     | .eq => vy
-    | .gt => get right x
+    | .gt => getD right y₀ x
 
 def Map.mapsTo {α β} [Ord α] (m : Map α β) (x : α) (y : β) : Prop :=
   match m.get? x with
