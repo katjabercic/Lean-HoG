@@ -1,3 +1,105 @@
+from typing import Tuple, List, Set, Dict, Any, AnyStr, Optional, Union
+
+from graph import Graph
+from treeMap import Map
+
+class ComponentsCertificate():
+    """A computational certificate for the connected components of a graph."""
+
+    graph : Graph
+    val : int # number of components
+    component : Dict[int, int] # mapping from vertices to components
+    root : Dict[int, int] # mapping from components to their roots
+    nextVertex : Dict[int, int] # next vertex on the path to the root
+    distToRoot : Dict[int, int] # distance to the component root
+    
+    def __init__(self, g : Graph):
+        self.val = 0
+        self.component = {}
+        self.root = {}
+        self.nextVertex = {}
+        self.distToRoot = {}
+
+        def sweep(v : int):
+            for w in g.neighbors(v):
+                if w in self.component: continue
+                else:
+                    self.component[w] = self.component[v]
+                    self.root[w] = self.root[v]
+                    self.nextVertex[w] = v
+                    self.distToRoot[w] = self.distToRoot[v] + 1
+                    sweep(w)
+
+        for v in range(g.vertex_size):
+            if v in self.component:
+                # we processed this one before
+                continue
+            else:
+                # set up v as the root
+                self.component[v] = self.val
+                self.root[v] = v
+                self.nextVertex[v] = v
+                self.distToRoot[v] = 0
+                # sweep the component reachable from v
+                sweep(v)
+                # new component
+                self.val += 1
+
+    def to_json(self):
+        return {
+            "val" : self.val,
+            "component" : Map.from_dict(self.component),
+            "root" : Map.from_dict(self.root),
+            "next" : Map.from_dict(self.nextVertex),
+            "distToRoot" : Map.from_dict(self.distToRoot),
+        }
+
+
+    def compute_components(neighborhoods):
+        n = len(neighborhoods)
+        vertices = [Vertex(i) for i in range(n)]
+        stack = [vertices[0]]
+        roots = []
+
+        for neighborhood in neighborhoods:
+            ind = neighborhood[0]
+            neighbors = neighborhood[1]
+            for neighbor in neighbors:
+                vertices[ind].neighbors.append(vertices[neighbor])
+
+        c = -1
+        for vertex in vertices:
+            if not vertex.checked:
+                stack.append(vertex)
+            h = 0
+            if stack:
+                c += 1
+            while stack:
+                next = stack.pop()
+                if next.checked:
+                    continue
+                next.c = c
+                next.h = h
+                if h == 0:
+                    roots.append((c,next.id))
+                h += 1
+                for neighbor in next.neighbors:
+                    if neighbor.checked == False:
+                        stack.append(neighbor)
+                next.checked = True
+
+        for vertex in vertices:
+            for nb in vertex.neighbors:
+                if nb.h < 0:
+                    raise RuntimeError(f'Height of vertex {nb.id} is -1!')    
+                if nb.h < vertex.h:
+                    vertex.next = nb
+                    break
+
+        return (vertices, roots)
+
+
+
 class Vertex:
     def __init__(self, id):
         self.id = id

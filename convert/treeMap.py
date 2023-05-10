@@ -1,3 +1,5 @@
+from typing import Dict, List
+
 class Map:
     """A map (dictionary) represented as a binary search tree."""
 
@@ -13,6 +15,21 @@ class Map:
             self.val = val
             self.left = left
             self.right = right
+
+    @staticmethod
+    def from_dict(d : Dict):
+        def build(lst : List):
+            n : int = len(lst)
+            if n == 0:
+                return Map()
+            else:
+                mid = n // 2
+                (key, val) = lst[mid]
+                left = build(lst[0:mid])
+                right = build(lst[mid+1:])
+                return Map(key=key, val=val, left=left, right=right)
+
+        return build(sorted(list(d.items()))) # type: ignore
 
     def is_empty(self) -> bool:
         return (self.key is None)
@@ -41,6 +58,6 @@ class Map:
         if self.is_empty():
             return []
         elif self.is_leaf():
-            return [[self.val, self.key]]
+            return [[self.key, self.val]]
         else:
-            return [self.key, self.val, self.get_left.to_json(), self.get_right.to_json]
+            return [self.key, self.val, self.get_left().to_json(), self.get_right().to_json()]

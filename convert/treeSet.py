@@ -22,8 +22,8 @@ class Tree(Generic[T]):
             self.left = None if (left is None) or left.is_empty() else left
             self.right = None if (right is None) or right.is_empty() else right
 
-    @classmethod
-    def fromSet(cls, edges : Set[T]):
+    @staticmethod
+    def from_set(edges : Set[T]):
         def build(lst : List[T]):
             n : int = len(lst)
             if n == 0:

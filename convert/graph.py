@@ -175,9 +175,14 @@ class Graph():
     def to_json(self):
         return {
             "vertexSize" : self.vertex_size,
-            "edges" : self.edge_tree().to_json(),
-            "edgeSize" : self.edge_size()
+            "edges" : self.edge_tree(),
         }
+
+    def neighbors(self, v):
+        """The neighbors of the given vertex."""
+        for e in self.edges:
+            if e.fst == v: yield e.snd
+            elif e.snd == v: yield e.fst
 
     # def get_data(self):
     #     """Return a dictionary with graph data, to be used in a template file."""
@@ -216,7 +221,7 @@ class Graph():
     #     }
 
     def edge_tree(self) -> Tree[Edge]:
-        return Tree.fromSet(self.edges)
+        return Tree.from_set(self.edges)
 
     # def neighborhoods(self):
     #     nbhds = [(i, []) for i in range(self.vertex_size)]
@@ -291,13 +296,3 @@ class Graph():
     #         else:
     #             B.append(v)
     #     return (A, B)
-
-class GraphEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, Edge):
-            return obj.to_json()
-        elif isinstance(obj, Graph):
-            return obj.to_json()
-        else:
-            # Let the base class default method raise the TypeError
-            return json.JSONEncoder.default(self, obj)
