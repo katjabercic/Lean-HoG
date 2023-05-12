@@ -38,7 +38,8 @@ partial def treeOfJson (n : Q(Nat)) (j : Lean.Json) : Except String Q(STree (Edg
   | #[e, l, r] => pure q(STree.node $(← edgeOfJson n e) $(← treeOfJson n l) $(← treeOfJson n r))
   | _ => throw "invalid tree format"
 
-partial def mapTreeOfJson (α β : Q(Type))
+partial def mapTreeOfJson {α β : Q(Type)}
+  (o : Q(Ord $α))
   (keyOfJson : Lean.Json → Except String Q($α))
   (valOfJson : Lean.Json → Except String Q($β))
   (j : Lean.Json) : Except String Q(Map $α $β) := do
@@ -46,22 +47,31 @@ partial def mapTreeOfJson (α β : Q(Type))
   match arr with
   | #[] => pure q(Map.empty)
   | #[k, v] => pure q(Map.leaf $(← keyOfJson k) $(← valOfJson v))
-  | #[k, v, l, r] => pure q(Map.node $(← keyOfJson k) $(← valOfJson v) $(← mapTreeOfJson α β keyOfJson valOfJson l) $(← mapTreeOfJson α β keyOfJson valOfJson r))
+  | #[k, v, l, r] => pure q(Map.node $(← keyOfJson k) $(← valOfJson v) $(← mapTreeOfJson o keyOfJson valOfJson l) $(← mapTreeOfJson o keyOfJson valOfJson r))
   | _ => throw "invalid tree map format"
 
-partial def mapOfJson (α β : Q(Type))
+def emptyMap {α β : Type}
+  [Decidable (α → False)]
+  (H : (Decidable.decide (α → False)) = true) (x : α) : β := by
+  simp at H
+  exact (False.elim (H x))
+
+partial def mapOfJson {α β : Q(Type)}
+  (o : Q(Ord $α))
+  (d : Q(Decidable ($α → False)))
   (keyOfJson : Lean.Json → Except String Q($α))
   (valOfJson : Lean.Json → Except String Q($β))
   (j : Lean.Json) : Except String Q($α → $β) := do
   let arr ← j.getArr?
   match arr with
-  | #[] => _ -- empty domain
+  | #[] =>
+    have H : Q(@Decidable.decide ($α → False) $d = true) := (q(Eq.refl true) : Lean.Expr)
+    pure q(emptyMap $H)
   | #[treeJ, defaultJ] =>
-    let tree ← mapTreeOfJson α β keyOfJson valOfJson treeJ
+    let tree ← mapTreeOfJson o keyOfJson valOfJson treeJ
     let defaultValue ← valOfJson defaultJ
     pure q(Map.getD $tree $defaultValue) 
   | _ => throw "invalid map format"
-
 
 partial def graphOfJson (j : Lean.Json) : Except String Q(Graph) := do
     let json_v ← j.getObjVal? "vertexSize"
@@ -71,21 +81,51 @@ partial def graphOfJson (j : Lean.Json) : Except String Q(Graph) := do
 
 def edgeSizeOfJson (G : Q(Graph)) (j : Lean.Json) : Except String Q(EdgeSize $G) := do
   have e : Q(Nat) := Lean.mkRawNatLit (← j.getNat?)
-  have H : Q(Nat.beq ($G).edgeTree.size $e = true) := (q(Eq.refl true) : Lean.Expr)
+  -- have H : Q(Nat.beq ($G).edgeTree.size $e = true) := (q(Eq.refl true) : Lean.Expr)
+  have H : Q(($G).edgeTree.size = $e) := (q(Eq.refl $e) : Lean.Expr)
   pure q(EdgeSize.mk' $G $e $H)
+
+
+#check Fintype.decidableForallFintype
+
+def forallFin {n : Nat} (p : Fin n → Prop) [DecidablePred p] : Bool := decide (∀ x, p x)
+
+def forallVertex {G : Graph} (p : G.vertex → Prop) [DecidablePred p] : Bool := decide (∀ v, p v)
 
 def componentsCertificateOfJson (G : Q(Graph)) (j : Lean.Json) : Except String Q(ComponentsCertificate $G) := do
   let valJ ← j.getObjVal? "val"
   have val : Q(Nat) := Lean.mkRawNatLit (← valJ.getNat?)
+  let o := q(instOrdFin (Graph.vertexSize $G))
+  let d := q(Fintype.decidableForallFintype)
   let componentJ ← j.getObjVal? "component"
-  let componentMap ← mapOfJson q(Graph.vertex $G) q(Fin $val) (vertexOfJson G) (finOfJson val) componentJ
+  let component ← mapOfJson o d (vertexOfJson G) (finOfJson val) componentJ
   let rootJ ← j.getObjVal? "root"
-  let rootMap ← mapOfJson q(Graph.vertex $G) q(Graph.vertex $G) (vertexOfJson G) (vertexOfJson G) rootJ
+  let root ← mapOfJson q(instOrdFin $val) q(Fintype.decidableForallFintype) (finOfJson val) (vertexOfJson G) rootJ
   let nextJ ← j.getObjVal? "next"
-  let nextMap ← mapOfJson q(Graph.vertex $G) q(Graph.vertex $G) (vertexOfJson G) (vertexOfJson G) nextJ
+  let next ← mapOfJson o d (vertexOfJson G) (vertexOfJson G) nextJ
   let distToRootJ ← j.getObjVal? "distToRoot"
-  let distToRootMap ← mapOfJson q(Graph.vertex $G) q(Graph.vertex $G) (vertexOfJson G) natOfJson distToRootJ
-  sorry -- we need a smart constructor here
+  let distToRoot ← mapOfJson o d (vertexOfJson G) natOfJson distToRootJ
+  have componentEdge : Q(STree.all (Graph.edgeTree $G) (fun x => $component (Graph.fst x) = $component (Graph.snd x)) = true) := (q(Eq.refl true) : Lean.Expr)
+  have rootCorrect : Q(forallFin (fun i => $component ($root i) = i) = true) := (q(Eq.refl true) : Lean.Expr)
+  have distRootZero : Q(forallFin (fun i => $distToRoot ($root i) = 0) = true) := (q(Eq.refl true) : Lean.Expr)
+  have distZeroRoot : Q(forallVertex (fun (v : Graph.vertex $G) => $distToRoot v = 0 → v = $root ($component v)) = true) := (q(Eq.refl true) : Lean.Expr)
+  have nextRoot : Q(forallFin (fun i => $next ($root i) = $root i) = true) := (q(Eq.refl true) : Lean.Expr)
+  have nextAdjacent : Q(forallVertex (fun v => 0 < $distToRoot v → Graph.adjacent v ($next v)) = true) := (q(Eq.refl true) : Lean.Expr)
+  have distNext : Q(decide (∀ v, 0 < $distToRoot v → $distToRoot ($next v) < $distToRoot v) = true) := (q(Eq.refl true) : Lean.Expr)
+  pure q(@ComponentsCertificate.mk
+         $G
+         $val 
+         $component
+         $componentEdge
+         $root
+         (of_decide_eq_true $rootCorrect)
+         $next
+         $distToRoot
+         (of_decide_eq_true $distRootZero)
+         (of_decide_eq_true $distZeroRoot)
+         (of_decide_eq_true $nextRoot)
+         (of_decide_eq_true $nextAdjacent)
+         (of_decide_eq_true $distNext))
 
 -- The Lean name generated from a string
 def hogName (hogId : String) : Lean.Name := (.str (.str .anonymous "HoG") hogId)
@@ -144,8 +184,8 @@ elab "#loadHog" hogId:str : command => do
     safety := .safe
   }
 
-#loadHog "hog00001"
-#eval (hog00001.edgeSizeI.val)
+#loadHog "hog00007"
+-- #eval (hog00002.edgeSizeI.val)
 
 
 -- elab "getHog" hogId:str : term => do

@@ -49,6 +49,11 @@ def Graph.badjacent {G : Graph} : G.vertex → G.vertex → Bool :=
 def Graph.adjacent {G : Graph} : G.vertex → G.vertex → Prop :=
   fun u v => G.badjacent u v
 
+instance (G : Graph) : DecidableRel G.adjacent := by
+  intros u v
+  unfold Graph.adjacent
+  infer_instance
+
 -- adjacent vertices induce an edge
 def Graph.adjacentEdge {G : Graph} {u v : G.vertex} :
   G.adjacent u v → G.edge := by

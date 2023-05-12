@@ -85,7 +85,7 @@ class ComponentsCertificate (G : Graph) : Type :=
   -- a root is a fixed point of next
   nextRoot : ∀ i, next (root i) = root i
   -- each vertex that is not a root is adjacent to the next one
-  nextAdjacent : forall v, 0 < distToRoot v → G.adjacent v (next v)
+  nextAdjacent : ∀ v, 0 < distToRoot v → G.adjacent v (next v)
   -- distance to root decreases as we travel along the path given by next
   distNext : ∀ v, 0 < distToRoot v → distToRoot (next v) < distToRoot v
 
