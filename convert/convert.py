@@ -1,288 +1,75 @@
+# Main program
+
+from typing import Tuple, List, Optional
 import os
 import os.path
+import pathlib
 import re
+import logging
+import json
 from string import Template
 from argparse import ArgumentParser
 
-from connected_components import compute_components, h_representation, connect_edges_representation, root_representation, is_root_representation, uniqueness_of_roots_representation, next_representation, height_cond_representation, lean_representation
+from graph import Graph
+from jsonEncoder import GraphEncoder, GraphWithInvariants
 
-class Edge:
-    def __init__(self, val):
-        self.val = val
+def hog_generator(datadir, prefix:str, skip=0, limit=None):
+    """Generate HoG graphs from input files datadir, skipping the first
+       skip files, and generating at most limit graphs."""
 
-    def __str__(self):
-        return "{edge := " + str(self.val) + "}"
-
-class Stree:
-    def __init__(self, val, left, right):
-        self.val = val
-        self.left = left
-        self.right = right
-
-    def __str__(self, subtree = None):
-        if self.val is None:
-            return "stree.empty (by bool_reflect)"
-        if self.left is None and self.right is None:
-            return "stree.leaf " + str(self.val) + " (by bool_reflect) (by bool_reflect)"
-        if self.left is None:
-            left = "stree.empty (by bool_reflect)"
-        else:
-            left = self.left.__str__("left")
-        if self.right is None:
-            right = "stree.empty (by bool_reflect)"
-        else:
-            right = self.right.__str__("right")
-        return "stree.node " + str(self.val) + "\n(" + left + ")\n(" + right + ")"
-
-class Smap:
-    def __init__(self, key, val, left, right):
-        self.key = key
-        self.val = val
-        self.left = left
-        self.right = right
-
-    def __str__(self, subtree = None):
-        if self.val is None:
-            return "smap.empty (by bool_reflect)"
-        if self.left is None and self.right is None:
-            return "smap.leaf " + str(self.key) + " (" + str(self.val) + ") " + " (by bool_reflect) (by bool_reflect)"
-        if self.left is None:
-            left = "smap.empty (by bool_reflect)"
-        else:
-            left = self.left.__str__("left")
-        if self.right is None:
-            right = "smap.empty (by bool_reflect)"
-        else:
-            right = self.right.__str__("right")
-        return "smap.node " + str(self.key) + " (" + str(self.val) + ") " + "\n(" + left + ")\n(" + right + ")"
-class HoGGraph:
-    """An object representing a single HoG graph"""
-
-    # Invariant names in the HoG data, with their declared types
-    # NB: The invariants should have the same order as in the input file.
-    _structure = {
-        "Acyclic": "bool",
-        "Algebraic Connectivity": "float",
-        "Average Degree": "float",
-        "Bipartite": "bool",
-        "Chromatic Index": "int",
-        "Chromatic Number": "int",
-        "Circumference": "int",
-        "Claw-Free": "bool",
-        "Clique Number": "int",
-        "Connected": "bool",
-        "Density": "float",
-        "Diameter": "int",
-        "Edge Connectivity": "int",
-        "Eulerian": "bool",
-        "Genus": "int",
-        "Girth": "int",
-        "Hamiltonian": "bool",
-        "Independence Number": "int",
-        "Index": "float",
-        "Laplacian Largest Eigenvalue": "float",
-        "Longest Induced Cycle": "int",
-        "Longest Induced Path": "int",
-        "Matching Number": "int",
-        "Maximum Degree": "int",
-        "Minimum Degree": "int",
-        "Minimum Dominating Set": "int",
-        "Number of Components": "int",
-        "Number of Edges": "int",
-        "Number of Triangles": "int",
-        "Number of Vertices": "int",
-        "Planar": "bool",
-        "Radius": "int",
-        "Regular": "bool",
-        "Second Largest Eigenvalue": "float",
-        "Smallest Eigenvalue": "float",
-        "Vertex Connectivity": "int"
-    }
-
-    def __init__(self, name, txt):
-        self.name = name
-        m = re.fullmatch(r'(?P<adjacency>(?:[0-9]+:[0-9 ]*\n)*)(?P<invariants>.*)',
-                         txt, flags=re.MULTILINE+re.DOTALL)
-        assert m, "Could not parse HoG data:\n{0}".format(txt)
-        self.vertex_size, self.edge_list = self._get_size_edge_list(m.group('adjacency'))
-        self.invariants = self._get_invariants(m.group('invariants'))
-        self.stree = self.edge_list_to_stree(self.edge_list)
-        self.edge_size = len(self.edge_list)
-        self.neighborhoods = self.edge_list_to_neighborhoods(self.edge_list)
-        self.components = compute_components(self.neighborhoods)
-        self.connected_components_witness = lean_representation(self.name, self.components[0], self.components[1])
-        self.nbhds_smap = self.neighborhoods_to_smap(self.neighborhoods)
-
-    def _get_size_edge_list(self, raw_adjacency):
-        """Return the number of vertices and the list of edges (i, j), such that i < j."""
-
-        # HoG vertices start at 1
-        def to_int_minus1(x):
-            """Convert a vertex label of type 1--n to one of type 0--(n-1)"""
-            assert int(x) > 0
-            return int(x) - 1
-
-        def parse_vertex(match):
-            """Given a match group for a list of neighbors of a vertex, return a list of edges"""
-            vertex = to_int_minus1(match.group('vertex'))
-            # sort and filter the neighbors of vertex
-            neighbors = sorted(filter(lambda x: vertex < x, map(to_int_minus1, match.group('neighbors').split())))
-            return list(map(lambda x: (vertex, x), neighbors))
-
-        edge_list = []
-        vertex_size = 0
-        for m in re.finditer(r'(?P<vertex>[0-9]+):(?P<neighbors>[0-9 ]*)\n', raw_adjacency):
-            vertex_size += 1
-            edge_list += parse_vertex(m)
-
-        # Sanity checks
-        for p in edge_list:
-            assert p[0] >= 0 and p[1] >= 0
- 
-        return vertex_size, edge_list
-
-    def _get_invariants(self, txt):
-        """Convert an iterator of invariant strings into a list of tuples (name, type, value)"""
-
-        def checked_invariant_value(inv_type, val_str):
-            """Validate and convert a string to given value type."""
-            value = None
-            if val_str in ['undefined', 'Computation time out', 'Computing']:
-                value = None
-            else:
-                if inv_type == 'bool':
-                    if val_str in ['Yes', 'No']: # valid bool values
-                        value = val_str == 'Yes'
-                    else:
-                        raise ValueError # fail early
-                elif val_str == 'infinity': # for now, ok for ints and floats
-                    value = 'infinity'
-                elif inv_type == 'int':
-                    value = int(val_str)
-                elif inv_type == 'float':
-                    value = float(val_str)
-                else:
-                    raise ValueError # fail early
-            return value
-
-        inv_list = {}
-        for m in re.finditer(r'(?:(?P<invariant>[a-zA-Z- ]+): (?P<value>.+))', txt):
-            name = m.group('invariant')
-            inv_type = self._structure[name]
-            value = checked_invariant_value(inv_type, m.group('value'))
-            inv_list[name] = { 'type': inv_type, 'value': value }
-        return inv_list
-
-    def get_data(self):
-        """Return a dictionary with graph data, to be used in a template file."""
-
-        return {
-            'name' : self.name,
-            'vertex_size' : self.vertex_size,
-            'edge_list' : self.edge_list,
-            'planar' : self.invariants['Planar']['value'],
-            'chromatic_number' : self.invariants['Chromatic Number']['value'],
-            'stree' : self.stree,
-            'edge_size' : self.edge_size,
-            'connected_components_witness' : self.connected_components_witness,
-            'nbhds_smap' : self.nbhds_smap
-        }
-
-    def edge_list_to_stree(self, edge_list):
-        n = len(edge_list)
-        if n == 0:
-            return Stree(None, None, None) 
-        mid = n // 2
-        root = Edge(edge_list[mid])
-        left = self.edge_list_to_stree(edge_list[0:mid])
-        right = self.edge_list_to_stree(edge_list[mid+1:])
-        return Stree(root, left, right)
-
-    def list_to_stree(self, l):
-        n = len(l)
-        if n == 0:
-            return Stree(None, None, None)
-        mid = n // 2
-        root = l[mid]
-        left = self.list_to_stree(l[0:mid])
-        right = self.list_to_stree(l[mid+1:])
-        total = Stree(root, left, right)
-        return total
-
-    def edge_list_to_neighborhoods(self, edge_list):
-        if not self.vertex_size:
-            raise RuntimeError("You have to compute vertex_size before computing neighborhoods!")
-        nbhds = [(i, []) for i in range(self.vertex_size)]
-        for u, v in edge_list:
-            nbhds[u][1].append(v)
-            nbhds[v][1].append(u)
-        return nbhds
-
-    def neighborhoods_to_smap(self, nbhds):
-        if not self.vertex_size:
-            raise RuntimeError("You have to compute vertex_size before computing neighborhoods!")
-        n = len(nbhds)
-        if n == 0: # we ran out of neighborhoods in a recursion step
-            return None
-        if n == 1:
-            vals = self.list_to_stree(nbhds[0][1])
-            return Smap(nbhds[0][0], vals, None, None)
-        mid = n // 2
-        root_key = nbhds[mid][0]
-        root_val = self.list_to_stree(nbhds[mid][1])
-        left = self.neighborhoods_to_smap(nbhds[0:mid])
-        right = self.neighborhoods_to_smap(nbhds[mid+1:])
-        return Smap(root_key, root_val, left, right)
-
-def hog_generator(datadir, file_prefix):
-    """Generate HoG graphs from input files in the given data directory.
-       Stop if the limit is given and reached."""
-
-    counter = 1
-
-    # Iterate through all the .txt files in the data directory
-    for input_file in sorted(f for f in os.listdir(datadir) if f.endswith('.txt')):
+    if skip > 0: logging.info (f"skipping {skip} graphs")    
+    if limit is not None: logging.info (f"limitting to {limit} graphs")    
+    files = sorted(f for f in os.listdir(datadir) if f.endswith('.txt'))
+    if len(files) == 0:
+        logging.warning("no data files found (hint: git submodule init && git submodule update)")
+    k = 0 # serial number
+    for fh in files:
         # Process next file
-        with open(os.path.join(datadir, input_file), 'r') as fh:
+        with open(os.path.join(datadir, fh), 'r') as fh:
             # Iterate through all graphs in the file
             for txt in re.finditer(r'^1:.+?^Vertex Connectivity: .+?\n', fh.read(), flags=re.DOTALL+re.MULTILINE):
-                yield HoGGraph("{0}{1:05d}".format(file_prefix, counter), txt.group(0))
-                counter += 1
-
-
-def write_lean_files(datadir, outdir, file_prefix, limit=None, skip=0):
-    """Convert HoG graphs in the datadir to Lean code and save them to destdir.
+                k += 1
+                if k < skip:
+                    logging.debug (f"skipping graph {k}")
+                    continue
+                elif limit is not None and k >= skip + limit:
+                    logging.debug (f"limit reached at graph {k}")
+                    return
+                else:
+                    logging.debug (f"processing graph {k}")
+                    yield Graph("{0}{1:05d}".format(prefix, k), txt.group(0))
+        
+def write_json_files(datadir, outdirData, prefix, skip : int = 0, limit : Optional[int] = None):
+    """Convert HoG graphs in the datadir to JSON and save them to destdir.
        If the limit is given, stop afer that many graphs.
-       Use the file_prefix to generate the Lean output filename.
+       The generated filenames have the form prefixXXXXX.json where XXXXX is the serial number.
        """
 
-    # Load the template file
-    with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'template_graph.txt')) as fh, open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'template_connected_components.txt')) as fh_cc:
-        template = Template(fh.read())
-        templace_cc = Template(fh_cc.read())
+    # # Load the template file
+    # with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'template_graph.txt')) as fh, open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'template_connected_components.txt')) as fh_cc, open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'template_invariants.txt')) as fh_inv:
+    #     template = Template(fh.read())
+    #     templace_cc = Template(fh_cc.read())
+    #     template_invariants = Template(fh_inv.read())
 
     # Make sure the output directory exists
-    if os.path.exists(outdir):
-        assert os.path.isdir(outdir), "{0} exists but is not a directory".format(outdir)
+    if os.path.exists(outdirData):
+        assert os.path.isdir(outdirData), "{0} exists but is not a directory".format(outdirData)
     else:
-        print ("Creating {0}".format(outdir))
-        os.mkdir(outdir)
+        pathlib.Path(outdirData).mkdir(parents=True, exist_ok=True)
+        logging.info("created output folder {0}".format(outdirData))
 
-    counter = 0
-    for graph in hog_generator(datadir, file_prefix=file_prefix):
-        if limit is not None and counter >= skip + limit:
-            print ("We reached the limit of {0} graphs, skipping the rest.".format(limit))
-            break
-        if counter < skip:
-            print ("Skipping graph {0}".format(graph.name), end='\r')
-        else:
-            print ("Writing graph {0}".format(graph.name), end='\r')
-            with open(os.path.join(outdir, "{0}.lean".format(graph.name)), 'w') as fh:
-                fh.write(template.substitute(graph.get_data()))
-            with open(os.path.join(outdir, "{0}_cc.lean".format(graph.name)), 'w') as fh:
-                fh.write(templace_cc.substitute(graph.get_data()))
+    # with open(os.path.join(outdirData, "Invariants.lean"), 'a') as fh:
+    #     fh.write("import Query\n\nnamespace Hog\n")
+
+    names = []
+    counter = 1 # the first graph has serial number 1
+    for graph in hog_generator(datadir, prefix=prefix, skip=skip, limit=limit):
+        names.append(graph.name)
+        with open(os.path.join(outdirData, "{0}.json".format(graph.name)), 'w') as fh:
+            json.dump(GraphWithInvariants(graph), fh, cls=GraphEncoder)
         counter += 1
-    print ("Wrote {0} graphs to {1}".format(counter - skip, outdir))
+
+    logging.info ("wrote {0} graphs to {1}".format(counter, outdirData))
 
 
 ########################################################
@@ -296,21 +83,25 @@ if __name__ == "__main__":
         return os.path.join(mydir, *fs)
 
     arg_parser = ArgumentParser()
-    arg_parser.add_argument("--datadir", default=relative('..', 'data'), dest="datadir",
+    arg_parser.add_argument("--srcdir", dest="datadir", required=True,
                         help="read HoG graph files from this directory")
-    arg_parser.add_argument("--outdir", default=relative('..', 'src', 'hog', 'data'), dest="outdir",
-                        help="output Lean files to this directory")
-    arg_parser.add_argument("--limit", type=int, default=0, dest="limit",
+    arg_parser.add_argument("--destdir", default=relative('..', 'src', 'hog', 'data', 'Data'), dest="outdirData",
+                        help="output JSON graph files to this directory")
+    arg_parser.add_argument("--limit", type=int, default=None, dest="limit",
                         help="limit the number of graphs to process")
-    arg_parser.add_argument("--skip", type=int, required=False, dest="skip",
+    arg_parser.add_argument("--skip", type=int, default=0, dest="skip",
                         help="skip this many graphs initially")
+    arg_parser.add_argument("--loglevel", type=int, default=30, dest="loglevel",
+                        help="set logging level (0 to 50)")
     args = arg_parser.parse_args()
 
+    # set logging level
+    logging.getLogger().setLevel(args.loglevel)
     # hog.write_lean_structure()
-    write_lean_files(
+    write_json_files(
         datadir=args.datadir,
-        outdir=args.outdir,
-        file_prefix='hog_',
+        outdirData=args.outdirData,
+        prefix='hog',
         limit=args.limit,
         skip=args.skip
     )

@@ -1,27 +1,37 @@
-OUTDIR=src/hog/data
-CONVERT=convert/convert.py
-LEANPKG=leanpkg
-LEAN=lean
+### Configuration
 
+# Folder with original HoG data file (if you do not have it, comment this out)
+SRCDIR=input-data/raw-hog
+
+# Use this instead if you don't have the real HoG data
+# SRCDIR=sample-data
+
+# Folder where generated JSON files are placed
+DESTDIR=pigpen
+
+# The script that converts HoG data files to Lean files
+CONVERT=convert/convert.py
+
+# We compile everything using lake - the lean build system
+LAKE=lake
+LOGLEVEL=30
 LIMIT=100
 SKIP=0
 
-.PHONY: convert build buildall cleandata
+.PHONY: build-lean build-graphs clean-data clean-lean
 
-all: convert build
+all: build-graphs build-lean
 
-convert: cleandata
-	python3 $(CONVERT) --out $(OUTDIR) --limit $(LIMIT) --skip $(SKIP)
+clean: clean-graphs clean-lean
 
-build:
-	$(LEAN) --make $(OUTDIR)
+clean-lean:
+	$(LAKE) clean
 
-buildall:
-	$(LEANPKG) build
-	
-test: cleandata
-	python3 $(CONVERT) --out $(OUTDIR) --limit 100 --skip $(SKIP) --datadir "sample_data"
-	$(LEAN) --make $(OUTDIR)
+build-lean:
+	$(LAKE) build
 
-cleandata:
-	/bin/rm -rf $(OUTDIR)
+build-graphs: clean-graphs
+	python3 $(CONVERT) --loglevel $(LOGLEVEL) --srcdir $(SRCDIR) --destdir $(DESTDIR) --limit $(LIMIT) --skip $(SKIP)
+
+clean-graphs:
+	/bin/rm -rf $(LEANDIR)

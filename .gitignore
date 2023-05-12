@@ -1,6 +1,9 @@
 *.olean
+lake-manifest.json
 /_target
 /leanpkg.path
-/src/hog/data
+/pigpen
 /convert/__pycache__
-data
+data/build
+/lake-packages/*
+build

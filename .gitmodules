@@ -1,0 +1,6 @@
+[submodule "data"]
+	path = input-data
+	url = git@github.com:katjabercic/Lean-HoG-data.git
+[submodule "process_io"]
+	path = process_io
+	url = https://github.com/cilinder/process_io.git
