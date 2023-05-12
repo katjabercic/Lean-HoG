@@ -85,9 +85,6 @@ def edgeSizeOfJson (G : Q(Graph)) (j : Lean.Json) : Except String Q(EdgeSize $G)
   have H : Q(($G).edgeTree.size = $e) := (q(Eq.refl $e) : Lean.Expr)
   pure q(EdgeSize.mk' $G $e $H)
 
-
-#check Fintype.decidableForallFintype
-
 def forallFin {n : Nat} (p : Fin n → Prop) [DecidablePred p] : Bool := decide (∀ x, p x)
 
 def forallVertex {G : Graph} (p : G.vertex → Prop) [DecidablePred p] : Bool := decide (∀ v, p v)
@@ -125,7 +122,8 @@ def componentsCertificateOfJson (G : Q(Graph)) (j : Lean.Json) : Except String Q
          (of_decide_eq_true $distZeroRoot)
          (of_decide_eq_true $nextRoot)
          (of_decide_eq_true $nextAdjacent)
-         (of_decide_eq_true $distNext))
+         (of_decide_eq_true $distNext)
+        )
 
 -- The Lean name generated from a string
 def hogName (hogId : String) : Lean.Name := (.str (.str .anonymous "HoG") hogId)
@@ -183,9 +181,11 @@ elab "#loadHog" hogId:str : command => do
     hints := .regular 0
     safety := .safe
   }
+  Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance componentsCertificateName .scoped 42
 
-#loadHog "hog00007"
--- #eval (hog00002.edgeSizeI.val)
+-- set_option maxRecDepth 20000
+-- #loadHog "hog17552"
+-- #eval hog00007.component ⟨5, (by simp)⟩
 
 
 -- elab "getHog" hogId:str : term => do

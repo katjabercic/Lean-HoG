@@ -26,7 +26,6 @@ class ComponentsCertificate():
                 if w in self.component: continue
                 else:
                     self.component[w] = self.component[v]
-                    self.root[w] = self.root[v]
                     self.nextVertex[w] = v
                     self.distToRoot[w] = self.distToRoot[v] + 1
                     sweep(w)

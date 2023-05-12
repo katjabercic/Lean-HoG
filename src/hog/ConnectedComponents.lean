@@ -49,6 +49,9 @@ class ConnectedComponents (G : Graph) : Type :=
   componentInhabited : ∀ (i : Fin val), ∃ u, component u = i -- each component is inhabited
   correct : ∀ u v, component u = component v ↔ G.connected u v
 
+def Graph.numberOfComponents (G : Graph) [C : ConnectedComponents G] : Nat := C.val
+def Graph.component (G : Graph) [C : ConnectedComponents G] (v : G.vertex) : Nat := C.component v
+
 -- Is this silly lemma somewhere in the prelude?
 lemma zero_or_lt : ∀ (n : Nat), n = 0 ∨ 0 < n := by
   intro n
