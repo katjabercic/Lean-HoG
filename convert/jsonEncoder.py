@@ -29,8 +29,6 @@ class GraphEncoder(json.JSONEncoder):
             return obj.to_json()
         elif isinstance(obj, ComponentsCertificate):
             return obj.to_json()
-        elif isinstance(obj, GraphWithInvariants):
-            return obj.to_json()
         else:
             # Let the base class default method raise the TypeError
             return json.JSONEncoder.default(self, obj)

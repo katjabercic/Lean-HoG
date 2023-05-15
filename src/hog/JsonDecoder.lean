@@ -19,7 +19,7 @@ def forallFin {n : Nat} (p : Fin n → Prop) [DecidablePred p] : Bool := decide 
 def forallVertex {G : Graph} (p : G.vertex → Prop) [DecidablePred p] : Bool := decide (∀ v, p v)
 
 def edgeOfJson (n : Q(Nat)) (j : Lean.Json) : Except String Q(Edge $n) := do
-  let arr ← j.getArr?
+  let arr ← j.getArr? <|> throw "array expected in edgeOfJson"
   have a : Q(Nat) := Lean.mkRawNatLit (← arr[0]!.getNat?)
   have b : Q(Nat) := Lean.mkRawNatLit (← arr[1]!.getNat?)
   have H1 : Q(Nat.blt $a $n = true) := (q(Eq.refl true) : Lean.Expr)
@@ -38,18 +38,21 @@ def finOfJson (n : Q(Nat)) (j : Lean.Json) : Except String Q(Fin $n) := do
 def vertexOfJson (G : Q(Graph)) (j : Lean.Json) : Except String Q(Graph.vertex $G) := do
   finOfJson (q(Graph.vertexSize $G)) j
 
-partial def streeOfJson (n : Q(Nat)) (j : Lean.Json) : Except String Q(STree (Edge $n)) := do
-  let arr ← j.getArr?
+partial def streeOfJson {α : Q(Type)}
+  (valOfJson : Lean.Json → Except String Q($α))
+  (j : Lean.Json)
+  : Except String Q(STree $α) := do
+  let arr ← j.getArr?  <|> throw "array expected in streeOfJson"
   match arr with
   | #[] => pure q(STree.empty)
   | #[v] =>
-    let edge ← edgeOfJson n v
-    pure q(STree.leaf $edge)
-  | #[e, l, r] =>
-    let left ← streeOfJson n l
-    let right ← streeOfJson n r
-    let edge ← edgeOfJson n e
-    pure q(STree.node $edge $left $right)
+    let val ← valOfJson v
+    pure q(STree.leaf $val)
+  | #[x, l, r] =>
+    let left ← streeOfJson valOfJson l
+    let right ← streeOfJson valOfJson r
+    let val ← valOfJson x
+    pure q(STree.node $val $left $right)
   | _ => throw "invalid tree format"
 
 partial def mapTreeOfJson {α β : Q(Type)}
@@ -57,7 +60,7 @@ partial def mapTreeOfJson {α β : Q(Type)}
   (keyOfJson : Lean.Json → Except String Q($α))
   (valOfJson : Lean.Json → Except String Q($β))
   (j : Lean.Json) : Except String Q(Map $α $β) := do
-  let arr ← j.getArr?
+  let arr ← j.getArr?  <|> throw "array expected in mapTreeOfJson"
   match arr with
   | #[] => pure q(Map.empty)
   | #[k, v] =>
@@ -82,7 +85,7 @@ partial def mapOfJson {α β : Q(Type)}
   (keyOfJson : Lean.Json → Except String Q($α))
   (valOfJson : Lean.Json → Except String Q($β))
   (j : Lean.Json) : Except String Q($α → $β) := do
-  let arr ← j.getArr?
+  let arr ← j.getArr? <|> throw "array expected in mapOfJson"
   match arr with
   | #[] =>
     have H : Q(@Decidable.decide ($α → False) $d = true) := (q(Eq.refl true) : Lean.Expr)
@@ -94,10 +97,11 @@ partial def mapOfJson {α β : Q(Type)}
   | _ => throw "invalid map format"
 
 partial def graphOfJson (j : Lean.Json) : Except String Q(Graph) := do
-    let json_v ← j.getObjVal? "vertexSize"
-    have v : Q(Nat) := Lean.mkRawNatLit (← json_v.getNat?)
-    let edges : Q(STree (Edge $v)) ← (streeOfJson v (← j.getObjVal? "edges"))
-    pure q(Graph.mk $v $edges)
+    let vertexSizeJ ← j.getObjVal? "vertexSize"
+    have vertexSize : Q(Nat) := Lean.mkRawNatLit (← vertexSizeJ.getNat?)
+    let edges : Q(STree (Edge $vertexSize)) ←
+      streeOfJson (edgeOfJson vertexSize) (← j.getObjVal? "edges")
+    pure q(Graph.mk $vertexSize $edges)
 
 def edgeSizeOfJson (G : Q(Graph)) (j : Lean.Json) : Except String Q(EdgeSize $G) := do
   have e : Q(Nat) := Lean.mkRawNatLit (← j.getNat?)
@@ -107,10 +111,8 @@ def edgeSizeOfJson (G : Q(Graph)) (j : Lean.Json) : Except String Q(EdgeSize $G)
 
 def neighborhoodMapOfJson (G : Q(Graph)) (j : Lean.Json)
   : Except String Q(NeighborhoodMap $G (STree (Graph.vertex $G))) := do
-  -- let o := q(instOrdFin (Graph.vertexSize $G))
-  -- let d := q(Fintype.decidableForallFintype)
   let map : Q(Graph.vertex $G → STree (Graph.vertex $G)) ←
-    mapOfJson q(instOrdFin (Graph.vertexSize $G)) q(Fintype.decidableForallFintype) (vertexOfJson G) (streeOfJson q(Graph.vertexSize $G)) j
+    mapOfJson q(instOrdFin (Graph.vertexSize $G)) q(Fintype.decidableForallFintype) (vertexOfJson G) (streeOfJson (vertexOfJson G)) j
   -- TODO make this efficient, it's currently Ω(G.vertexSize²)
   have correct : Q(forallVertex (fun u => ∀ (v : Graph.vertex $G), Graph.adjacent u v ↔ STree.mem v ($map u)) = true) :=
     (q(Eq.refl true) : Lean.Expr)
@@ -203,7 +205,7 @@ elab "#loadHog" hogId:str : command => do
   Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
     name := neighborhoodMapName
     levelParams := []
-    type := q(ComponentsCertificate $graph)
+    type := q(NeighborhoodMap $graph (STree (Graph.vertex $graph)))
     value := neighborhoodMap
     hints := .regular 0
     safety := .safe
@@ -223,15 +225,7 @@ elab "#loadHog" hogId:str : command => do
   }
   Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance componentsCertificateName .scoped 42
 
-#loadHog "hog00002"
+-- #loadHog "hog00002"
 -- #eval hog00002.component ⟨5, (by simp)⟩
-
-
--- elab "getHog" hogId:str : term => do
---   let hog := hogName hogId.getString
---   let env ← Lean.getEnv
---   match env.contains hog with
---   | true => pure (Lean.mkConst hog [])
---   | false => loadHog hogId ; pure (Lean.mkConst hog [])
 
 end HoG
