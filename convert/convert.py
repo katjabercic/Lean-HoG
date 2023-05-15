@@ -17,8 +17,8 @@ def hog_generator(datadir, prefix:str, skip=0, limit=None):
     """Generate HoG graphs from input files datadir, skipping the first
        skip files, and generating at most limit graphs."""
 
-    if skip > 0: logging.info (f"skipping {skip} graphs")    
-    if limit is not None: logging.info (f"limitting to {limit} graphs")    
+    if skip > 0: logging.info (f"skipping {skip} graphs")
+    if limit is not None: logging.info (f"limitting to {limit} graphs")
     files = sorted(f for f in os.listdir(datadir) if f.endswith('.txt'))
     if len(files) == 0:
         logging.warning("no data files found (hint: git submodule init && git submodule update)")
@@ -38,18 +38,12 @@ def hog_generator(datadir, prefix:str, skip=0, limit=None):
                 else:
                     logging.debug (f"processing graph {k}")
                     yield Graph("{0}{1:05d}".format(prefix, k), txt.group(0))
-        
+
 def write_json_files(datadir, outdirData, prefix, skip : int = 0, limit : Optional[int] = None):
     """Convert HoG graphs in the datadir to JSON and save them to destdir.
        If the limit is given, stop afer that many graphs.
        The generated filenames have the form prefixXXXXX.json where XXXXX is the serial number.
        """
-
-    # # Load the template file
-    # with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'template_graph.txt')) as fh, open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'template_connected_components.txt')) as fh_cc, open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'template_invariants.txt')) as fh_inv:
-    #     template = Template(fh.read())
-    #     templace_cc = Template(fh_cc.read())
-    #     template_invariants = Template(fh_inv.read())
 
     # Make sure the output directory exists
     if os.path.exists(outdirData):
@@ -57,9 +51,6 @@ def write_json_files(datadir, outdirData, prefix, skip : int = 0, limit : Option
     else:
         pathlib.Path(outdirData).mkdir(parents=True, exist_ok=True)
         logging.info("created output folder {0}".format(outdirData))
-
-    # with open(os.path.join(outdirData, "Invariants.lean"), 'a') as fh:
-    #     fh.write("import Query\n\nnamespace Hog\n")
 
     names = []
     counter = 1 # the first graph has serial number 1

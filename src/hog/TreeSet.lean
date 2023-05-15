@@ -52,7 +52,7 @@ def STree.mem {α : Type} [Ord α] (x : α) : STree α → Bool
     | .gt => mem x right
 
 @[simp]
-instance hasMem {α : Type} [Ord α] : Membership α (STree α) where
+instance STree.hasMem {α : Type} [Ord α] : Membership α (STree α) where
   mem := (fun x t => ↑ (STree.mem x t))
 
 @[simp]

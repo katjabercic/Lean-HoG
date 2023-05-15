@@ -22,8 +22,8 @@ lean_lib JsonDecoder
 -- lean_lib Test
 -- lean_lib OneGraph
 -- lean_lib Query
--- lean_lib NeighborMap
 -- lean_lib Tactic
+lean_lib NeighborhoodMap
 lean_lib ConnectedComponents
 -- lean_lib Walk
 -- lean_lib Bipartite

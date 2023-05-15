@@ -10,11 +10,14 @@ class GraphWithInvariants():
 
     def __init__(self, graph : Graph):
         self.graph = graph
-    
+
     def to_json(self):
         return {
             "graph" : self.graph,
             "edgeSize" : self.graph.edge_size(),
+            "neighborhoodMap" :
+                TreeMap.from_dict({v : Tree.from_set(nbh)
+                    for (v, nbh) in self.graph.neighborhood_map().items()}),
             "componentsCertificate" : ComponentsCertificate(self.graph)
         }
 

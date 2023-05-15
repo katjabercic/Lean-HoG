@@ -1,14 +1,22 @@
 import Qq
-import Graph
-import EdgeSize
-import ConnectedComponents
+import TreeSet
 import TreeMap
+import Graph
+
+-- invariants
+import EdgeSize
+import NeighborhoodMap
+import ConnectedComponents
+
 
 set_option autoImplicit false
 
 namespace HoG
 
 open Qq
+
+def forallFin {n : Nat} (p : Fin n → Prop) [DecidablePred p] : Bool := decide (∀ x, p x)
+def forallVertex {G : Graph} (p : G.vertex → Prop) [DecidablePred p] : Bool := decide (∀ v, p v)
 
 def edgeOfJson (n : Q(Nat)) (j : Lean.Json) : Except String Q(Edge $n) := do
   let arr ← j.getArr?
@@ -70,7 +78,7 @@ partial def mapOfJson {α β : Q(Type)}
   | #[treeJ, defaultJ] =>
     let tree ← mapTreeOfJson o keyOfJson valOfJson treeJ
     let defaultValue ← valOfJson defaultJ
-    pure q(Map.getD $tree $defaultValue) 
+    pure q(Map.getD $tree $defaultValue)
   | _ => throw "invalid map format"
 
 partial def graphOfJson (j : Lean.Json) : Except String Q(Graph) := do
@@ -85,9 +93,15 @@ def edgeSizeOfJson (G : Q(Graph)) (j : Lean.Json) : Except String Q(EdgeSize $G)
   have H : Q(($G).edgeTree.size = $e) := (q(Eq.refl $e) : Lean.Expr)
   pure q(EdgeSize.mk' $G $e $H)
 
-def forallFin {n : Nat} (p : Fin n → Prop) [DecidablePred p] : Bool := decide (∀ x, p x)
-
-def forallVertex {G : Graph} (p : G.vertex → Prop) [DecidablePred p] : Bool := decide (∀ v, p v)
+def neighborhoodMapOfJson (G : Q(Graph)) (j : Lean.Json)
+  : Except String Q(@NeighborhoodMap (STree (Graph.vertex $G)) $G (STree.hasMem)) := do
+  let o := q(instOrdFin (Graph.vertexSize $G))
+  let d := q(Fintype.decidableForallFintype)
+  let map : Q(Graph.vertex $G → STree (Graph.vertex $G)) ← mapOfJson o d (vertexOfJson G) (treeOfJson q(Graph.vertexSize $G)) j
+  -- TODO make H efficient
+  -- have h := q(Fintype.decidableForallFintype)
+  have correct : Q(forallVertex (fun u => ∀ (v : Graph.vertex $G), Graph.adjacent u v ↔ STree.mem v ($map u)) = true) := (q(Eq.refl true) : Lean.Expr)
+  pure q(NeighborhoodMap.mk $map (of_decide_eq_true $correct))
 
 def componentsCertificateOfJson (G : Q(Graph)) (j : Lean.Json) : Except String Q(ComponentsCertificate $G) := do
   let valJ ← j.getObjVal? "val"
@@ -111,7 +125,7 @@ def componentsCertificateOfJson (G : Q(Graph)) (j : Lean.Json) : Except String Q
   have distNext : Q(decide (∀ v, 0 < $distToRoot v → $distToRoot ($next v) < $distToRoot v) = true) := (q(Eq.refl true) : Lean.Expr)
   pure q(@ComponentsCertificate.mk
          $G
-         $val 
+         $val
          $component
          $componentEdge
          $root
@@ -169,6 +183,19 @@ elab "#loadHog" hogId:str : command => do
     safety := .safe
   }
   Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance edgeSizeName .scoped 42
+  -- load the neighborhood maps
+  let neighborhoodMapName := hogInstanceName hogId.getString "neighborhoodMapI"
+  let neighborhoodMapJ ← liftExcept <| json.getObjVal? "neighborhoodMap"
+  let neighborhoodMapQ : Q(@NeighborhoodMap (STree (Graph.vertex $graph)) $graph (Stree.hasMem)) ← liftExcept <| neighborhoodMapOfJson graph neighborhoodMapJ
+  Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
+    name := neighborhoodMapName
+    levelParams := []
+    type := q(ComponentsCertificate $graph)
+    value := neighborhoodMapQ
+    hints := .regular 0
+    safety := .safe
+  }
+  Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance neighborhoodMapName .scoped 42
   -- load the components certificate
   let componentsCertificateName := hogInstanceName hogId.getString "componentsCertificateI"
   let componentsCertificateJ ← liftExcept <| json.getObjVal? "componentsCertificate"
@@ -183,9 +210,8 @@ elab "#loadHog" hogId:str : command => do
   }
   Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance componentsCertificateName .scoped 42
 
--- set_option maxRecDepth 20000
--- #loadHog "hog17552"
--- #eval hog00007.component ⟨5, (by simp)⟩
+#loadHog "hog00002"
+-- #eval hog00002.component ⟨5, (by simp)⟩
 
 
 -- elab "getHog" hogId:str : term => do
