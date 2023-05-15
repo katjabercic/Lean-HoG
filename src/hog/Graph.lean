@@ -32,6 +32,9 @@ def Graph.fst {G : Graph} (e : G.edgeType) : G.vertex := e.fst
 def Graph.snd {G : Graph} (e : G.edgeType) : G.vertex :=
   ⟨e.snd, lt_trans e.snd.isLt e.fst.isLt⟩
 
+variable (p : Fin 4 → Bool)
+#synth Fintype {x : Fin 4 | p x}
+
 instance Graph_edge_Fintype (G : Graph) : Fintype G.edge := by
   sorry
 

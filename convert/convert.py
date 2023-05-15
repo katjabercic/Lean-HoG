@@ -11,7 +11,7 @@ from string import Template
 from argparse import ArgumentParser
 
 from graph import Graph
-from jsonEncoder import GraphEncoder, GraphWithInvariants
+from jsonEncoder import GraphEncoder, graph_to_json
 
 def hog_generator(datadir, prefix:str, skip=0, limit=None):
     """Generate HoG graphs from input files datadir, skipping the first
@@ -57,7 +57,7 @@ def write_json_files(datadir, outdirData, prefix, skip : int = 0, limit : Option
     for graph in hog_generator(datadir, prefix=prefix, skip=skip, limit=limit):
         names.append(graph.name)
         with open(os.path.join(outdirData, "{0}.json".format(graph.name)), 'w') as fh:
-            json.dump(GraphWithInvariants(graph), fh, cls=GraphEncoder)
+            json.dump(graph_to_json(graph), fh, cls=GraphEncoder)
         counter += 1
 
     logging.info ("wrote {0} graphs to {1}".format(counter, outdirData))

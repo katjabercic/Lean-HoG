@@ -62,12 +62,12 @@ def Map.mapsTo {α β} [Ord α] (m : Map α β) (x : α) (y : β) : Prop :=
   | some z => y = z
 
 def Map.hasKey {α β : Type} [Ord α] (x : α) : Map α β → Bool
-  | empty => false
-  | leaf y _ =>
+  | .empty => false
+  | .leaf y _ =>
     match compare x y with
     | .eq => true
     | _ => false
-  | node y _ left right =>
+  | .node y _ left right =>
     match compare x y with
     | .lt => hasKey x left
     | .eq => true

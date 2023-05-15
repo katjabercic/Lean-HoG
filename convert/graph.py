@@ -167,6 +167,9 @@ class Graph():
     def get_invariant(self, inv):
         return self.invariants[inv]
 
+    def is_empty(self) -> bool:
+        return self.vertex_size == 0
+
     def edge_size(self) -> int:
         """Number of edges."""
         return len(self.edges)

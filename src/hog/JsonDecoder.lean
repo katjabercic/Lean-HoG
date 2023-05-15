@@ -38,12 +38,18 @@ def finOfJson (n : Q(Nat)) (j : Lean.Json) : Except String Q(Fin $n) := do
 def vertexOfJson (G : Q(Graph)) (j : Lean.Json) : Except String Q(Graph.vertex $G) := do
   finOfJson (q(Graph.vertexSize $G)) j
 
-partial def treeOfJson (n : Q(Nat)) (j : Lean.Json) : Except String Q(STree (Edge $n)) := do
+partial def streeOfJson (n : Q(Nat)) (j : Lean.Json) : Except String Q(STree (Edge $n)) := do
   let arr ← j.getArr?
   match arr with
   | #[] => pure q(STree.empty)
-  | #[v] => pure q(STree.leaf $(← edgeOfJson n v))
-  | #[e, l, r] => pure q(STree.node $(← edgeOfJson n e) $(← treeOfJson n l) $(← treeOfJson n r))
+  | #[v] =>
+    let edge ← edgeOfJson n v
+    pure q(STree.leaf $edge)
+  | #[e, l, r] =>
+    let left ← streeOfJson n l
+    let right ← streeOfJson n r
+    let edge ← edgeOfJson n e
+    pure q(STree.node $edge $left $right)
   | _ => throw "invalid tree format"
 
 partial def mapTreeOfJson {α β : Q(Type)}
@@ -54,8 +60,14 @@ partial def mapTreeOfJson {α β : Q(Type)}
   let arr ← j.getArr?
   match arr with
   | #[] => pure q(Map.empty)
-  | #[k, v] => pure q(Map.leaf $(← keyOfJson k) $(← valOfJson v))
-  | #[k, v, l, r] => pure q(Map.node $(← keyOfJson k) $(← valOfJson v) $(← mapTreeOfJson o keyOfJson valOfJson l) $(← mapTreeOfJson o keyOfJson valOfJson r))
+  | #[k, v] =>
+    pure q(Map.leaf $(← keyOfJson k) $(← valOfJson v))
+  | #[k, v, l, r] =>
+    let key ← keyOfJson k
+    let val ← valOfJson v
+    let left ← mapTreeOfJson o keyOfJson valOfJson l
+    let right ← mapTreeOfJson o keyOfJson valOfJson r
+    pure q(Map.node $key $val $left $right)
   | _ => throw "invalid tree map format"
 
 def emptyMap {α β : Type}
@@ -84,7 +96,7 @@ partial def mapOfJson {α β : Q(Type)}
 partial def graphOfJson (j : Lean.Json) : Except String Q(Graph) := do
     let json_v ← j.getObjVal? "vertexSize"
     have v : Q(Nat) := Lean.mkRawNatLit (← json_v.getNat?)
-    let edges : Q(STree (Edge $v)) ← (treeOfJson v (← j.getObjVal? "edges"))
+    let edges : Q(STree (Edge $v)) ← (streeOfJson v (← j.getObjVal? "edges"))
     pure q(Graph.mk $v $edges)
 
 def edgeSizeOfJson (G : Q(Graph)) (j : Lean.Json) : Except String Q(EdgeSize $G) := do
@@ -94,14 +106,15 @@ def edgeSizeOfJson (G : Q(Graph)) (j : Lean.Json) : Except String Q(EdgeSize $G)
   pure q(EdgeSize.mk' $G $e $H)
 
 def neighborhoodMapOfJson (G : Q(Graph)) (j : Lean.Json)
-  : Except String Q(@NeighborhoodMap (STree (Graph.vertex $G)) $G (STree.hasMem)) := do
-  let o := q(instOrdFin (Graph.vertexSize $G))
-  let d := q(Fintype.decidableForallFintype)
-  let map : Q(Graph.vertex $G → STree (Graph.vertex $G)) ← mapOfJson o d (vertexOfJson G) (treeOfJson q(Graph.vertexSize $G)) j
-  -- TODO make H efficient
-  -- have h := q(Fintype.decidableForallFintype)
-  have correct : Q(forallVertex (fun u => ∀ (v : Graph.vertex $G), Graph.adjacent u v ↔ STree.mem v ($map u)) = true) := (q(Eq.refl true) : Lean.Expr)
-  pure q(NeighborhoodMap.mk $map (of_decide_eq_true $correct))
+  : Except String Q(NeighborhoodMap $G (STree (Graph.vertex $G))) := do
+  -- let o := q(instOrdFin (Graph.vertexSize $G))
+  -- let d := q(Fintype.decidableForallFintype)
+  let map : Q(Graph.vertex $G → STree (Graph.vertex $G)) ←
+    mapOfJson q(instOrdFin (Graph.vertexSize $G)) q(Fintype.decidableForallFintype) (vertexOfJson G) (streeOfJson q(Graph.vertexSize $G)) j
+  -- TODO make this efficient, it's currently Ω(G.vertexSize²)
+  have correct : Q(forallVertex (fun u => ∀ (v : Graph.vertex $G), Graph.adjacent u v ↔ STree.mem v ($map u)) = true) :=
+    (q(Eq.refl true) : Lean.Expr)
+  pure q(NeighborhoodMap.mk' $G $map $correct)
 
 def componentsCertificateOfJson (G : Q(Graph)) (j : Lean.Json) : Except String Q(ComponentsCertificate $G) := do
   let valJ ← j.getObjVal? "val"
@@ -186,12 +199,12 @@ elab "#loadHog" hogId:str : command => do
   -- load the neighborhood maps
   let neighborhoodMapName := hogInstanceName hogId.getString "neighborhoodMapI"
   let neighborhoodMapJ ← liftExcept <| json.getObjVal? "neighborhoodMap"
-  let neighborhoodMapQ : Q(@NeighborhoodMap (STree (Graph.vertex $graph)) $graph (Stree.hasMem)) ← liftExcept <| neighborhoodMapOfJson graph neighborhoodMapJ
+  let neighborhoodMap : Q(NeighborhoodMap $graph (STree (Graph.vertex $graph))) ← liftExcept <| neighborhoodMapOfJson graph neighborhoodMapJ
   Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
     name := neighborhoodMapName
     levelParams := []
     type := q(ComponentsCertificate $graph)
-    value := neighborhoodMapQ
+    value := neighborhoodMap
     hints := .regular 0
     safety := .safe
   }
