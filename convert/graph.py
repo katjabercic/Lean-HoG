@@ -3,7 +3,7 @@
 
 import re
 import json
-from typing import Tuple, List, Set, Dict, Any, AnyStr, Optional, Union
+from typing import Tuple, List, Set, Dict, Any, AnyStr, Optional, Union, Iterable
 # from connected_components import *
 from treeSet import Tree
 
@@ -167,6 +167,9 @@ class Graph():
     def get_invariant(self, inv):
         return self.invariants[inv]
 
+    def is_empty(self) -> bool:
+        return self.vertex_size == 0
+
     def edge_size(self) -> int:
         """Number of edges."""
         return len(self.edges)
@@ -177,76 +180,19 @@ class Graph():
             "edges" : self.edge_tree(),
         }
 
-    def neighbors(self, v):
+    def neighbors(self, v) -> Iterable[int] :
         """The neighbors of the given vertex."""
         for e in self.edges:
             if e.fst == v: yield e.snd
             elif e.snd == v: yield e.fst
 
-    # def get_data(self):
-    #     """Return a dictionary with graph data, to be used in a template file."""
-
-    #     name = self.name.replace("_", "")
-    #     return {
-    #         'name' : name,
-    #         'vertex_size' : self.vertex_size,
-    #         'adjacency_list' : self.adjacency_list,
-    #         'planar' : self.invariants['Planar']['value'],
-    #         'chromatic_number' : self.invariants['Chromatic Number']['value'],
-    #         'edge_tree' : self.edge_tree,
-    #         'edge_size' : self.edgeSize,
-    #         'connected_components_witness' : self.connected_components_witness,
-    #         'nbhds_smap' : self.nbhds_smap,
-    #         'min_degree' : f'some {self.min_degree}' if self.min_degree is not None else 'none',
-    #         'max_degree' : f'some {self.max_degree}' if self.max_degree is not None else 'none',
-    #         'is_regular' : str(self.is_regular).lower(),
-    #         'is_bipartite' : str(self.is_bipartite).lower()
-    #     }
-
-    # def get_invariants(self):
-    #     """Return a dictionary with graph invariants (without proofs that they're correct),
-    #        to be used in a template file.
-    #     """
-
-    #     name = self.name.replace("_", "")
-    #     return {
-    #         'name' : name,
-    #         'vertex_size' : self.vertex_size,
-    #         'edge_size' : self.edgeSize,
-    #         'min_degree' : f'some {self.min_degree}' if self.min_degree is not None else 'none',
-    #         'max_degree' : f'some {self.max_degree}' if self.max_degree is not None else 'none',
-    #         'is_regular' : self.is_regular,
-    #         'is_bipartite' : self.is_bipartite
-    #     }
+    def neighborhood_map(self) -> Dict[int, Set[int]]:
+        """The mapping from vertices to their neighbors."""
+        return { v : set(self.neighbors(v)) for v in range(self.vertex_size) }
 
     def edge_tree(self) -> Tree[Edge]:
+        """The search tree with all the edges."""
         return Tree.from_set(self.edges)
-
-    # def neighborhoods(self):
-    #     nbhds = [(i, []) for i in range(self.vertex_size)]
-    #     for u, v in self.adjacency_list:
-    #         nbhds[u][1].append(v)
-    #         nbhds[v][1].append(u)
-    #     return nbhds
-
-    # def _neighborhoods_to_smap(self):
-    #     def build(nbhds):
-    #         n = len(nbhds)
-    #         if n == 0:
-    #             return None
-    #         if n == 1:
-    #             vals = Tree.fromList(nbhds[0][1])
-    #             return Map(nbhds[0][0], vals, None, None)
-    #         else:
-    #             mid = n // 2
-    #             root_key = nbhds[mid][0]
-    #             root_val = Tree.fromList(nbhds[mid][1])
-    #             left = build(nbhds[0:mid])
-    #             right = build(nbhds[mid+1:])
-    #             return Map(root_key, root_val, left, right)
-
-    #     return build(self.neighborhoods())
-
 
     # def compute_min_degree(self):
     #     if not self.adjacency_list or len(self.adjacency_list) == 0:

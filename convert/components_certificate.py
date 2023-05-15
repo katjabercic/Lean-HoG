@@ -46,7 +46,7 @@ class ComponentsCertificate():
                 self.val += 1
 
     def to_json(self):
-        emptyGraph = (self.graph.vertex_size == 0)
+        emptyGraph = self.graph.is_empty()
         return {
             "val" : self.val,
             "component" : Map(emptyDomain=emptyGraph, defaultValue = 0, tree=TreeMap.from_dict(self.component)),

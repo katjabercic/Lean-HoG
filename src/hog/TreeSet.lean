@@ -52,8 +52,11 @@ def STree.mem {α : Type} [Ord α] (x : α) : STree α → Bool
     | .gt => mem x right
 
 @[simp]
-instance hasMem {α : Type} [Ord α] : Membership α (STree α) where
+instance STree.hasMem {α : Type} [Ord α] : Membership α (STree α) where
   mem := (fun x t => ↑ (STree.mem x t))
+
+instance STree.memDecidable {α : Type} [Ord α] (t : STree α): DecidablePred (fun x => ↑ (STree.mem x t)) := by
+  infer_instance
 
 @[simp]
 def STree.sizeBounded {α : Type} [Ord α] (low high : Bounded α) : STree α → Nat

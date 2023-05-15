@@ -5,18 +5,15 @@ from treeSet import Tree
 from treeMap import Map, TreeMap
 from components_certificate import ComponentsCertificate
 
-class GraphWithInvariants():
-    graph : Graph
-
-    def __init__(self, graph : Graph):
-        self.graph = graph
-    
-    def to_json(self):
-        return {
-            "graph" : self.graph,
-            "edgeSize" : self.graph.edge_size(),
-            "componentsCertificate" : ComponentsCertificate(self.graph)
-        }
+def graph_to_json(graph : Graph) -> dict:
+    nbhMap = TreeMap.from_dict({v : Tree.from_set(nbh)
+                for (v, nbh) in graph.neighborhood_map().items()})
+    return {
+        "graph" : graph,
+        "edgeSize" : graph.edge_size(),
+        "neighborhoodMap" : Map(emptyDomain=graph.is_empty(), defaultValue=Tree(), tree=nbhMap),
+        "componentsCertificate" : ComponentsCertificate(graph)
+    }
 
 class GraphEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -31,8 +28,6 @@ class GraphEncoder(json.JSONEncoder):
         elif isinstance(obj, Map):
             return obj.to_json()
         elif isinstance(obj, ComponentsCertificate):
-            return obj.to_json()
-        elif isinstance(obj, GraphWithInvariants):
             return obj.to_json()
         else:
             # Let the base class default method raise the TypeError
