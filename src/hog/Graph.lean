@@ -15,15 +15,12 @@ structure Graph : Type :=
 def Graph.vertex (G : Graph) := Fin G.vertexSize
 
 -- the underlying type of edges (pairs (i,j) such that j < i < G.vertexSize)
-@[simp]
+@[simp, reducible]
 def Graph.edgeType (G : Graph) := Edge G.vertexSize
 
-instance Graph_edgeType_Finset (G : Graph) : Finset G.edgeType :=
-  (Edge_Fintype G.vertexSize).elems
-
 -- the type of edges
-@[simp]
-def Graph.edge (G : Graph) := { e : G.edgeType // e ∈ G.edgeTree }
+@[simp, reducible]
+def Graph.edge (G : Graph) := { e : G.edgeType // G.edgeTree.mem e }
 
 @[simp]
 def Graph.fst {G : Graph} (e : G.edgeType) : G.vertex := e.fst
@@ -31,12 +28,6 @@ def Graph.fst {G : Graph} (e : G.edgeType) : G.vertex := e.fst
 @[simp]
 def Graph.snd {G : Graph} (e : G.edgeType) : G.vertex :=
   ⟨e.snd, lt_trans e.snd.isLt e.fst.isLt⟩
-
-variable (p : Fin 4 → Bool)
-#synth Fintype {x : Fin 4 | p x}
-
-instance Graph_edge_Fintype (G : Graph) : Fintype G.edge := by
-  sorry
 
 -- the number of eges in a graph
 def Graph.edgeSize (G : Graph) := Fintype.card G.edge
@@ -88,8 +79,8 @@ lemma Graph.adjacentEdge_lt_snd {G : Graph} {u v : G.vertex} (uv : G.adjacent u 
   intro u_lt_v
   apply Fin.eq_of_val_eq
   simp [Fin.eq_of_val_eq, adjacentEdge, lt_by_cases, u_lt_v, not_lt_of_lt]
-  sorry 
-  
+  sorry
+
 lemma Graph.adjacentEdge_gt_snd {G : Graph} {u v : G.vertex} (uv : G.adjacent u v):
   v < u -> G.snd (G.adjacentEdge uv).val = v := by
   sorry
@@ -101,5 +92,13 @@ lemma Graph.symmetricNeighbor (G : Graph) :
   ∀ (u v : G.vertex), adjacent u v → adjacent v u := by
     intros u v
     apply lt_by_cases u v <;> (intro h ; simp [lt_by_cases, not_lt_of_lt, h, adjacent, badjacent])
+
+-- the neighborhood of a graph
+@[reducible]
+def Graph.neighborhood (G : Graph) (v : G.vertex) :=
+  { u : G.vertex // G.badjacent v u }
+
+-- the degree of a vertex
+def Graph.degree (G : Graph) (v : G.vertex) : ℕ := Fintype.card (G.neighborhood v)
 
 end HoG

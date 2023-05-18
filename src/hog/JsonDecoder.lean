@@ -110,7 +110,7 @@ def edgeSizeOfJson (G : Q(Graph)) (j : Lean.Json) : Except String Q(EdgeSize $G)
   pure q(EdgeSize.mk' $G $e $H)
 
 def neighborhoodMapOfJson (G : Q(Graph)) (j : Lean.Json)
-  : Except String Q(NeighborhoodMap $G (STree (Graph.vertex $G))) := do
+  : Except String Q(NeighborhoodMap $G) := do
   let map : Q(Graph.vertex $G → STree (Graph.vertex $G)) ←
     mapOfJson q(instOrdFin (Graph.vertexSize $G)) q(Fintype.decidableForallFintype) (vertexOfJson G) (streeOfJson (vertexOfJson G)) j
   -- TODO make this efficient, it's currently Ω(G.vertexSize²)
@@ -201,11 +201,11 @@ elab "#loadHog" hogId:str : command => do
   -- load the neighborhood maps
   let neighborhoodMapName := hogInstanceName hogId.getString "neighborhoodMapI"
   let neighborhoodMapJ ← liftExcept <| json.getObjVal? "neighborhoodMap"
-  let neighborhoodMap : Q(NeighborhoodMap $graph (STree (Graph.vertex $graph))) ← liftExcept <| neighborhoodMapOfJson graph neighborhoodMapJ
+  let neighborhoodMap : Q(NeighborhoodMap $graph) ← liftExcept <| neighborhoodMapOfJson graph neighborhoodMapJ
   Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
     name := neighborhoodMapName
     levelParams := []
-    type := q(NeighborhoodMap $graph (STree (Graph.vertex $graph)))
+    type := q(NeighborhoodMap $graph)
     value := neighborhoodMap
     hints := .regular 0
     safety := .safe

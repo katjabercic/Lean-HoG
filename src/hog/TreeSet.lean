@@ -51,12 +51,9 @@ def STree.mem {α : Type} [Ord α] (x : α) : STree α → Bool
     | .eq => true
     | .gt => mem x right
 
-@[simp]
+@[simp, reducible]
 instance STree.hasMem {α : Type} [Ord α] : Membership α (STree α) where
-  mem := (fun x t => ↑ (STree.mem x t))
-
-instance STree.memDecidable {α : Type} [Ord α] (t : STree α): DecidablePred (fun x => ↑ (STree.mem x t)) := by
-  infer_instance
+  mem := fun x t => t.mem x
 
 @[simp]
 def STree.sizeBounded {α : Type} [Ord α] (low high : Bounded α) : STree α → Nat
@@ -135,4 +132,12 @@ theorem STree.exists_exi {α : Type} [Ord α] [OrdEq α] (p : α → Prop) [Deci
       cases G with
       | inl H => simp [H.left] ; rw [H.right] ; intro ; apply Or.inl ; apply Or.inl ; assumption
       | inr H => simp [H.left] ; intros ; apply Or.inr ; apply ihr ; exists x
+
+-- The underlying set of the tree
+@[reducible, simp]
+def STree.set {α : Type} [Ord α] (t : STree α) := { x : α // t.mem x }
+
+def STree.size_is_card {α : Type} [Ord α] [Fintype α] (t : STree α) :
+  Fintype.card t.set = t.size := sorry
+
 end HoG
