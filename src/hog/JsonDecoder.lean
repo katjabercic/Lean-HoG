@@ -126,7 +126,7 @@ def degreeMapOfJson (G : Q(Graph)) (nbh : Q(NeighborhoodMap $G)) (j : Lean.Json)
   -- TODO make this efficient, it's currently Ω(G.vertexSize²)
   have correct : Q(forallVertex (fun u => $map u = (@NeighborhoodMap.val $G $nbh u).size) = true) :=
     (q(Eq.refl true) : Lean.Expr)
-  pure q(DegreeMap.mk' $G $nbh $map $correct)
+  pure q(DegreeMap.mk' $G $nbh $map (of_decide_eq_true $correct))
 
 def componentsCertificateOfJson (G : Q(Graph)) (j : Lean.Json) : Except String Q(ComponentsCertificate $G) := do
   let valJ ← j.getObjVal? "val"

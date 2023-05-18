@@ -12,13 +12,13 @@ def DegreeMap.mk'
   (G : Graph)
   (nbh : NeighborhoodMap G)
   (d : G.vertex → Nat)
-  (H : (decide (∀ (u : G.vertex), d u = (nbh.val u).size) = true)) :
+  (H : ∀ (u : G.vertex), d u = (nbh.val u).size) :
   DegreeMap G :=
   { val := d,
     correct := by
       intro u
       apply Eq.trans (b := (nbh.val u).size)
-      · exact (of_decide_eq_true H u)
+      · exact (H u)
       · apply Eq.symm ; apply nbh.neighborhoodSize
   }
 
