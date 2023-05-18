@@ -6,6 +6,7 @@ import Graph
 -- invariants
 import EdgeSize
 import NeighborhoodMap
+import DegreeMap
 import ConnectedComponents
 
 
@@ -110,13 +111,22 @@ def edgeSizeOfJson (G : Q(Graph)) (j : Lean.Json) : Except String Q(EdgeSize $G)
   pure q(EdgeSize.mk' $G $e $H)
 
 def neighborhoodMapOfJson (G : Q(Graph)) (j : Lean.Json)
-  : Except String Q(NeighborhoodMap $G (STree (Graph.vertex $G))) := do
+  : Except String Q(NeighborhoodMap $G) := do
   let map : Q(Graph.vertex $G → STree (Graph.vertex $G)) ←
     mapOfJson q(instOrdFin (Graph.vertexSize $G)) q(Fintype.decidableForallFintype) (vertexOfJson G) (streeOfJson (vertexOfJson G)) j
   -- TODO make this efficient, it's currently Ω(G.vertexSize²)
   have correct : Q(forallVertex (fun u => ∀ (v : Graph.vertex $G), Graph.adjacent u v ↔ STree.mem v ($map u)) = true) :=
     (q(Eq.refl true) : Lean.Expr)
   pure q(NeighborhoodMap.mk' $G $map $correct)
+
+def degreeMapOfJson (G : Q(Graph)) (nbh : Q(NeighborhoodMap $G)) (j : Lean.Json)
+  : Except String Q(DegreeMap $G) := do
+  let map : Q(Graph.vertex $G → Nat) ←
+    mapOfJson q(instOrdFin (Graph.vertexSize $G)) q(Fintype.decidableForallFintype) (vertexOfJson G) natOfJson j
+  -- TODO make this efficient, it's currently Ω(G.vertexSize²)
+  have correct : Q(forallVertex (fun u => $map u = (@NeighborhoodMap.val $G $nbh u).size) = true) :=
+    (q(Eq.refl true) : Lean.Expr)
+  pure q(DegreeMap.mk' $G $nbh $map $correct)
 
 def componentsCertificateOfJson (G : Q(Graph)) (j : Lean.Json) : Except String Q(ComponentsCertificate $G) := do
   let valJ ← j.getObjVal? "val"
@@ -198,19 +208,32 @@ elab "#loadHog" hogId:str : command => do
     safety := .safe
   }
   Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance edgeSizeName .scoped 42
-  -- load the neighborhood maps
+  -- load the neighborhood map
   let neighborhoodMapName := hogInstanceName hogId.getString "neighborhoodMapI"
   let neighborhoodMapJ ← liftExcept <| json.getObjVal? "neighborhoodMap"
-  let neighborhoodMap : Q(NeighborhoodMap $graph (STree (Graph.vertex $graph))) ← liftExcept <| neighborhoodMapOfJson graph neighborhoodMapJ
+  let neighborhoodMap : Q(NeighborhoodMap $graph) ← liftExcept <| neighborhoodMapOfJson graph neighborhoodMapJ
   Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
     name := neighborhoodMapName
     levelParams := []
-    type := q(NeighborhoodMap $graph (STree (Graph.vertex $graph)))
+    type := q(NeighborhoodMap $graph)
     value := neighborhoodMap
     hints := .regular 0
     safety := .safe
   }
   Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance neighborhoodMapName .scoped 42
+  -- load the vertex degree map
+  let degreeMapName := hogInstanceName hogId.getString "degreeMapI"
+  let degreeMapJ ← liftExcept <| json.getObjVal? "degreeMap"
+  let degreeMap : Q(NeighborhoodMap $graph) ← liftExcept <| degreeMapOfJson graph neighborhoodMap degreeMapJ
+  Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
+    name := degreeMapName
+    levelParams := []
+    type := q(DegreeMap $graph)
+    value := degreeMap
+    hints := .regular 0
+    safety := .safe
+  }
+  Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance degreeMapName .scoped 42
   -- load the components certificate
   let componentsCertificateName := hogInstanceName hogId.getString "componentsCertificateI"
   let componentsCertificateJ ← liftExcept <| json.getObjVal? "componentsCertificate"
@@ -226,6 +249,7 @@ elab "#loadHog" hogId:str : command => do
   Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance componentsCertificateName .scoped 42
 
 -- #loadHog "hog00002"
+-- #eval hog00002.degreeMapI.val ⟨3, by simp⟩ 
 -- #eval hog00002.component ⟨5, (by simp)⟩
 
 end HoG

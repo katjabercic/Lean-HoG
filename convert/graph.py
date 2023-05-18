@@ -190,19 +190,13 @@ class Graph():
         """The mapping from vertices to their neighbors."""
         return { v : set(self.neighbors(v)) for v in range(self.vertex_size) }
 
+    def degree_map(self) -> Dict[int, int]:
+        """The mapping from vertices to their degrees."""
+        return {v : len(nbh) for (v, nbh) in self.neighborhood_map().items() }
+
     def edge_tree(self) -> Tree[Edge]:
         """The search tree with all the edges."""
         return Tree.from_set(self.edges)
-
-    # def compute_min_degree(self):
-    #     if not self.adjacency_list or len(self.adjacency_list) == 0:
-    #         return None
-    #     return min([len(nbhd[1]) for nbhd in self.neighborhoods()])
-
-    # def compute_max_degree(self):
-    #     if not self.adjacency_list or len(self.adjacency_list) == 0:
-    #         return None
-    #     return max([len(nbhd[1]) for nbhd in self.neighborhoods()])
 
     # def compute_bipartiteness(self):
     #     if self.vertex_size == 0 or not self.adjacency_list or len(self.adjacency_list) == 0:

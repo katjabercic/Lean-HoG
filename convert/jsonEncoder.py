@@ -8,10 +8,12 @@ from components_certificate import ComponentsCertificate
 def graph_to_json(graph : Graph) -> dict:
     nbhMap = TreeMap.from_dict({v : Tree.from_set(nbh)
                 for (v, nbh) in graph.neighborhood_map().items()})
+    degMap = TreeMap.from_dict(graph.degree_map())
     return {
         "graph" : graph,
         "edgeSize" : graph.edge_size(),
         "neighborhoodMap" : Map(emptyDomain=graph.is_empty(), defaultValue=Tree(), tree=nbhMap),
+        "degreeMap" : Map(emptyDomain=graph.is_empty(), defaultValue=0, tree=degMap),
         "componentsCertificate" : ComponentsCertificate(graph)
     }
 
