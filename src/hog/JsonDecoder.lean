@@ -194,6 +194,7 @@ elab "#loadHog" hogId:str : command => do
     hints := .regular 0
     safety := .safe
   }
+  Lean.setReducibleAttribute graphName
   have graph : Q(Graph) := Lean.mkConst graphName []
   -- load the edgeSize instance
   let edgeSizeName := hogInstanceName hogId.getString "edgeSizeI"
@@ -248,7 +249,6 @@ elab "#loadHog" hogId:str : command => do
   }
   Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance componentsCertificateName .scoped 42
 
--- #loadHog "hog00002"
 -- #eval hog00002.degreeMapI.val ⟨3, by simp⟩ 
 -- #eval hog00002.component ⟨5, (by simp)⟩
 
