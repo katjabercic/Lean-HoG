@@ -99,6 +99,14 @@ def Graph.neighborhood (G : Graph) (v : G.vertex) :=
   { u : G.vertex // G.badjacent v u }
 
 -- the degree of a vertex
-def Graph.degree (G : Graph) (v : G.vertex) : ℕ := Fintype.card (G.neighborhood v)
+def Graph.degree (G : Graph) (v : G.vertex) : Nat := Fintype.card (G.neighborhood v)
+
+-- the minimal vertex degree
+def Graph.minDegree (G : Graph) : WithTop Nat :=
+  Finset.inf (Fin.fintype G.vertexSize).elems (fun v => G.degree v)
+
+-- the maximal vertex degree
+def Graph.maxDegree (G : Graph) : WithBot Nat :=
+  Finset.sup (Fin.fintype G.vertexSize).elems (fun v => G.degree v)
 
 end HoG
