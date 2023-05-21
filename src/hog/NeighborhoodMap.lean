@@ -7,16 +7,17 @@ class NeighborhoodMap (G : Graph) : Type where
   val : G.vertex → STree G.vertex
   correct : ∀ (u v : G.vertex), G.adjacent u v ↔ (val u).mem v
 
-@[reducible, simp]
-def Graph.neighborhoodTree (G : Graph) [n : NeighborhoodMap G] (v : G.vertex) := n.val v
+instance (G : Graph) : CoeFun (NeighborhoodMap G) (fun _ => G.vertex → STree G.vertex) where
+  coe := @NeighborhoodMap.val G
 
-lemma Graph.neighborhoodSize (G : Graph) [n : NeighborhoodMap G] (v : G.vertex) :
-  G.degree v = (G.neighborhoodTree v).size := by
-  unfold degree
-
-
-
-
+lemma NeighborhoodMap.neighborhoodSize (G : Graph) [nbh : NeighborhoodMap G] (v : G.vertex) :
+  G.degree v = (nbh v).size := by
+  apply Eq.trans (b := Fintype.card (nbh v).set)
+  · apply Fintype.card_congr
+    apply (Equiv.subtypeEquiv (Equiv.refl G.vertex))
+    intro u
+    exact (nbh.correct v u)
+  · apply STree.size_is_card
 
 -- specialized constructor for JSON decoding
 def NeighborhoodMap.mk'

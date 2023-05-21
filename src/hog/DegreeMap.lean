@@ -7,19 +7,22 @@ class DegreeMap (G : Graph) : Type where
   val : G.vertex → Nat
   correct : ∀ (u : G.vertex), val u = G.degree u
 
+instance {G : Graph} : CoeFun (DegreeMap G) (fun _ => G.vertex → Nat) where
+  coe := @DegreeMap.val G
+
 -- specialized constructor for JSON decoding
 def DegreeMap.mk'
   (G : Graph)
-  [N : NeighborhoodMap G]
+  (nbh : NeighborhoodMap G)
   (d : G.vertex → Nat)
-  (H : (decide (∀ (u : G.vertex), d u = (N.val u).size) = true)) :
+  (H : ∀ (u : G.vertex), d u = (nbh u).size) :
   DegreeMap G :=
   { val := d,
     correct := by
       intro u
-      apply Eq.trans (b := (N.val u).size)
-      · exact (of_decide_eq_true H u)
-      · apply Eq.symm ; unfold Graph.degree ; have X := (N.val u).size_is_card
+      apply Eq.trans (b := (nbh u).size)
+      · exact (H u)
+      · apply Eq.symm ; apply nbh.neighborhoodSize
   }
 
 end HoG

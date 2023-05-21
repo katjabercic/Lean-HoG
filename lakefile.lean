@@ -24,6 +24,7 @@ lean_lib JsonDecoder
 -- lean_lib Query
 -- lean_lib Tactic
 lean_lib NeighborhoodMap
+lean_lib DegreeMap
 lean_lib ConnectedComponents
 -- lean_lib Walk
 -- lean_lib Bipartite
