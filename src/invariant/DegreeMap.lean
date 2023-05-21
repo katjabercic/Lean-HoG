@@ -1,4 +1,4 @@
-import Graph
+import HoG.Graph
 import NeighborhoodMap
 
 namespace HoG

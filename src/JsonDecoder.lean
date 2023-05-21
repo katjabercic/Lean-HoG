@@ -4,10 +4,10 @@ import TreeMap
 import Graph
 
 -- invariants
-import EdgeSize
-import NeighborhoodMap
-import DegreeMap
-import ConnectedComponents
+import Invariant.EdgeSize
+import Invariant.NeighborhoodMap
+import Invariant.DegreeMap
+import Invariant.ConnectedComponents
 
 
 set_option autoImplicit false
@@ -249,7 +249,7 @@ elab "#loadHog" hogId:str : command => do
   }
   Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance componentsCertificateName .scoped 42
 
--- #eval hog00002.degreeMapI.val ⟨3, by simp⟩ 
+-- #eval hog00002.degreeMapI.val ⟨3, by simp⟩
 -- #eval hog00002.component ⟨5, (by simp)⟩
 
 end HoG
