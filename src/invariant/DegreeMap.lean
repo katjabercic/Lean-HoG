@@ -1,5 +1,5 @@
-import HoG.Graph
-import NeighborhoodMap
+import Graph
+import Invariant.NeighborhoodMap
 
 namespace HoG
 
