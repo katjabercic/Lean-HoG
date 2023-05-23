@@ -4,10 +4,10 @@ import TreeMap
 import Graph
 
 -- invariants
-import EdgeSize
-import NeighborhoodMap
-import DegreeMap
-import ConnectedComponents
+import Invariant.EdgeSize
+import Invariant.NeighborhoodMap
+import Invariant.DegreeMap
+import Invariant.ConnectedComponents
 
 
 set_option autoImplicit false
@@ -126,7 +126,7 @@ def degreeMapOfJson (G : Q(Graph)) (nbh : Q(NeighborhoodMap $G)) (j : Lean.Json)
   -- TODO make this efficient, it's currently Ω(G.vertexSize²)
   have correct : Q(forallVertex (fun u => $map u = (@NeighborhoodMap.val $G $nbh u).size) = true) :=
     (q(Eq.refl true) : Lean.Expr)
-  pure q(DegreeMap.mk' $G $nbh $map $correct)
+  pure q(DegreeMap.mk' $G $nbh $map (of_decide_eq_true $correct))
 
 def componentsCertificateOfJson (G : Q(Graph)) (j : Lean.Json) : Except String Q(ComponentsCertificate $G) := do
   let valJ ← j.getObjVal? "val"
@@ -194,6 +194,7 @@ elab "#loadHog" hogId:str : command => do
     hints := .regular 0
     safety := .safe
   }
+  Lean.setReducibleAttribute graphName
   have graph : Q(Graph) := Lean.mkConst graphName []
   -- load the edgeSize instance
   let edgeSizeName := hogInstanceName hogId.getString "edgeSizeI"
@@ -248,8 +249,7 @@ elab "#loadHog" hogId:str : command => do
   }
   Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance componentsCertificateName .scoped 42
 
--- #loadHog "hog00002"
--- #eval hog00002.degreeMapI.val ⟨3, by simp⟩ 
+-- #eval hog00002.degreeMapI.val ⟨3, by simp⟩
 -- #eval hog00002.component ⟨5, (by simp)⟩
 
 end HoG

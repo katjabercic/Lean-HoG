@@ -1,11 +1,4 @@
--- -- Graph components
-import Mathlib.Init.Data.Quot
-import Mathlib.Logic.Basic
-import Mathlib.Init.Function
-import Init.WF
 import Graph
-import TreeSet
-import TreeMap
 
 namespace HoG
 

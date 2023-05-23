@@ -1,5 +1,6 @@
 {
     "mypy.targets": [
         "convert"
-    ]
+    ],
+    "lean4.serverArgs": ["-DautoImplicit=false"]
 }
