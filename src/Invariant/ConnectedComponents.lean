@@ -95,18 +95,12 @@ def ComponentsCertificate.componentEdge' {G : Graph} [C : ComponentsCertificate 
 lemma ComponentsCertificate.componentAdjacent {G} [C : ComponentsCertificate G] :
   ∀ u v, G.adjacent u v → component u = component v := by
   intros u v uv
-  let ce := C.componentEdge' (G.adjacentEdge uv)
-  apply lt_by_cases u v
-  · intro u_lt_v
-    rw [Graph.adjacentEdge_lt_fst uv u_lt_v, Graph.adjacentEdge_lt_snd uv u_lt_v] at ce
-    symm
-    assumption
-  · intro eq
-    apply congrArg
-    assumption
-  · intro v_lt_u
-    rw [Graph.adjacentEdge_gt_fst uv v_lt_u, Graph.adjacentEdge_gt_snd uv v_lt_u] at ce
-    assumption
+  cases G.adjacentEdge uv with
+  | mk e r =>
+    have ce := C.componentEdge' e
+    cases r with
+    | inl eq => rw [←eq.1, ←eq.2] ; assumption
+    | inr eq => rw [←eq.1, ←eq.2] ; apply Eq.symm; assumption
 
 -- the root of the component of a given vertex
 @[simp]
