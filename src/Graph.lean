@@ -48,42 +48,19 @@ instance (G : Graph) : DecidableRel G.adjacent := by
   unfold Graph.adjacent
   infer_instance
 
--- adjacent vertices induce an edge
+-- There is an edge between adjacent vertices
 def Graph.adjacentEdge {G : Graph} {u v : G.vertex} :
-  G.adjacent u v → G.edge := by
-  apply lt_by_cases u v
-  · intros u_lt_v uv
-    constructor
-    case val => exact Edge.mk v ⟨u, u_lt_v⟩
-    case property => simp_all [u_lt_v, lt_by_cases, adjacent, badjacent]
-  · intro u_eq_v
-    intro H
-    simp [u_eq_v, lt_by_cases, adjacent, badjacent] at H
-  · intros v_lt_u uv
-    constructor
-    case val => exact Edge.mk u ⟨v, v_lt_u⟩
-    case property => simp_all [v_lt_u, not_lt_of_lt, lt_by_cases, adjacent, badjacent]
-
-lemma Graph.adjacentEdge_lt_fst {G : Graph} {u v : G.vertex} (uv : G.adjacent u v):
-  u < v -> G.fst (G.adjacentEdge uv).val = v := by
-  intro u_lt_v
-  simp [u_lt_v, lt_by_cases, adjacentEdge]
-
-lemma Graph.adjacentEdge_gt_fst {G : Graph} {u v : G.vertex} (uv : G.adjacent u v):
-  v < u -> G.fst (G.adjacentEdge uv).val = u := by
-  intro v_lt_u
-  simp [v_lt_u, not_lt_of_lt, lt_by_cases, adjacentEdge]
-
-lemma Graph.adjacentEdge_lt_snd {G : Graph} {u v : G.vertex} (uv : G.adjacent u v):
-  u < v -> G.snd (G.adjacentEdge uv).val = u := by
-  intro u_lt_v
-  apply Fin.eq_of_val_eq
-  simp [Fin.eq_of_val_eq, adjacentEdge, lt_by_cases, u_lt_v, not_lt_of_lt]
-  sorry
-
-lemma Graph.adjacentEdge_gt_snd {G : Graph} {u v : G.vertex} (uv : G.adjacent u v):
-  v < u -> G.snd (G.adjacentEdge uv).val = v := by
-  sorry
+  G.adjacent u v → { e : G.edge // (G.fst e = u ∧ G.snd e = v) ∨ (G.fst e = v ∧ G.snd e = u) } := by
+  apply lt_by_cases u v <;> intro H <;> simp [H, not_lt_of_lt, adjacent, badjacent, lt_by_cases]
+  · intro e_mem
+    let e : G.edge := ⟨ Edge.mk_lt H, (by simp [e_mem, Edge.mk_lt]) ⟩ 
+    exists e
+    simp [Edge.mk_lt]
+  · intro ; contradiction
+  · intro e_mem
+    let e : G.edge := ⟨ Edge.mk_lt H, (by simp [e_mem, Edge.mk_lt]) ⟩ 
+    exists e
+    simp [Edge.mk_lt]
 
 lemma Graph.irreflexiveNeighbor (G : Graph) :
   ∀ (v : G.vertex), ¬ adjacent v v := by simp [lt_by_cases, adjacent, badjacent]
@@ -92,6 +69,27 @@ lemma Graph.symmetricNeighbor (G : Graph) :
   ∀ (u v : G.vertex), adjacent u v → adjacent v u := by
     intros u v
     apply lt_by_cases u v <;> (intro h ; simp [lt_by_cases, not_lt_of_lt, h, adjacent, badjacent])
+
+-- checking that a symetric relations holds for all pairs of adjacent vertices
+-- reduces to checking it for all edges
+lemma Graph.adjacentAll (G : Graph)
+  (p : G.vertex → G.vertex → Prop) [DecidableRel p] :
+  G.edgeTree.all (fun e => p (G.fst e) (G.snd e)) → ∀ u v, G.adjacent u v → p u v ∨ p v u := by 
+  intros eA u v uv
+  cases G.adjacentEdge uv with
+  | mk e r =>
+    have pe := G.edgeTree.all_forall (fun e => p (G.fst e) (G.snd e)) eA e e.property
+    cases r with
+    | inl eq => apply Or.inl ; rw [←eq.1, ←eq.2] ; exact pe
+    | inr eq => apply Or.inr ; rw [←eq.1, ←eq.2] ; exact pe
+
+lemma Graph.adajcentAllSymm (G : Graph)
+  (p : G.vertex → G.vertex → Prop) [DecidableRel p]:
+  Symmetric p → G.edgeTree.all (fun e => p (G.fst e) (G.snd e)) → ∀ u v, G.adjacent u v → p u v := by
+  intros sp eA u v uv
+  cases G.adjacentAll p eA u v uv
+  · assumption
+  · apply sp ; assumption
 
 -- the neighborhood of a graph
 @[reducible]

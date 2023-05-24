@@ -115,9 +115,11 @@ def neighborhoodMapOfJson (G : Q(Graph)) (j : Lean.Json)
   let map : Q(Graph.vertex $G → STree (Graph.vertex $G)) ←
     mapOfJson q(instOrdFin (Graph.vertexSize $G)) q(Fintype.decidableForallFintype) (vertexOfJson G) (streeOfJson (vertexOfJson G)) j
   -- TODO make this efficient, it's currently Ω(G.vertexSize²)
-  have correct : Q(forallVertex (fun u => ∀ (v : Graph.vertex $G), Graph.adjacent u v ↔ STree.mem v ($map u)) = true) :=
+  have correct₁ : Q((Graph.edgeTree $G).all (fun e => ($map (Graph.fst e)).mem (Graph.snd e) ∧ ($map (Graph.snd e)).mem (Graph.fst e)) = true) :=
     (q(Eq.refl true) : Lean.Expr)
-  pure q(NeighborhoodMap.mk' $G $map $correct)
+  have correct₂ : Q(decide (∀ u, ($map u).all (fun v => Graph.badjacent u v)) = true) :=
+    (q(Eq.refl true) : Lean.Expr)
+  pure q(NeighborhoodMap.mk' $G $map $correct₁ $correct₂)
 
 def degreeMapOfJson (G : Q(Graph)) (nbh : Q(NeighborhoodMap $G)) (j : Lean.Json)
   : Except String Q(DegreeMap $G) := do
@@ -248,8 +250,5 @@ elab "#loadHog" hogId:str : command => do
     safety := .safe
   }
   Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance componentsCertificateName .scoped 42
-
--- #eval hog00002.degreeMapI.val ⟨3, by simp⟩
--- #eval hog00002.component ⟨5, (by simp)⟩
 
 end HoG
