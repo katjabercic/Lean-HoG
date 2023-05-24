@@ -178,7 +178,7 @@ def liftExcept {α : Type} : Except String α → Lean.Elab.Command.CommandElabM
 
 elab "#loadHog" hogId:str : command => do
   let packageDir ← Mathlib.getPackageDir "HoG"
-  let dataDir := ((packageDir.join "..").join "..").join "pigpen" -- folder with the JSON files
+  let dataDir := (packageDir.join "..").join "pigpen" -- folder with the JSON files
   let fileName := (dataDir.join hogId.getString).withExtension "json"
   let file ← IO.FS.readFile fileName
   let json ← liftExcept <| Lean.Json.parse file
