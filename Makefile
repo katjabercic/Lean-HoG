@@ -34,4 +34,4 @@ build-graphs: clean-graphs
 	python3 $(CONVERT) --loglevel $(LOGLEVEL) --srcdir $(SRCDIR) --destdir $(DESTDIR) --limit $(LIMIT) --skip $(SKIP)
 
 clean-graphs:
-	/bin/rm -rf $(LEANDIR)
+	/bin/rm -f $(DESTDIR)/*.json

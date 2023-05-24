@@ -23,10 +23,19 @@ lemma NeighborhoodMap.neighborhoodSize (G : Graph) [nbh : NeighborhoodMap G] (v 
 def NeighborhoodMap.mk'
   (G : Graph)
   (m : G.vertex → STree G.vertex)
-  (H : (decide (∀ (u v : G.vertex), G.adjacent u v ↔ (m u).mem v) = true)) :
+  (H₁ : G.edgeTree.all (fun e => (m (G.fst e)).mem (G.snd e) ∧ (m (G.snd e)).mem (G.fst e)) = true)
+  (H₂ : decide (∀ u, (m u).all (fun v => G.badjacent u v)) = true) :
   NeighborhoodMap G :=
   { val := m,
-    correct := by simp_all
+    correct := by
+      intros u v
+      apply Iff.intro
+      · intro uv
+        cases G.adjacentAll (fun u v => (m u).mem v ∧ (m v).mem u) H₁ u v uv with
+        | inl vmu => exact vmu.1
+        | inr vmu => exact vmu.2
+      · intro vmu
+        exact (m u).all_forall _ (of_decide_eq_true H₂ u) v vmu
   }
 
 end HoG

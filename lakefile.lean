@@ -23,7 +23,6 @@ lean_lib HoG where
     `Invariant.DegreeMap,
     `Invariant.ConnectedComponents,
     `JsonDecoder
---    `Test,
 --    `OneGraph,
 --    `Query,
 --    `Tactic,

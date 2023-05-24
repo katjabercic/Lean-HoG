@@ -1,6 +1,3 @@
-import Mathlib.Init.Algebra.Order
-import Mathlib.Tactic.Basic
-
 import BoundedOrder
 import OrdEq
 
