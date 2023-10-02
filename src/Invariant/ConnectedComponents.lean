@@ -45,13 +45,6 @@ class ConnectedComponents (G : Graph) : Type :=
 def Graph.numberOfComponents (G : Graph) [C : ConnectedComponents G] : Nat := C.val
 def Graph.component (G : Graph) [C : ConnectedComponents G] (v : G.vertex) : Nat := C.component v
 
--- Is this silly lemma somewhere in the prelude?
-lemma zero_or_lt : ∀ (n : Nat), n = 0 ∨ 0 < n := by
-  intro n
-  cases n
-  · apply Or.inl ; simp
-  · apply Or.inr ; simp
-
 -- A certificate for connected components:
 class ComponentsCertificate (G : Graph) : Type :=
   -- number of components
@@ -110,7 +103,7 @@ def ComponentsCertificate.rootOf {G} [C : ComponentsCertificate G] : G.vertex �
 def ComponentsCertificate.rootOfNext {G} [C : ComponentsCertificate G] (v : G.vertex) :
   C.rootOf (C.next v) = C.rootOf v := by
   apply congrArg C.root
-  cases zero_or_lt (C.distToRoot v)
+  cases Nat.eq_zero_or_pos (C.distToRoot v)
   case inl eq =>
     apply congrArg
     apply Eq.symm
@@ -143,7 +136,7 @@ lemma connectedToRoot (G : Graph) [C : ComponentsCertificate G] :
   ∀ v, G.connected v (C.rootOf v) := by
   apply heightInduction C.distToRoot (fun v => G.connected v (C.rootOf v))
   intros v ih
-  cases (zero_or_lt (C.distToRoot v))
+  cases Nat.eq_zero_or_pos (C.distToRoot v)
   · apply G.connectedEq
     apply C.distZeroRoot v
     assumption
