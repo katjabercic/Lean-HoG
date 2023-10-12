@@ -1,6 +1,6 @@
-import Graph
-import ConnectedComponents
-import TreeSet
+import HoG.Graph
+import HoG.Invariant.ConnectedComponents
+import HoG.TreeSet
 
 
 -- -- [ ] Be able to define the functions on paths my pattern matching instead of having to use induction
@@ -37,7 +37,7 @@ def Walk.notInWalk {g : SimpleIrreflexiveGraph} {u v a b : Nat} : Walk g u v →
 
 def Walk.reverse {g : SimpleIrreflexiveGraph} {s t : Nat} :  Walk g s t → Walk g t s
   | .trivial s p => .trivial s p
-  | .left e p => Walk.right (reverse p) (edgeRelationSymmetric e) 
+  | .left e p => Walk.right (reverse p) (edgeRelationSymmetric e)
   | .right p e => Walk.left (edgeRelationSymmetric e) (reverse p)
 
 macro p:term "↑" : term => `(Walk.reverse $p)
@@ -98,9 +98,9 @@ lemma witnessWalkToRoot (w : numComponentsWitnessExact) (s : Fin w.G.vertexSize)
       have p : Walk w.G u (w.root (w.c u)) := by apply h; cases hyp; assumption
       have same_c : w.c ↑u = w.c ↑v := by
         have er : edgeRelation w.G ↑u ↑v := by simp [hyp]
-        apply @Nat.lt_by_cases u v
+        apply ltByCases u v
         · intro H'
-          let e : Edge := Edge.mk (u, v) 
+          let e : Edge := Edge.mk (u, v)
           apply w.connectEdges e (edgeRelationIsMem er)
         · intro H'
           rw [H']

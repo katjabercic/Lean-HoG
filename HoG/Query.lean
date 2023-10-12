@@ -1,5 +1,5 @@
 import Lean
-import TreeSet
+import HoG.TreeSet
 
 structure GraphInfo : Type :=
   (vertexSize : Nat)
@@ -10,7 +10,7 @@ structure GraphInfo : Type :=
   (isBipartite : Bool)
 deriving Repr
 
-def findGraphSuchThat (p : GraphInfo → Bool) : 
+def findGraphSuchThat (p : GraphInfo → Bool) :
   List GraphInfo → Option GraphInfo
   | [] => none
   | g :: gs => if p g then g else findGraphSuchThat p gs
@@ -18,7 +18,7 @@ def findGraphSuchThat (p : GraphInfo → Bool) :
 open Lean in
 def list_graphInvariants := (Expr.app (Expr.const ``List [levelZero]) (Expr.const ``GraphInfo []))
 
-open Lean Lean.Elab.Tactic Expr Meta in 
+open Lean Lean.Elab.Tactic Expr Meta in
 elab "try_add_invariants_to_ctx" : tactic =>
   withMainContext do
       let m1 ← Meta.mkFreshExprMVar list_graphInvariants (userName := `graph_invariants)
@@ -38,13 +38,13 @@ elab "try_add_invariants_to_ctx" : tactic =>
           logError m!"Unable to find Hog.invariants, please add 'import Data.Invariants' at the beginning of the file"
           restoreState s
 
-open Lean Lean.Elab.Tactic Expr Meta in 
+open Lean Lean.Elab.Tactic Expr Meta in
 elab "try_find_invariant " p:term : tactic =>
   withMainContext do
     let ctx ← MonadLCtx.getLCtx
     let my_list ← LocalContext.findFromUserName? ctx `graph_invariants
     let p ← elabTerm p none
-    let my_fun := Expr.const `findGraphSuchThat [] 
+    let my_fun := Expr.const `findGraphSuchThat []
     liftMetaTactic fun mvarId => do
       let my_app ← mkAppM ``findGraphSuchThat #[p, my_list.toExpr]
       let reduced ← reduce my_app

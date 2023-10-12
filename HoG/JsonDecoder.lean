@@ -1,13 +1,13 @@
 import Qq
-import TreeSet
-import TreeMap
-import Graph
+import HoG.TreeSet
+import HoG.TreeMap
+import HoG.Graph
 
 -- invariants
-import Invariant.EdgeSize
-import Invariant.NeighborhoodMap
-import Invariant.DegreeMap
-import Invariant.ConnectedComponents
+import HoG.Invariant.EdgeSize
+import HoG.Invariant.NeighborhoodMap
+import HoG.Invariant.DegreeMap
+import HoG.Invariant.ConnectedComponents
 
 
 set_option autoImplicit false

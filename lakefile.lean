@@ -1,8 +1,7 @@
 import Lake
 open Lake DSL
 
-package «LeanHoG» {
-  srcDir := "src"
+package «HoG» {
   moreLeanArgs := #["-DautoImplicit=false"]
 }
 
@@ -10,22 +9,4 @@ require mathlib from git
   "https://github.com/leanprover-community/mathlib4.git"
 
 @[default_target]
-lean_lib HoG where
-  roots := #[
-    `BoundedOrder,
-    `OrdEq,
-    `TreeSet,
-    `TreeMap,
-    `Edge,
-    `Graph,
-    `Invariant.EdgeSize,
-    `Invariant.NeighborhoodMap,
-    `Invariant.DegreeMap,
-    `Invariant.ConnectedComponents,
-    `JsonDecoder
---    `OneGraph,
---    `Query,
---    `Tactic,
---    `Walk,
---    `Bipartite,
-  ]
+lean_lib HoG

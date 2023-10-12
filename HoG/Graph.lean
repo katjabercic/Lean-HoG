@@ -1,7 +1,7 @@
-import OrdEq
-import TreeSet
-import TreeMap
-import Edge
+import HoG.OrdEq
+import HoG.TreeSet
+import HoG.TreeMap
+import HoG.Edge
 
 namespace HoG
 
@@ -35,7 +35,7 @@ def Graph.edgeSize (G : Graph) := Fintype.card G.edge
 -- the vertex adjacency relation
 def Graph.badjacent {G : Graph} : G.vertex → G.vertex → Bool :=
   fun u v =>
-    lt_by_cases u v
+    ltByCases u v
       (fun u_lt_v => G.edgeTree.mem (Edge.mk v (Fin.mk u u_lt_v)))
       (fun _ => false)
       (fun v_lt_u => G.edgeTree.mem (Edge.mk u (Fin.mk v v_lt_u)))
@@ -51,30 +51,30 @@ instance (G : Graph) : DecidableRel G.adjacent := by
 -- There is an edge between adjacent vertices
 def Graph.adjacentEdge {G : Graph} {u v : G.vertex} :
   G.adjacent u v → { e : G.edge // (G.fst e = u ∧ G.snd e = v) ∨ (G.fst e = v ∧ G.snd e = u) } := by
-  apply lt_by_cases u v <;> intro H <;> simp [H, not_lt_of_lt, adjacent, badjacent, lt_by_cases]
+  apply ltByCases u v <;> intro H <;> simp [H, not_lt_of_lt, adjacent, badjacent, ltByCases]
   · intro e_mem
-    let e : G.edge := ⟨ Edge.mk_lt H, (by simp [e_mem, Edge.mk_lt]) ⟩ 
+    let e : G.edge := ⟨ Edge.mk_lt H, (by simp [e_mem, Edge.mk_lt]) ⟩
     exists e
     simp [Edge.mk_lt]
   · intro ; contradiction
   · intro e_mem
-    let e : G.edge := ⟨ Edge.mk_lt H, (by simp [e_mem, Edge.mk_lt]) ⟩ 
+    let e : G.edge := ⟨ Edge.mk_lt H, (by simp [e_mem, Edge.mk_lt]) ⟩
     exists e
     simp [Edge.mk_lt]
 
 lemma Graph.irreflexiveNeighbor (G : Graph) :
-  ∀ (v : G.vertex), ¬ adjacent v v := by simp [lt_by_cases, adjacent, badjacent]
+  ∀ (v : G.vertex), ¬ adjacent v v := by simp [ltByCases, adjacent, badjacent]
 
 lemma Graph.symmetricNeighbor (G : Graph) :
   ∀ (u v : G.vertex), adjacent u v → adjacent v u := by
     intros u v
-    apply lt_by_cases u v <;> (intro h ; simp [lt_by_cases, not_lt_of_lt, h, adjacent, badjacent])
+    apply ltByCases u v <;> (intro h ; simp [ltByCases, not_lt_of_lt, h, adjacent, badjacent])
 
 -- checking that a symetric relations holds for all pairs of adjacent vertices
 -- reduces to checking it for all edges
 lemma Graph.adjacentAll (G : Graph)
   (p : G.vertex → G.vertex → Prop) [DecidableRel p] :
-  G.edgeTree.all (fun e => p (G.fst e) (G.snd e)) → ∀ u v, G.adjacent u v → p u v ∨ p v u := by 
+  G.edgeTree.all (fun e => p (G.fst e) (G.snd e)) → ∀ u v, G.adjacent u v → p u v ∨ p v u := by
   intros eA u v uv
   cases G.adjacentEdge uv with
   | mk e r =>
