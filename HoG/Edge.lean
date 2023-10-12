@@ -1,8 +1,6 @@
-import Mathlib.Init.Algebra.Order
-import Mathlib.Tactic.Basic
-import TreeSet
-import OrdEq
-import Mathlib.Data.Sigma.Order
+import Mathlib
+import HoG.TreeSet
+import HoG.OrdEq
 
 namespace HoG
 

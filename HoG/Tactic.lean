@@ -1,4 +1,4 @@
-import Mathlib.Init.Data.Bool.Lemmas
+import Mathlib
 
 namespace LeanHog.Tactic
 

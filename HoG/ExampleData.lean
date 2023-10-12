@@ -1,7 +1,7 @@
-import Graph
-import EdgeSize
+import HoG.Graph
+import HoG.Invariant.EdgeSize
 
-namespace ExampleData
+namespace HoG
 
 def piglet1 : Graph :=
   { vertexSize := 3,
@@ -10,7 +10,7 @@ def piglet1 : Graph :=
 instance : EdgeSize piglet1 where val := 3
 
 example : piglet1.edgeSize + 2 = 5 := by
-  simp [piglet1.edgeSize_is] 
+  simp [piglet1.edgeSize_is]
 
 
-end ExampleData
+end HoG

@@ -1,5 +1,6 @@
-import BoundedOrder
-import OrdEq
+import Mathlib
+import HoG.BoundedOrder
+import HoG.OrdEq
 
 namespace HoG
 

@@ -1,5 +1,5 @@
-import TreeSet
-import Graph
+import HoG.TreeSet
+import HoG.Graph
 
 namespace HoG
 

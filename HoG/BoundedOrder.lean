@@ -1,12 +1,6 @@
-import Mathlib.Init.Algebra.Order
-import Mathlib.Tactic.LibrarySearch
-import Mathlib.Tactic.Tauto
-import Mathlib.Mathport.Syntax
-import Mathlib.Tactic.Basic
-import Mathlib.Logic.Basic
-import Mathlib.Order.Monotone.Basic
-import Init.Core
-import Init.Prelude
+import Mathlib
+
+namespace HoG
 
 -- An order extended with a bottom and a top element
 
@@ -121,7 +115,9 @@ instance Bounded_Preorder (α : Type) [Preorder α] : Preorder (Bounded α) wher
   le_refl := by intro a; cases a <;> trivial
   le_trans := by intros a b c; apply Bounded.le_trans
   lt_iff_le_not_le := by
-    intros a b; cases a <;> repeat (first | cases b | tauto | apply lt_iff_le_not_le)
+    intros a b;
+    cases a <;> cases b <;> simp
+    · apply lt_iff_le_not_le
 
 instance Bounded_PartialOrder (α : Type) [PartialOrder α]: PartialOrder (Bounded α) where
   le_antisymm := by
@@ -140,20 +136,20 @@ instance Bounded_LinearOrder (α : Type) [la : LinearOrder α] [de : DecidableEq
     cases a <;> cases b <;> simp [LE.le] ; first | apply isTrue True.intro | apply isFalse id | skip
     · apply la.le_total
 
-  decidable_le := by
+  decidableLE := by
     intros a b
     cases a <;> cases b <;> simp [LE.le] <;> first | apply isTrue True.intro | apply isFalse id | skip
-    · apply la.decidable_le
+    · apply la.decidableLE
 
-  decidable_eq := by
+  decidableEq := by
     intros a b
     cases a <;> cases b <;> simp <;> first | apply isTrue True.intro | apply isFalse id | skip
     · apply de
 
-  decidable_lt := by
+  decidableLT := by
     intros a b
     cases a <;> cases b <;> simp [LT.lt] <;> first | apply isTrue True.intro | apply isFalse id | skip
-    · apply la.decidable_lt
+    · apply la.decidableLT
 
   max_def := by
     intros a b
@@ -183,4 +179,4 @@ def Bounded.liftFunction {α β : Type} : (α → β) → (Bounded α → Bounde
     | element y => Bounded.extendFunction f y
     | top => top
 
-macro "↑↑" f:term : term => `(Bounded.liftFunction $f)
+end HoG

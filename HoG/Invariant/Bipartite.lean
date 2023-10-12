@@ -1,13 +1,8 @@
-import Mathlib.Algebra.Parity
+import Mathlib
+import HoG.Graph
+import HoG.Walk
 
-import Graph
-import Walk
-
-namespace Bipartite
-
-open TreeSet
-open TreeMap
-
+namespace HoG
 
 -- A bipartite graph is a graph together with:
 -- · a subset of edges
@@ -75,4 +70,4 @@ class Bipartite (G : SimpleIrreflexiveGraph) : Type where
   value : Bool
   correct : value ↔ IsBipartite G
 
-end Bipartite
+end HoG
