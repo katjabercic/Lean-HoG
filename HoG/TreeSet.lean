@@ -10,6 +10,7 @@ inductive STree .{u} (α : Type u) : Type u
   | empty : STree α
   | leaf : α → STree α
   | node : α → STree α → STree α → STree α
+deriving Inhabited
 
 open STree
 
@@ -52,6 +53,12 @@ def STree.mem {α : Type} [Ord α] (x : α) : STree α → Bool
 @[simp, reducible]
 instance STree.hasMem {α : Type} [Ord α] : Membership α (STree α) where
   mem := fun x t => t.mem x
+
+instance {α : Type} [Ord α] (S : STree α) (x : α)  : Decidable (x ∈ S) :=
+  if h : S.mem x then
+    isTrue h
+  else
+    isFalse h
 
 @[simp]
 def STree.sizeBounded {α : Type} [Ord α] (low high : Bounded α) : STree α → Nat

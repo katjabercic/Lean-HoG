@@ -9,6 +9,7 @@ structure Graph : Type :=
   vertexSize : Nat
   edgeTree : STree (Edge vertexSize)
   -- edgeCorrect : edgeTree.correct := by rfl
+deriving Inhabited
 
 -- the type of graph vertices
 @[simp, reducible]

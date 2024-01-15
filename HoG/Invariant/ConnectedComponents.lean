@@ -6,7 +6,7 @@ namespace HoG
 def Graph.connected {G : Graph} : G.vertex → G.vertex → Prop := EqvGen G.adjacent
 
 -- Neighbors are connected
-lemma Graph.adjacentConected {G : Graph} {u v : G.vertex} : G.adjacent u v → G.connected u v :=
+lemma Graph.adjacentConnected {G : Graph} {u v : G.vertex} : G.adjacent u v → G.connected u v :=
   EqvGen.rel u v
 
 -- Equal vertices are connected
@@ -21,7 +21,7 @@ lemma Graph.connectedTrans {G : Graph} (u v w : G.vertex) :
   G.connected u v → G.connected v w → G.connected u w :=
   EqvGen.trans u v w
 
-lemma Graph.adjacentConnected {G : Graph} (u v w : G.vertex) :
+lemma Graph.adjacentConnectedConnected {G : Graph} (u v w : G.vertex) :
   G.adjacent u v → G.connected v w → G.connected u w := by
   intros uv vw
   apply connectedTrans (v := v)
@@ -140,7 +140,7 @@ lemma connectedToRoot (G : Graph) [C : ComponentsCertificate G] :
   · apply G.connectedEq
     apply C.distZeroRoot v
     assumption
-  · apply G.adjacentConnected v (C.next v) (C.rootOf v)
+  · apply G.adjacentConnectedConnected v (C.next v) (C.rootOf v)
     · apply C.nextAdjacent ; assumption
     · rw [Eq.symm (C.rootOfNext v)]
       apply ih
