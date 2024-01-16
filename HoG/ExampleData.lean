@@ -17,6 +17,6 @@ instance : EdgeSize piglet1 where
 
 instance : Solver IO := Solver.Impl.DimacsCommand "/home/jure/source-control/kissat/build/kissat"
 
-#eval (solve piglet1)
+#eval (findHamiltonianCycle piglet1)
 
 end HoG

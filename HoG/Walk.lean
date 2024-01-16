@@ -26,7 +26,7 @@ def Walk.toString {g : Graph} {s t : g.vertex} : Walk g s t → String
 instance walkToString {g : Graph} {s t : g.vertex} : ToString (Walk g s t) where
   toString := fun w => w.toString
 
-instance {g : Graph} {u v : g.vertex} : Repr (Walk g u v) where
+instance reprWalk {g : Graph} {u v : g.vertex} : Repr (Walk g u v) where
   reprPrec w _ := w.toString
 
 def Walk.isNontrivial {g : Graph} {s t : g.vertex} : Walk g s t → Prop
@@ -126,6 +126,9 @@ theorem strongInduction
 
 def ClosedWalk (g : Graph) (u : g.vertex) : Type := Walk g u u
 
+instance {g : Graph} {u : g.vertex} : Repr (ClosedWalk g u) where
+  reprPrec c n := reprWalk.reprPrec c n
+
 def ClosedWalk.length {g : Graph} {u : g.vertex} (w : ClosedWalk g u) : Nat :=
   Walk.length w
 
@@ -151,11 +154,11 @@ def Walk.isPath {g : Graph} {u v : g.vertex} : Walk g u v → Bool :=
 
 class Path (g : Graph) (u v : g.vertex) where
   walk : Walk g u v
-  is_path : walk.isPath = true
+  isPath : walk.isPath = true
 
 instance trivialPath {g : Graph} (u : g.vertex) : Path g u u where
   walk := Walk.trivial u
-  is_path := by simp [List.all_distinct]
+  isPath := by simp [List.all_distinct]
 
 instance {g : Graph} {u v : g.vertex} : Repr (Path g u v) where
   reprPrec p n := reprPrec p.walk n
@@ -163,8 +166,22 @@ instance {g : Graph} {u v : g.vertex} : Repr (Path g u v) where
 instance {g : Graph} : Repr ((u v : g.vertex) ×' Path g u v) where
   reprPrec p n := reprPrec p.2.2 n
 
+@[simp]
+def ClosedWalk.isCycle {g : Graph} {u : g.vertex} : ClosedWalk g u → Bool := fun cw =>
+  let vertices := Walk.vertices cw
+  match vertices with
+  | [] => true
+  | _ :: vs =>
+    List.all_distinct vs
+
 class Cycle (g : Graph) (u : g.vertex) where
   cycle : ClosedWalk g u
-  is_path : Walk.isPath cycle
+  isCycle : ClosedWalk.isCycle cycle
+
+instance {g : Graph} {u : g.vertex} : Repr (Cycle g u) where
+  reprPrec p n := reprPrec p.cycle n
+
+instance {g : Graph} : Repr ((u : g.vertex) ×' Cycle g u) where
+  reprPrec p n := reprPrec p.2 n
 
 end HoG
