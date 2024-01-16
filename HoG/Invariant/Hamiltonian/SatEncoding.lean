@@ -4,12 +4,16 @@ import HoG.Tactic
 import HoG.Graph
 import HoG.Walk
 import HoG.Invariant.ConnectedComponents
+import HoG.Invariant.Hamiltonian.Definition
 import LeanSAT
 
 namespace HoG
 
 open LeanSAT
 
+/--
+  For a given graph `g` encode finding a Hamiltonian path as a SAT problem.
+-/
 def Graph.hamiltonianPathEncodeToSAT (g : Graph) :
   Encode.EncCNF (Fin g.vertexSize → Fin g.vertexSize → IVar) :=
   open Encode.EncCNF in do
@@ -58,6 +62,9 @@ def Graph.hamiltonianPathEncodeToSAT (g : Graph) :
     have h' : g.vertexSize = 0 := by simp_all
     return (by rw [h']; intro x; have := Fin.isLt x; contradiction)
 
+/--
+  For a given graph `g` encode finding a Hamiltonian cycle as a SAT problem.
+-/
 def Graph.hamiltonianCycleEncodeToSAT (g : Graph) :
   Encode.EncCNF (Fin g.vertexSize → Fin (g.vertexSize + 1) → IVar) :=
   open Encode.EncCNF in do
@@ -111,6 +118,10 @@ def Graph.hamiltonianCycleEncodeToSAT (g : Graph) :
     have h' : g.vertexSize = 0 := by simp_all
     return (by rw [h']; intro x; have := Fin.isLt x; contradiction)
 
+/--
+  Given a list of vertices of a graph, try to construct a `Path` in the graph from them.
+  If the construction fails, return `none`.
+-/
 def buildPath {g : Graph} : Option (List (g.vertex)) → Option ((u v : g.vertex) ×' Path g u v)
   | none => none
   | some [] => none
@@ -130,6 +141,10 @@ def buildPath {g : Graph} : Option (List (g.vertex)) → Option ((u v : g.vertex
         none
     fold v v (trivialPath v) vs
 
+/--
+  Given a list of vertices of a graph, try to construct a `Cycle` in the graph from them.
+  If the construction fails, return `none`.
+-/
 def buildCycle {g : Graph} : Option (List (g.vertex)) → Option ((u : g.vertex) ×' Cycle g u)
   | none => none
   | some [] => none
@@ -169,7 +184,12 @@ def buildCycle {g : Graph} : Option (List (g.vertex)) → Option ((u : g.vertex)
       else
         none
 
-def findHamiltonianPath [Solver IO] (g : Graph) : IO (Option ((u v : g.vertex) ×' Path g u v)) := do
+/--
+  Given a graph `g`, encode the problem of finding a Hamiltonian path as a SAT
+  problem and then from the solution construct a `HamiltonianPath` in the graph.
+-/
+def findHamiltonianPath [Solver IO] (g : Graph) :
+  IO (Option ((u v : g.vertex) ×' HamiltonianPath g u v)) := do
   let (vertexAtLoc, enc) := Encode.EncCNF.new! (g.hamiltonianPathEncodeToSAT)
   match ← Solver.solve enc.toFormula with
   | .error =>
@@ -189,11 +209,23 @@ def findHamiltonianPath [Solver IO] (g : Graph) : IO (Option ((u v : g.vertex) �
             path := path.set! j i
           | some false =>
             path := path
-      return (buildPath (some path.toList))
+      let p := (buildPath (some path.toList))
+      match p with
+      | none => return none
+      | some ⟨u,v,p⟩ =>
+        if h' : p.isHamiltonian then
+          return some ⟨u,v,p,h'⟩
+        else
+          return none
     else
-      return (buildPath (some []))
+      return none
 
-def findHamiltonianCycle [Solver IO] (g : Graph) : IO (Option ((u : g.vertex) ×' Cycle g u)) := do
+/--
+  Given a graph `g`, encode the problem of finding a Hamiltonian cycle as a SAT
+  problem and then from the solution construct a `HamiltonianCycle` in the graph.
+-/
+def findHamiltonianCycle [Solver IO] (g : Graph) :
+  IO (Option ((u : g.vertex) ×' HamiltonianCycle g u)) := do
   let (vertexAtLoc, enc) := Encode.EncCNF.new! (g.hamiltonianCycleEncodeToSAT)
   match ← Solver.solve enc.toFormula with
   | .error =>
@@ -214,8 +246,15 @@ def findHamiltonianCycle [Solver IO] (g : Graph) : IO (Option ((u : g.vertex) ×
             path := path.set! j i
           | some false =>
             path := path
-      return (buildCycle (some path.toList))
+      let c := (buildCycle (some path.toList))
+      match c with
+      | none => return none
+      | some ⟨u,c⟩ =>
+        if h' : c.isHamiltonian then
+          return some ⟨u, c, h'⟩
+        else
+          return none
     else
-      return (buildCycle (some []))
+      return none
 
 end HoG
