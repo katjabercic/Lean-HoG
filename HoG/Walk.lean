@@ -190,7 +190,7 @@ def List.all_distinct {α : Type} [DecidableEq α] : List α → Bool
   | [] => true
   | x :: xs => x ∉ xs && xs.all_distinct
 
-lemma all_distinct_nodup {α : Type} [DecidableEq α] (l : List α) :
+lemma all_distinct_nodup {α : Type} [DecidableEq α] {l : List α} :
   l.all_distinct = true ↔ l.Nodup := by
   induction' l
   repeat simp_all
@@ -218,7 +218,7 @@ lemma get_implies_get? {α : Type} (l : List α) (i j : Fin l.length) :
 -/
 lemma all_distinct_ne_idx {α : Type} [DecidableEq α] (l : List α) (d : l.all_distinct = true) :
   (∀ (i j : Fin l.length), l.get i = l.get j → i = j) := by
-  have d' : l.Nodup := Iff.mp (all_distinct_nodup l) d
+  have d' : l.Nodup := Iff.mp all_distinct_nodup d
   intros i j h
   let h' : l.get? i = l.get? j := get_implies_get? l i j h
   have := List.get?_inj i.2 d' h'
@@ -251,24 +251,35 @@ def vertices {g : Graph} {u v : g.vertex} : Path g u v → List g.vertex := fun 
   Walk.vertices p.walk
 
 @[simp]
-def verticesMultiset {g : Graph} {u v : g.vertex} : Path g u v → Multiset g.vertex := fun p =>
+def vertexSet {g : Graph} {u v : g.vertex} : Path g u v → Set g.vertex := fun p =>
+  { x : g.vertex | x ∈ p.walk.vertices }
+
+@[simp]
+lemma vertexSet_finite {g : Graph} {u v : g.vertex} (p : Path g u v) :
+  Set.Finite p.vertexSet :=
+  List.finite_toSet p.vertices
+
+@[simp]
+def vertexMultiset {g : Graph} {u v : g.vertex} : Path g u v → Multiset g.vertex := fun p =>
   Walk.verticesMultiset p.walk
 
-instance path_vertices_fintype {g : Graph} {u v : g.vertex} {w : Path g u v} : Fintype w.verticesMultiset := by
+@[simp]
+lemma vertexMultiset_nodup {g : Graph} {u v : g.vertex} {p : Path g u v} :
+  Multiset.Nodup p.vertexMultiset := by
+  apply Iff.mp Multiset.coe_nodup
+  apply Iff.mp all_distinct_nodup
+  apply p.isPath
+
+@[simp]
+def vertexFinset {g : Graph} {u v : g.vertex} : Path g u v → Finset g.vertex := fun p =>
+  ⟨p.vertexMultiset, vertexMultiset_nodup⟩
+
+instance path_vertices_fintype {g : Graph} {u v : g.vertex} {w : Path g u v} : Fintype w.vertexMultiset := by
   infer_instance
 
-lemma path_vertices_length_as_multiset {g : Graph} {u v : g.vertex} (p : Path g u v) :
+lemma path_vertices_length_as_multiset {g : Graph} {u v : g.vertex} {p : Path g u v} :
   p.vertices.length = Fintype.card (Multiset.ofList p.vertices) := by
   simp
-
-lemma vertices_len_is_subtype_card {g : Graph} {u v : g.vertex} (p : Path g u v) :
-  p.vertices.length = Fintype.card { x : g.vertex // x ∈ p.vertices } := by
-  induction' p' : p.walk with _ a b c conn walk
-  · simp [p']
-  · simp [p']
-    sorry
-  sorry
-
 
 @[simp]
 def length {g : Graph} {u v : g.vertex} : Path g u v → Nat
@@ -288,18 +299,28 @@ lemma subpathIsPath_right {g : Graph} {u v w : g.vertex} (p : Path g u w) (conn_
   have walk_is_path : walk.isPath = true := by apply p.isPath
   aesop
 
+lemma vertexMultiset_card_is_vertices_length {g : Graph} {u v : g.vertex} {p : Path g u v} :
+  Multiset.card p.vertexMultiset = p.vertices.length := by
+  simp
+  rfl
+
+lemma vertexFinset_card_is_vertices_length {g : Graph} {u v : g.vertex} {p : Path g u v} :
+  p.vertices.length = p.vertexFinset.card := by
+  simp [vertexMultiset_card_is_vertices_length]
+  rfl
+
+lemma path_length_is_num_vertices {g : Graph} {u v : g.vertex} {p : Path g u v} :
+  p.length + 1 = p.vertexFinset.card := by
+  simp [vertexFinset_card_is_vertices_length]
+  rfl
+
 lemma path_length_as_vertices {g : Graph} {u v : g.vertex} (p : Path g u v) :
   p.length + 1 = p.vertices.length := by
   simp
 
 lemma path_length_as_vertices_multiset {g : Graph} {u v : g.vertex} (p : Path g u v) :
-  p.length + 1 = Fintype.card p.verticesMultiset := by
+  p.length + 1 = Fintype.card p.vertexMultiset := by
   aesop
-
-lemma path_length_as_subtype {g : Graph} {u v : g.vertex} (p : Path g u v) :
-  p.length + 1 = Fintype.card { x : g.vertex // x ∈ p.vertices } := by
-  rw [path_length_as_vertices]
-  rw [vertices_len_is_subtype_card]
 
 lemma path_length_as_fintype_card {g : Graph} {u v : g.vertex} (p : Path g u v) :
   p.length + 1 = Fintype.card (Fin (List.length (vertices p))) := by
@@ -318,6 +339,13 @@ theorem maxPathLength {g : Graph} {u v : g.vertex} (p : Path g u v) :
   | ⟨i, j, i_neq_j, i_get_eq_j_get⟩ =>
     have i_eq_j := by apply all_distinct_ne_idx p.vertices p.isPath i j i_get_eq_j_get
     contradiction
+
+-- Same theorem just different proof
+theorem maxPathLength' {g : Graph} {u v : g.vertex} (p : Path g u v) :
+  p.length + 1 <= Finset.card p.vertexFinset := by
+  by_contra h
+  rw [not_le, path_length_is_num_vertices] at h
+  simp_all only [lt_self_iff_false]
 
 end Path
 
