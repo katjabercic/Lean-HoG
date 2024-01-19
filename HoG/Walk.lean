@@ -1,3 +1,4 @@
+import Mathlib.Tactic.LibrarySearch
 import HoG.Graph
 import HoG.Invariant.ConnectedComponents
 import HoG.TreeSet
@@ -65,6 +66,8 @@ def Walk.concat {g : Graph} {s t u : g.vertex} : Walk g s t → Walk g t u → W
 def Walk.edgeWalk {g : Graph} {s t : g.vertex} (e : g.connected s t) : Walk g s t :=
   Walk.left e (Walk.trivial t)
 
+-- Definition from https://mathworld.wolfram.com/GraphPath.html
+@[simp]
 def Walk.length {g : Graph} {s t : g.vertex} : Walk g s t → ℕ
   | .trivial s => 0
   | .left _ p' => length p' + 1
@@ -132,19 +135,94 @@ instance {g : Graph} {u : g.vertex} : Repr (ClosedWalk g u) where
 def ClosedWalk.length {g : Graph} {u : g.vertex} (w : ClosedWalk g u) : Nat :=
   Walk.length w
 
+@[simp]
 def Walk.vertices {g : Graph} {u v : g.vertex} : Walk g u v -> List g.vertex
   | .trivial v => [v]
   | .left conn_ut walk_tv => u :: walk_tv.vertices
   | .right walk_ut conn_tv => v :: walk_ut.vertices
 
+def Walk.verticesMultiset {g : Graph} {u v : g.vertex} :
+  Walk g u v -> Multiset g.vertex := fun w => Multiset.ofList w.vertices
+
+instance walk_vertices_fintype {g : Graph} {u v : g.vertex} {w : Walk g u v} : Fintype w.verticesMultiset := by
+  infer_instance
+
+-- We need to provide the explicit equality of `u = v` here. Is there a nicer way to do this?
+@[simp]
+lemma walk_vertices_trivial {g : Graph} {u v : g.vertex} (p : Walk g u v) (eq : u = v)
+  (p_is_trivial : eq ▸ p = Walk.trivial u) :
+  p.vertices = [u] := by
+  aesop
+
+@[simp]
+lemma walk_vertices_sublist_left {g : Graph} {u v w : g.vertex} (p : Walk g u w) (conn_u_v : g.connected u v)
+  (q : Walk g v w) (p_is_left : p = Walk.left conn_u_v q) : p.vertices = u :: q.vertices := by
+  aesop -- Can't just use simp, as it doesn't apply induction
+
+@[simp]
+lemma walk_vertices_sublist_right {g : Graph} {u v w : g.vertex} (p : Walk g u w) (conn_v_w : g.connected v w)
+  (q : Walk g u v) (p_is_right : p = Walk.right q conn_v_w) : p.vertices = w :: q.vertices := by
+  aesop  -- Can't just use simp, as it doesn't apply induction
+
+lemma walk_vertices_length_as_multiset {g : Graph} {u v : g.vertex} (w : Walk g u v) :
+  w.vertices.length = Fintype.card (Multiset.ofList w.vertices) := by
+  simp
+
+@[simp]
+lemma walkLengthAsVertices {g : Graph} {u v : g.vertex} (w : Walk g u v) :
+  w.length + 1 = w.vertices.length := by
+  induction' w
+  · simp
+  · simp; assumption -- just apply induction hypothesis
+  · simp; assumption -- just apply induction hypothesis
+
+@[simp]
 def ClosedWalk.vertices {g : Graph} {u : g.vertex} : ClosedWalk g u -> List g.vertex :=
   Walk.vertices
 
+instance {g : Graph} {u : g.vertex} {w : ClosedWalk g u} : Fintype w.verticesMultiset := by
+  infer_instance
+
 end HoG
 
-def List.all_distinct {α : Type} [BEq α] : List α → Bool
+@[simp]
+def List.all_distinct {α : Type} [DecidableEq α] : List α → Bool
   | [] => true
-  | x :: xs => !xs.contains x && xs.all_distinct
+  | x :: xs => x ∉ xs && xs.all_distinct
+
+lemma all_distinct_nodup {α : Type} [DecidableEq α] (l : List α) :
+  l.all_distinct = true ↔ l.Nodup := by
+  induction' l
+  repeat simp_all
+
+lemma all_distinct_dedup {α : Type} [DecidableEq α] (l : List α) :
+  l.all_distinct = true ↔ List.dedup l = l := by
+  simp only [all_distinct_nodup, List.dedup_eq_self]
+
+lemma index_of_lt_length_of_exists {α : Type} [DecidableEq α] (xs : List α)
+  (_ : xs.all_distinct) (x : α) (h : x ∈ xs) :
+  xs.indexOf x < xs.length := by
+  apply List.findIdx_lt_length_of_exists
+  apply Exists.intro x
+  apply And.intro
+  exact h
+  simp
+
+-- TODO: Surely we can just apply the theorem we used to prove this instead of a separate lemma
+lemma get_implies_get? {α : Type} (l : List α) (i j : Fin l.length) :
+  (l.get i) = (l.get j) → l.get? i = l.get? j := by
+  simp [List.get?_eq_get]
+
+/--
+  Reformulation of injectivity of get for a list with the `all_distinct` property.
+-/
+lemma all_distinct_ne_idx {α : Type} [DecidableEq α] (l : List α) (d : l.all_distinct = true) :
+  (∀ (i j : Fin l.length), l.get i = l.get j → i = j) := by
+  have d' : l.Nodup := Iff.mp (all_distinct_nodup l) d
+  intros i j h
+  let h' : l.get? i = l.get? j := get_implies_get? l i j h
+  have := List.get?_inj i.2 d' h'
+  apply Fin.ext this -- have to apply Fin extensionality
 
 namespace HoG
 
@@ -156,6 +234,8 @@ class Path (g : Graph) (u v : g.vertex) where
   walk : Walk g u v
   isPath : walk.isPath = true
 
+namespace Path
+
 instance trivialPath {g : Graph} (u : g.vertex) : Path g u u where
   walk := Walk.trivial u
   isPath := by simp [List.all_distinct]
@@ -165,6 +245,81 @@ instance {g : Graph} {u v : g.vertex} : Repr (Path g u v) where
 
 instance {g : Graph} : Repr ((u v : g.vertex) ×' Path g u v) where
   reprPrec p n := reprPrec p.2.2 n
+
+@[simp]
+def vertices {g : Graph} {u v : g.vertex} : Path g u v → List g.vertex := fun p =>
+  Walk.vertices p.walk
+
+@[simp]
+def verticesMultiset {g : Graph} {u v : g.vertex} : Path g u v → Multiset g.vertex := fun p =>
+  Walk.verticesMultiset p.walk
+
+instance path_vertices_fintype {g : Graph} {u v : g.vertex} {w : Path g u v} : Fintype w.verticesMultiset := by
+  infer_instance
+
+lemma path_vertices_length_as_multiset {g : Graph} {u v : g.vertex} (p : Path g u v) :
+  p.vertices.length = Fintype.card (Multiset.ofList p.vertices) := by
+  simp
+
+lemma vertices_len_is_subtype_card {g : Graph} {u v : g.vertex} (p : Path g u v) :
+  p.vertices.length = Fintype.card { x : g.vertex // x ∈ p.vertices } := by
+  induction' p' : p.walk with _ a b c conn walk
+  · simp [p']
+  · simp [p']
+    sorry
+  sorry
+
+
+@[simp]
+def length {g : Graph} {u v : g.vertex} : Path g u v → Nat
+  | ⟨w, _⟩ => w.length
+
+@[simp]
+lemma subpathIsPath_left {g : Graph} {u v w : g.vertex} (p : Path g u w) (conn_u_v : g.connected u v)
+  (q : Walk g v w) (p_is_left : p.walk = Walk.left conn_u_v q) : q.isPath = true := by
+  simp
+  have walk_is_path : walk.isPath = true := by apply p.isPath
+  aesop
+
+@[simp]
+lemma subpathIsPath_right {g : Graph} {u v w : g.vertex} (p : Path g u w) (conn_v_w : g.connected v w)
+  (q : Walk g u v) (p_is_right : p.walk = Walk.right q conn_v_w) : q.isPath = true := by
+  simp
+  have walk_is_path : walk.isPath = true := by apply p.isPath
+  aesop
+
+lemma path_length_as_vertices {g : Graph} {u v : g.vertex} (p : Path g u v) :
+  p.length + 1 = p.vertices.length := by
+  simp
+
+lemma path_length_as_vertices_multiset {g : Graph} {u v : g.vertex} (p : Path g u v) :
+  p.length + 1 = Fintype.card p.verticesMultiset := by
+  aesop
+
+lemma path_length_as_subtype {g : Graph} {u v : g.vertex} (p : Path g u v) :
+  p.length + 1 = Fintype.card { x : g.vertex // x ∈ p.vertices } := by
+  rw [path_length_as_vertices]
+  rw [vertices_len_is_subtype_card]
+
+lemma path_length_as_fintype_card {g : Graph} {u v : g.vertex} (p : Path g u v) :
+  p.length + 1 = Fintype.card (Fin (List.length (vertices p))) := by
+  simp_all only [length, walkLengthAsVertices, Graph.vertex, Graph.connected, vertices, Fintype.card_fin]
+
+/-- The length of a path in a graph is at most the number of vertices -/
+theorem maxPathLength {g : Graph} {u v : g.vertex} (p : Path g u v) :
+  p.length + 1 <= Fintype.card g.vertex := by
+  by_contra h
+  -- We want to apply the pigeonhole principle to show we must have a vertex appearing twice on the path
+  -- So we're going to use `Fintype.exists_ne_map_eq_of_card_lt`
+  -- Before that we have to rewrite h into a form we can use
+  rw [not_le, path_length_as_fintype_card] at h
+  have := Fintype.exists_ne_map_eq_of_card_lt p.vertices.get h
+  match this with
+  | ⟨i, j, i_neq_j, i_get_eq_j_get⟩ =>
+    have i_eq_j := by apply all_distinct_ne_idx p.vertices p.isPath i j i_get_eq_j_get
+    contradiction
+
+end Path
 
 @[simp]
 def ClosedWalk.isCycle {g : Graph} {u : g.vertex} : ClosedWalk g u → Bool := fun cw =>

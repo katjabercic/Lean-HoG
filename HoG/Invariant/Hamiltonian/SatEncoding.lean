@@ -139,7 +139,7 @@ def buildPath {g : Graph} : Option (List (g.vertex)) → Option ((u v : g.vertex
           none
       else
         none
-    fold v v (trivialPath v) vs
+    fold v v (Path.trivialPath v) vs
 
 /--
   Given a list of vertices of a graph, try to construct a `Cycle` in the graph from them.
@@ -165,7 +165,7 @@ def buildCycle {g : Graph} : Option (List (g.vertex)) → Option ((u : g.vertex)
           none
       else
         none
-    let path := fold v₂ v₂ (trivialPath v₂) vs
+    let path := fold v₂ v₂ (Path.trivialPath v₂) vs
     match path with
     | none => none
     | some ⟨u,v,p⟩ =>

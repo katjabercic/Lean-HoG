@@ -15,6 +15,9 @@ deriving Inhabited
 @[simp, reducible]
 def Graph.vertex (G : Graph) := Fin G.vertexSize
 
+lemma Graph.vertexSizeCard {g : Graph} : g.vertexSize = Fintype.card g.vertex := by
+  simp
+
 -- the underlying type of edges (pairs (i,j) such that j < i < G.vertexSize)
 @[simp, reducible]
 def Graph.edgeType (G : Graph) := Edge G.vertexSize
