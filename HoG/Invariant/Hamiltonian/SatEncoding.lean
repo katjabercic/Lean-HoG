@@ -33,14 +33,14 @@ def Graph.hamiltonianPathEncodeToSAT (g : Graph) :
     for i in List.fins n do
       let vars := (List.fins n).map (fun j => vertexAtLoc j i) |>.toArray
       addClause (vars.map LitVar.mkPos)
-    -- ⋀_i ⋀_i≠k (¬xᵢ,ⱼ ∨ ¬xᵢ,ₖ) ↔ no vertex appears on the path more than once
+    -- ⋀_i ⋀_j≠k (¬xᵢ,ⱼ ∨ ¬xᵢ,ₖ) ↔ no vertex appears on the path more than once
     for i in List.fins n do
       for j in List.fins n do
         for k in List.fins n do
           if j ≠ k then
             let clause := #[(vertexAtLoc i j), (vertexAtLoc i k)].map LitVar.mkNeg
             addClause clause
-    -- ⋀_i ⋀_i≠k (¬xⱼ,ᵢ ∨ ¬xₖ,ᵢ) ↔ no distinct vertices occupy the same position on the path
+    -- ⋀_i ⋀_j≠k (¬xⱼ,ᵢ ∨ ¬xₖ,ᵢ) ↔ no distinct vertices occupy the same position on the path
     for i in List.fins n do
       for j in List.fins n do
         for k in List.fins n do
@@ -89,7 +89,7 @@ def Graph.hamiltonianCycleEncodeToSAT (g : Graph) :
     for i in List.fins n do
       let vars := (List.fins n).map (fun j => vertexAtLoc j i) |>.toArray
       addClause (vars.map LitVar.mkPos)
-    -- ⋀_i ⋀_i≠k (¬xᵢ,ⱼ ∨ ¬xᵢ,ₖ) ↔ no vertex appears on the path more than once
+    -- ⋀_i ⋀_j≠k (¬xᵢ,ⱼ ∨ ¬xᵢ,ₖ) ↔ no vertex appears on the path more than once
     -- except vertex 0 on the first and last place
     for i in List.fins n do
       for j in List.fins n do
@@ -97,7 +97,7 @@ def Graph.hamiltonianCycleEncodeToSAT (g : Graph) :
           if j ≠ k then
             let clause := #[(vertexAtLoc i j), (vertexAtLoc i k)].map LitVar.mkNeg
             addClause clause
-    -- ⋀_i ⋀_i≠k (¬xⱼ,ᵢ ∨ ¬xₖ,ᵢ) ↔ no distinct vertices occupy the same position on the path
+    -- ⋀_i ⋀_j≠k (¬xⱼ,ᵢ ∨ ¬xₖ,ᵢ) ↔ no distinct vertices occupy the same position on the path
     for i in List.fins (n + 1) do
       for j in List.fins n do
         for k in List.fins n do
@@ -131,8 +131,7 @@ def buildPath {g : Graph} : Option (List (g.vertex)) → Option ((u v : g.vertex
     | [] => some ⟨first, last, p⟩
     | v :: vs =>
       if h : g.adjacent last v then
-        have conn_last_v : g.connected last v := g.adjacentConnected h
-        let w := Walk.right p.walk conn_last_v
+        let w := Walk.right p.walk h
         if h' : Walk.isPath w = true then
           fold first v ⟨w, h'⟩ vs
         else
@@ -157,8 +156,7 @@ def buildCycle {g : Graph} : Option (List (g.vertex)) → Option ((u : g.vertex)
     | [] => some ⟨first, last, p⟩
     | v :: vs =>
       if h : g.adjacent last v then
-        have conn_last_v : g.connected last v := g.adjacentConnected h
-        let w := Walk.right p.walk conn_last_v
+        let w := Walk.right p.walk h
         if h' : Walk.isPath w = true then
           fold first v ⟨w, h'⟩ vs
         else
@@ -172,15 +170,17 @@ def buildCycle {g : Graph} : Option (List (g.vertex)) → Option ((u : g.vertex)
       if h : u = v₂ ∧ v = v₁ ∧ g.adjacent v₁ v₂ then
         have u_eq_v₂ := h.1
         have v_eq_v₁ := h.2.1
-        have conn_v₁_v₂ : g.connected v₁ v₂ := g.adjacentConnected h.2.2
-        let w : ClosedWalk g v₁ := Walk.left conn_v₁_v₂ (u_eq_v₂ ▸ v_eq_v₁ ▸ p.walk)
+        let w : ClosedWalk g v₁ := Walk.left h.2.2 (u_eq_v₂ ▸ v_eq_v₁ ▸ p.walk)
+        if cyc : w.isCycle then
         some ⟨ v₁,
           { cycle := w,
             isCycle := by
               subst u_eq_v₂
               subst v_eq_v₁
-              exact p.isPath
+              exact cyc
           }⟩
+        else
+          none
       else
         none
 
@@ -189,8 +189,9 @@ def buildCycle {g : Graph} : Option (List (g.vertex)) → Option ((u : g.vertex)
   problem and then from the solution construct a `HamiltonianPath` in the graph.
 -/
 def findHamiltonianPath [Solver IO] (g : Graph) :
-  IO (Option ((u v : g.vertex) ×' HamiltonianPath g u v)) := do
+  IO (Option ((u v : g.vertex) ×' HamiltonianPath u v)) := do
   let (vertexAtLoc, enc) := Encode.EncCNF.new! (g.hamiltonianPathEncodeToSAT)
+  -- IO.println s!"{enc}"
   match ← Solver.solve enc.toFormula with
   | .error =>
     IO.println "error"

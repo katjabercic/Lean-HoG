@@ -66,17 +66,16 @@ def Graph.adjacentEdge {G : Graph} {u v : G.vertex} :
     exists e
     simp [Edge.mk_lt]
 
-lemma Graph.irreflexiveNeighbor (G : Graph) :
-  ∀ (v : G.vertex), ¬ adjacent v v := by simp [ltByCases, adjacent, badjacent]
+lemma Graph.irreflexiveNeighbor {G : Graph} {v : G.vertex} : ¬ adjacent v v := by
+  simp [ltByCases, adjacent, badjacent]
 
-lemma Graph.symmetricNeighbor (G : Graph) :
-  ∀ (u v : G.vertex), adjacent u v → adjacent v u := by
-    intros u v
-    apply ltByCases u v <;> (intro h ; simp [ltByCases, not_lt_of_lt, h, adjacent, badjacent])
+lemma Graph.symmetricNeighbor {G : Graph} {u v : G.vertex} :
+  adjacent u v → adjacent v u := by
+  apply ltByCases u v <;> (intro h ; simp [ltByCases, not_lt_of_lt, h, adjacent, badjacent])
 
 -- checking that a symetric relations holds for all pairs of adjacent vertices
 -- reduces to checking it for all edges
-lemma Graph.adjacentAll (G : Graph)
+lemma Graph.adjacentAll {G : Graph}
   (p : G.vertex → G.vertex → Prop) [DecidableRel p] :
   G.edgeTree.all (fun e => p (G.fst e) (G.snd e)) → ∀ u v, G.adjacent u v → p u v ∨ p v u := by
   intros eA u v uv

@@ -11,8 +11,8 @@ namespace HoG
 -- a path is either just an edge or it is constructed from a path and a next edge that fits
 inductive Walk (g : Graph) : g.vertex → g.vertex → Type
   | trivial (v : g.vertex) : Walk g v v
-  | left {s t u : g.vertex} : g.connected s t → Walk g t u →  Walk g s u
-  | right {s t u : g.vertex} : Walk g s t → g.connected t u → Walk g s u
+  | left {s t u : g.vertex} : g.adjacent s t → Walk g t u →  Walk g s u
+  | right {s t u : g.vertex} : Walk g s t → g.adjacent t u → Walk g s u
 
 -- -- We probably want some kind of list-like notation for defining paths, i.e. < v₁, v₂, …, vₙ > or something
 macro walk:term " ~- " "{" u:term "," v:term "}" : term => `(Walk.right _ $u $v (by rfl) $walk)
@@ -42,8 +42,8 @@ def Walk.notInWalk {g : Graph} {u v a b : g.vertex} : Walk g u v → g.adjacent 
 
 def Walk.reverse {g : Graph} {s t : g.vertex} :  Walk g s t → Walk g t s
   | .trivial s => .trivial s
-  | .left e p => Walk.right (reverse p) (g.connectedSymm _ _ e)
-  | .right p e => Walk.left (g.connectedSymm _ _ e) (reverse p)
+  | .left e p => Walk.right (reverse p) (g.symmetricNeighbor e)
+  | .right p e => Walk.left (g.symmetricNeighbor e) (reverse p)
 
 macro p:term "↑" : term => `(Walk.reverse $p)
 
@@ -63,7 +63,7 @@ def Walk.concat {g : Graph} {s t u : g.vertex} : Walk g s t → Walk g t u → W
 
 -- macro p:term "++" q:term : term => `(Walk.concat $p $q)
 
-def Walk.edgeWalk {g : Graph} {s t : g.vertex} (e : g.connected s t) : Walk g s t :=
+def Walk.edgeWalk {g : Graph} {s t : g.vertex} (e : g.adjacent s t) : Walk g s t :=
   Walk.left e (Walk.trivial t)
 
 -- Definition from https://mathworld.wolfram.com/GraphPath.html
@@ -76,8 +76,8 @@ def Walk.length {g : Graph} {s t : g.vertex} : Walk g s t → ℕ
 -- The easy direction, just apply induction on the structure of path
 lemma pathImpliesConnected {g : Graph} {s t : g.vertex} : Walk g s t → g.connected s t
   | .trivial s => g.connectedEq s s (Eq.refl s)
-  | .left e p' => g.connectedTrans _ _ _ e (pathImpliesConnected p')
-  | .right p' e => g.connectedTrans _ _ _ (pathImpliesConnected p') e
+  | .left e p' => g.connectedTrans _ _ _ (g.adjacentConnected e) (pathImpliesConnected p')
+  | .right p' e => g.connectedTrans _ _ _ (pathImpliesConnected p') (g.adjacentConnected e)
 
 theorem strongInduction
   (α : Type)
@@ -127,14 +127,6 @@ theorem strongInduction
       -- sorry -- apply v.isLt
   -- }
 
-def ClosedWalk (g : Graph) (u : g.vertex) : Type := Walk g u u
-
-instance {g : Graph} {u : g.vertex} : Repr (ClosedWalk g u) where
-  reprPrec c n := reprWalk.reprPrec c n
-
-def ClosedWalk.length {g : Graph} {u : g.vertex} (w : ClosedWalk g u) : Nat :=
-  Walk.length w
-
 @[simp]
 def Walk.vertices {g : Graph} {u v : g.vertex} : Walk g u v -> List g.vertex
   | .trivial v => [v]
@@ -155,13 +147,13 @@ lemma walk_vertices_trivial {g : Graph} {u v : g.vertex} (p : Walk g u v) (eq : 
   aesop
 
 @[simp]
-lemma walk_vertices_sublist_left {g : Graph} {u v w : g.vertex} (p : Walk g u w) (conn_u_v : g.connected u v)
-  (q : Walk g v w) (p_is_left : p = Walk.left conn_u_v q) : p.vertices = u :: q.vertices := by
+lemma walk_vertices_sublist_left {g : Graph} {u v w : g.vertex} (p : Walk g u w) (adj_u_v : g.adjacent u v)
+  (q : Walk g v w) (p_is_left : p = Walk.left adj_u_v q) : p.vertices = u :: q.vertices := by
   aesop -- Can't just use simp, as it doesn't apply induction
 
 @[simp]
-lemma walk_vertices_sublist_right {g : Graph} {u v w : g.vertex} (p : Walk g u w) (conn_v_w : g.connected v w)
-  (q : Walk g u v) (p_is_right : p = Walk.right q conn_v_w) : p.vertices = w :: q.vertices := by
+lemma walk_vertices_sublist_right {g : Graph} {u v w : g.vertex} (p : Walk g u w) (adj_v_w : g.adjacent v w)
+  (q : Walk g u v) (p_is_right : p = Walk.right q adj_v_w) : p.vertices = w :: q.vertices := by
   aesop  -- Can't just use simp, as it doesn't apply induction
 
 lemma walk_vertices_length_as_multiset {g : Graph} {u v : g.vertex} (w : Walk g u v) :
@@ -176,9 +168,30 @@ lemma walkLengthAsVertices {g : Graph} {u v : g.vertex} (w : Walk g u v) :
   · simp; assumption -- just apply induction hypothesis
   · simp; assumption -- just apply induction hypothesis
 
+def Walk.edges {g : Graph} {u v : g.vertex} : Walk g u v → List (Edge g.vertexSize)
+  | .trivial v => []
+  | .left adj_ut walk_tv =>
+    let e := Graph.adjacentEdge adj_ut
+    e :: walk_tv.edges
+  | .right walk_ut adj_tv =>
+    let e := Graph.adjacentEdge adj_tv
+    e :: walk_ut.edges
+
+def ClosedWalk (g : Graph) (u : g.vertex) : Type := Walk g u u
+
+instance {g : Graph} {u : g.vertex} : Repr (ClosedWalk g u) where
+  reprPrec c n := reprWalk.reprPrec c n
+
+def ClosedWalk.length {g : Graph} {u : g.vertex} (w : ClosedWalk g u) : Nat :=
+  Walk.length w
+
 @[simp]
 def ClosedWalk.vertices {g : Graph} {u : g.vertex} : ClosedWalk g u -> List g.vertex :=
   Walk.vertices
+
+@[simp]
+def ClosedWalk.edges {g : Graph} {u : g.vertex} : ClosedWalk g u -> List (Edge g.vertexSize) :=
+  Walk.edges
 
 instance {g : Graph} {u : g.vertex} {w : ClosedWalk g u} : Fintype w.verticesMultiset := by
   infer_instance
@@ -286,15 +299,15 @@ def length {g : Graph} {u v : g.vertex} : Path g u v → Nat
   | ⟨w, _⟩ => w.length
 
 @[simp]
-lemma subpathIsPath_left {g : Graph} {u v w : g.vertex} (p : Path g u w) (conn_u_v : g.connected u v)
-  (q : Walk g v w) (p_is_left : p.walk = Walk.left conn_u_v q) : q.isPath = true := by
+lemma subpathIsPath_left {g : Graph} {u v w : g.vertex} (p : Path g u w) (adj_u_v : g.adjacent u v)
+  (q : Walk g v w) (p_is_left : p.walk = Walk.left adj_u_v q) : q.isPath = true := by
   simp
   have walk_is_path : walk.isPath = true := by apply p.isPath
   aesop
 
 @[simp]
-lemma subpathIsPath_right {g : Graph} {u v w : g.vertex} (p : Path g u w) (conn_v_w : g.connected v w)
-  (q : Walk g u v) (p_is_right : p.walk = Walk.right q conn_v_w) : q.isPath = true := by
+lemma subpathIsPath_right {g : Graph} {u v w : g.vertex} (p : Path g u w) (adj_v_w : g.adjacent v w)
+  (q : Walk g u v) (p_is_right : p.walk = Walk.right q adj_v_w) : q.isPath = true := by
   simp
   have walk_is_path : walk.isPath = true := by apply p.isPath
   aesop
@@ -305,7 +318,7 @@ lemma vertexMultiset_card_is_vertices_length {g : Graph} {u v : g.vertex} {p : P
   rfl
 
 lemma vertexFinset_card_is_vertices_length {g : Graph} {u v : g.vertex} {p : Path g u v} :
-  p.vertices.length = p.vertexFinset.card := by
+  p.vertexFinset.card = p.vertices.length := by
   simp [vertexMultiset_card_is_vertices_length]
   rfl
 
@@ -314,11 +327,11 @@ lemma path_length_is_num_vertices {g : Graph} {u v : g.vertex} {p : Path g u v} 
   simp [vertexFinset_card_is_vertices_length]
   rfl
 
-lemma path_length_as_vertices {g : Graph} {u v : g.vertex} (p : Path g u v) :
+lemma path_length_as_vertices {g : Graph} {u v : g.vertex} {p : Path g u v} :
   p.length + 1 = p.vertices.length := by
   simp
 
-lemma path_length_as_vertices_multiset {g : Graph} {u v : g.vertex} (p : Path g u v) :
+lemma path_length_as_vertices_multiset {g : Graph} {u v : g.vertex} {p : Path g u v} :
   p.length + 1 = Fintype.card p.vertexMultiset := by
   aesop
 
@@ -351,11 +364,12 @@ end Path
 
 @[simp]
 def ClosedWalk.isCycle {g : Graph} {u : g.vertex} : ClosedWalk g u → Bool := fun cw =>
-  let vertices := Walk.vertices cw
+  let vertices := cw.vertices
+  let edges := cw.edges
   match vertices with
   | [] => true
-  | _ :: vs =>
-    List.all_distinct vs
+  | _ :: vertices =>
+    vertices.all_distinct && edges.all_distinct
 
 class Cycle (g : Graph) (u : g.vertex) where
   cycle : ClosedWalk g u
