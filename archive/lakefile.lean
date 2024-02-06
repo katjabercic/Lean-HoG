@@ -1,7 +1,7 @@
 import Lake
 open Lake DSL
 
-package «LeanHoG» {
+package «HoG» {
   moreLeanArgs := #["-DautoImplicit=false"]
 }
 
@@ -9,4 +9,4 @@ require mathlib from git
   "https://github.com/leanprover-community/mathlib4.git"
 
 @[default_target]
-lean_lib LeanHoG
+lean_lib HoG

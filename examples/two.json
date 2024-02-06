@@ -1,0 +1,8 @@
+{
+    "graph" : { "vertexSize" : 2, "edges" : [] },
+    "disconnectivityData" : {
+        "color" : [[0,0],[1,1]],
+        "vertex0" : 0,
+        "vertex1" : 1
+    }
+}

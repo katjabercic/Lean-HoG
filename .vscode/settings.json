@@ -1,6 +1,6 @@
 {
     "mypy.targets": [
-        "convert"
+        "archive/convert"
     ],
     "lean4.serverArgs": ["-DautoImplicit=false"]
 }
