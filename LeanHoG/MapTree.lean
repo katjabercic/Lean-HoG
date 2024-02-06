@@ -1,7 +1,7 @@
 import Lean
-import JSON2Lean.BoundedOrder
+import LeanHoG.BoundedOrder
 
-namespace JSON2Lean
+namespace LeanHoG
 
 /--
   We implement finite maps as search trees. These need not be balanced (and therefore) may
@@ -132,4 +132,4 @@ def MapTree.hasKey {α β : Type} [Ord α] (x : α) : MapTree α β → Bool
     | .eq => true
     | .gt => hasKey y right
 
-end JSON2Lean
+end LeanHoG

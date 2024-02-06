@@ -1,8 +1,8 @@
 import Lean
-import JSON2Lean.MapTree
-import JSON2Lean.Graph
+import LeanHoG.MapTree
+import LeanHoG.Graph
 
-namespace JSON2Lean
+namespace LeanHoG
 
 /--
   A structure that corresponds to the JSON description of a graph.
@@ -65,4 +65,4 @@ def loadGAPData (filePath : System.FilePath) : IO GAPData := do
   | .ok data => pure data
   | .error msg => throw (.userError msg)
 
-end JSON2Lean
+end LeanHoG

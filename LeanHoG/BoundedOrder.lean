@@ -3,7 +3,7 @@ import Mathlib
 -- An order extended with a bottom and a top element at the same time.
 -- This is like simultaneous WithBot and MathLib.Order.
 
-namespace JSON2Lean
+namespace LeanHoG
 
 inductive Bounded (α : Type) : Type
   | bottom : Bounded α
@@ -174,4 +174,4 @@ def Bounded.liftFunction {α β : Type} : (α → β) → (Bounded α → Bounde
     | element y => Bounded.extendFunction f y
     | top => top
 
-end JSON2Lean
+end LeanHoG

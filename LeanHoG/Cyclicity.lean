@@ -1,7 +1,7 @@
-import JSON2Lean.Graph
-import JSON2Lean.Edge
+import LeanHoG.Graph
+import LeanHoG.Edge
 
-namespace JSON2Lean
+namespace LeanHoG
 
 def cycleEdgeTree (n: Nat) (k : Fin n.succ) : SetTree (Edge (n + 3)) :=
   if h : k = 0 then

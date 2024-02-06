@@ -1,6 +1,6 @@
-import JSON2Lean.Graph
+import LeanHoG.Graph
 
-namespace JSON2Lean
+namespace LeanHoG
 
 /- Basic facts about connected and disconnected graphs. -/
 
@@ -140,4 +140,4 @@ theorem Graph.is_disconnected (G : Graph) [D : DisconnectivityCertificate G] : â
     assumption
   Â· simp [D.vertex0Color, D.vertex1Color]
 
-end JSON2Lean
+end LeanHoG

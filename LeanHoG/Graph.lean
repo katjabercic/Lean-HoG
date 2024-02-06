@@ -1,8 +1,8 @@
-import JSON2Lean.SetTree
-import JSON2Lean.MapTree
-import JSON2Lean.Edge
+import LeanHoG.SetTree
+import LeanHoG.MapTree
+import LeanHoG.Edge
 
-namespace JSON2Lean
+namespace LeanHoG
 
 structure Graph where
   vertexSize : Nat
@@ -125,4 +125,4 @@ def Graph.minDegree (G : Graph) : WithTop Nat :=
 def Graph.maxDegree (G : Graph) : WithBot Nat :=
   Finset.sup (Fin.fintype G.vertexSize).elems (fun v => G.degree v)
 
-end JSON2Lean
+end LeanHoG

@@ -1,8 +1,8 @@
 import Mathlib
 
-import JSON2Lean.BoundedOrder
+import LeanHoG.BoundedOrder
 
-namespace JSON2Lean
+namespace LeanHoG
 
 /--  A finite set represented as a search tree. --/
 inductive SetTree.{u} (α : Type u) : Type u
@@ -148,4 +148,4 @@ theorem SetTree.exists_exi {α : Type} [LinearOrder α] (p : α → Prop) [Decid
 @[reducible]
 def SetTree.set {α : Type} [Ord α] (t : SetTree α) := { x : α // t.mem x }
 
-end JSON2Lean
+end LeanHoG

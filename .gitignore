@@ -2,3 +2,4 @@
 .lake
 lake-manifest.json
 /lake-packages
+/archive/*
