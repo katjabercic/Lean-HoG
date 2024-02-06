@@ -1,9 +1,4 @@
 *.olean
+.lake
 lake-manifest.json
-/_target
-/leanpkg.path
-/pigpen
-/convert/__pycache__
-data/build
-/lake-packages/*
-build
+/lake-packages
