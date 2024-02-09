@@ -1,18 +1,18 @@
+import HoG.Invariant.Hamiltonian.SatHelpers
 import LeanSAT
 
 namespace HoG
-namespace PropForm
+namespace PropFun
 
-open LeanSAT Model
+open LeanSAT Model PropFun
 
 @[simp]
-def disj_list {ν : Type} : List (PropForm ν) → PropForm ν
-  | [] => PropForm.fls
-  | p :: ps => PropForm.disj p (disj_list ps)
+def disj_list {ν : Type} : List (PropFun ν) → PropFun ν
+  | [] => PropFun.fls
+  | p :: ps => p ⊔ (disj_list ps)
 
-open PropForm in
-def satisfies_disj_list_to_witness {ν : Type} {τ : PropAssignment ν} (ps : List (PropForm ν))
-  (h : τ ⊨ (disj_list ps)) : (p : PropForm ν) ×' (p ∈ ps ∧ τ ⊨ p) :=
+def satisfies_disj_list_to_witness {ν : Type} {τ : PropAssignment ν} (ps : List (PropFun ν))
+  (h : τ ⊨ (disj_list ps)) : (p : PropFun ν) ×' (p ∈ ps ∧ τ ⊨ p) :=
   match ps with
   | [] => by contradiction
   | p :: ps => by
@@ -24,8 +24,7 @@ def satisfies_disj_list_to_witness {ν : Type} {τ : PropAssignment ν} (ps : Li
       let ⟨p', ⟨p'_mem, τ_sat_p'⟩⟩ := satisfies_disj_list_to_witness ps h
       exact ⟨p', ⟨List.mem_cons_of_mem p p'_mem, τ_sat_p'⟩⟩
 
-open PropForm in
-lemma satisfies_disj_list {ν : Type} {τ : PropAssignment ν} {ps : List (PropForm ν)} :
+lemma satisfies_disj_list {ν : Type} {τ : PropAssignment ν} {ps : List (PropFun ν)} :
   τ ⊨ (disj_list ps) ↔ ∃ p ∈ ps, τ ⊨ p := by
   apply Iff.intro
   · intro h
@@ -60,22 +59,30 @@ lemma satisfies_disj_list {ν : Type} {τ : PropAssignment ν} {ps : List (PropF
         assumption
 
 @[simp]
-def conj_list {ν : Type} : List (PropForm ν) → PropForm ν
-  | [] => PropForm.tr
-  | p :: ps => PropForm.conj p (conj_list ps)
+def conj_list {ν : Type} : List (PropFun ν) → PropFun ν
+  | [] => PropFun.tr
+  | p :: ps => p ⊓ (conj_list ps)
 
-open PropForm in
-lemma satisfies_conj_list {ν : Type} {τ : PropAssignment ν} {ps : List (PropForm ν)} :
+lemma satisfies_conj_list {ν : Type} {τ : PropAssignment ν} {ps : List (PropFun ν)} :
   τ ⊨ (conj_list ps) ↔ ∀ p ∈ ps, τ ⊨ p := by
   induction' ps with q qs ih
   simp_all only [conj_list, satisfies_tr, List.find?_nil, List.not_mem_nil, IsEmpty.forall_iff, forall_const]
-  simp_all only [conj_list, satisfies_conj, List.mem_cons, forall_eq_or_imp]
+  · simp
+    rfl
+  · simp_all [conj_list, satisfies_conj, List.mem_cons, forall_eq_or_imp]
 
-end PropForm
+lemma satisfies_disj_fls {ν : Type} {τ : PropAssignment ν} {p : PropFun ν} :
+  τ ⊨ p ⊔ fls ↔ τ ⊨ p := by
+  apply Iff.intro
+  · intro h
+    simp at h
+    cases' h with h h'
+    exact h
+    contradiction
+  · intro h
+    simp
+    apply Or.intro_left
+    exact h
 
-open LeanSAT Model PropFun in
-lemma satisfies_neg_or {ν : Type} {τ : PropAssignment ν} {p q : PropFun ν} :
-  ¬ (τ ⊨ pᶜ ∨ τ ⊨ qᶜ) ↔ τ ⊨ p ∧ τ ⊨ q := by
-  simp [not_or]
-
+end PropFun
 end HoG

@@ -1,11 +1,11 @@
-import Mathlib.Tactic.LibrarySearch
 import HoG.Graph
 import HoG.Invariant.ConnectedComponents
 import HoG.TreeSet
+import HoG.Util.List
 
 namespace HoG
 
--- -- [ ] Be able to define the functions on paths my pattern matching instead of having to use induction
+-- [ ] Be able to define the functions on paths by pattern matching instead of having to use induction
 
 -- inductive definition of path in a graph
 -- a path is either just an edge or it is constructed from a path and a next edge that fits
@@ -29,6 +29,16 @@ instance walkToString {g : Graph} {s t : g.vertex} : ToString (Walk g s t) where
 
 instance reprWalk {g : Graph} {u v : g.vertex} : Repr (Walk g u v) where
   reprPrec w _ := w.toString
+
+def Walk.isTrivial {g : Graph} {u v : g.vertex} : Walk g u v → Bool
+  | .trivial _ => true
+  | .left _ _ => false
+  | .right _ _ => false
+
+lemma Walk.isTrivial_vertex {g : Graph} {u v : g.vertex} (p : Walk g u v)
+  (h : p.isTrivial = true) :
+  (w : g.vertex) ×' (eq₁ : w = u) ×' (eq₂ : w = v) ×' (p = (eq₁ ▸ eq₂ ▸ Walk.trivial w)) := by
+  sorry
 
 def Walk.isNontrivial {g : Graph} {s t : g.vertex} : Walk g s t → Prop
   | .trivial s => False
@@ -133,6 +143,13 @@ def Walk.vertices {g : Graph} {u v : g.vertex} : Walk g u v -> List g.vertex
   | .left conn_ut walk_tv => u :: walk_tv.vertices
   | .right walk_ut conn_tv => v :: walk_ut.vertices
 
+@[simp] lemma walk_trivial_vertices_length {g : Graph} {u v : g.vertex} (p : Walk g u v)
+  (h : p.isTrivial) : p.vertices.length = 1 := by
+  induction' p with p ih
+  · simp
+  · contradiction
+  · contradiction
+
 def Walk.verticesMultiset {g : Graph} {u v : g.vertex} :
   Walk g u v -> Multiset g.vertex := fun w => Multiset.ofList w.vertices
 
@@ -168,7 +185,7 @@ lemma walkLengthAsVertices {g : Graph} {u v : g.vertex} (w : Walk g u v) :
   · simp; assumption -- just apply induction hypothesis
   · simp; assumption -- just apply induction hypothesis
 
-def Walk.edges {g : Graph} {u v : g.vertex} : Walk g u v → List (Edge g.vertexSize)
+@[simp] def Walk.edges {g : Graph} {u v : g.vertex} : Walk g u v → List (Edge g.vertexSize)
   | .trivial v => []
   | .left adj_ut walk_tv =>
     let e := Graph.adjacentEdge adj_ut
@@ -196,48 +213,6 @@ def ClosedWalk.edges {g : Graph} {u : g.vertex} : ClosedWalk g u -> List (Edge g
 instance {g : Graph} {u : g.vertex} {w : ClosedWalk g u} : Fintype w.verticesMultiset := by
   infer_instance
 
-end HoG
-
-@[simp]
-def List.all_distinct {α : Type} [DecidableEq α] : List α → Bool
-  | [] => true
-  | x :: xs => x ∉ xs && xs.all_distinct
-
-lemma all_distinct_nodup {α : Type} [DecidableEq α] {l : List α} :
-  l.all_distinct = true ↔ l.Nodup := by
-  induction' l
-  repeat simp_all
-
-lemma all_distinct_dedup {α : Type} [DecidableEq α] (l : List α) :
-  l.all_distinct = true ↔ List.dedup l = l := by
-  simp only [all_distinct_nodup, List.dedup_eq_self]
-
-lemma index_of_lt_length_of_exists {α : Type} [DecidableEq α] (xs : List α)
-  (_ : xs.all_distinct) (x : α) (h : x ∈ xs) :
-  xs.indexOf x < xs.length := by
-  apply List.findIdx_lt_length_of_exists
-  apply Exists.intro x
-  apply And.intro
-  exact h
-  simp
-
--- TODO: Surely we can just apply the theorem we used to prove this instead of a separate lemma
-lemma get_implies_get? {α : Type} (l : List α) (i j : Fin l.length) :
-  (l.get i) = (l.get j) → l.get? i = l.get? j := by
-  simp [List.get?_eq_get]
-
-/--
-  Reformulation of injectivity of get for a list with the `all_distinct` property.
--/
-lemma all_distinct_ne_idx {α : Type} [DecidableEq α] (l : List α) (d : l.all_distinct = true) :
-  (∀ (i j : Fin l.length), l.get i = l.get j → i = j) := by
-  have d' : l.Nodup := Iff.mp all_distinct_nodup d
-  intros i j h
-  let h' : l.get? i = l.get? j := get_implies_get? l i j h
-  have := List.get?_inj i.2 d' h'
-  apply Fin.ext this -- have to apply Fin extensionality
-
-namespace HoG
 
 @[simp]
 def Walk.isPath {g : Graph} {u v : g.vertex} : Walk g u v → Bool :=
@@ -263,6 +238,62 @@ instance {g : Graph} : Repr ((u v : g.vertex) ×' Path g u v) where
 def vertices {g : Graph} {u v : g.vertex} : Path g u v → List g.vertex := fun p =>
   Walk.vertices p.walk
 
+@[simp] def edges {g : Graph} {u v : g.vertex} : Path g u v → List (Edge g.vertexSize) :=
+  fun p => p.walk.edges
+
+lemma edges_get_adjacent {g : Graph} {e : g.edge} :
+  g.adjacent (g.fst e) (g.snd e) := by
+  simp at e
+  let ⟨e', cond⟩ := e
+  let ⟨u, v⟩ := e'
+  have u_lt_n := u.isLt
+  have v_lt_u := v.isLt
+  have v_lt_n : v < g.vertexSize := Nat.lt_trans v_lt_u u_lt_n
+  simp [Graph.badjacent]
+  have : g.fst e < g.snd e := by
+    simp
+    sorry
+  sorry
+
+@[simp] lemma vertices_all_distinct {g : Graph} {u v : g.vertex} (p : Path g u v) :
+  p.vertices.all_distinct := by
+  apply p.isPath
+
+@[simp]
+lemma subpathIsPath_left {g : Graph} {u v w : g.vertex} (p : Path g u w) (adj_u_v : g.adjacent u v)
+  (q : Walk g v w) (p_is_left : p.walk = Walk.left adj_u_v q) : q.isPath = true := by
+  simp
+  have walk_is_path : walk.isPath = true := by apply p.isPath
+  aesop
+
+@[simp]
+lemma subpathIsPath_right {g : Graph} {u v w : g.vertex} (p : Path g u w) (adj_v_w : g.adjacent v w)
+  (q : Walk g u v) (p_is_right : p.walk = Walk.right q adj_v_w) : q.isPath = true := by
+  simp
+  have walk_is_path : walk.isPath = true := by apply p.isPath
+  aesop
+
+lemma walk_consecutive_distinct {g : Graph} {u v : g.vertex} {p : Path g u v}
+  {i j : Fin p.vertices.length} {h : i.val + 1 = j.val} :
+  p.vertices.get i ≠ p.vertices.get j := by
+  induction' p.walk with w w w' w'' adj walk ih
+  · sorry
+  · simp
+    by_contra
+    have : walk.vertices.all_distinct := by
+      sorry
+    sorry
+  sorry
+
+lemma walk_consecutive_vertices_adjacent {g : Graph} {u v : g.vertex} {p : Walk g u v}
+  {i j : Fin p.vertices.length} {h : i.val + 1 = j.val}  :
+  g.badjacent (p.vertices.get i) (p.vertices.get j) := by
+  induction' p with w w w' w'' adj_w_w' walk_w'_w'' ih
+  · aesop
+  · simp
+    sorry
+  sorry
+
 @[simp]
 def vertexSet {g : Graph} {u v : g.vertex} : Path g u v → Set g.vertex := fun p =>
   { x : g.vertex | x ∈ p.walk.vertices }
@@ -280,7 +311,7 @@ def vertexMultiset {g : Graph} {u v : g.vertex} : Path g u v → Multiset g.vert
 lemma vertexMultiset_nodup {g : Graph} {u v : g.vertex} {p : Path g u v} :
   Multiset.Nodup p.vertexMultiset := by
   apply Iff.mp Multiset.coe_nodup
-  apply Iff.mp all_distinct_nodup
+  apply Iff.mp List.all_distinct_iff_nodup
   apply p.isPath
 
 @[simp]
@@ -297,20 +328,6 @@ lemma path_vertices_length_as_multiset {g : Graph} {u v : g.vertex} {p : Path g 
 @[simp]
 def length {g : Graph} {u v : g.vertex} : Path g u v → Nat
   | ⟨w, _⟩ => w.length
-
-@[simp]
-lemma subpathIsPath_left {g : Graph} {u v w : g.vertex} (p : Path g u w) (adj_u_v : g.adjacent u v)
-  (q : Walk g v w) (p_is_left : p.walk = Walk.left adj_u_v q) : q.isPath = true := by
-  simp
-  have walk_is_path : walk.isPath = true := by apply p.isPath
-  aesop
-
-@[simp]
-lemma subpathIsPath_right {g : Graph} {u v w : g.vertex} (p : Path g u w) (adj_v_w : g.adjacent v w)
-  (q : Walk g u v) (p_is_right : p.walk = Walk.right q adj_v_w) : q.isPath = true := by
-  simp
-  have walk_is_path : walk.isPath = true := by apply p.isPath
-  aesop
 
 lemma vertexMultiset_card_is_vertices_length {g : Graph} {u v : g.vertex} {p : Path g u v} :
   Multiset.card p.vertexMultiset = p.vertices.length := by
@@ -343,14 +360,14 @@ lemma path_length_as_fintype_card {g : Graph} {u v : g.vertex} (p : Path g u v) 
 theorem maxPathLength {g : Graph} {u v : g.vertex} (p : Path g u v) :
   p.length + 1 <= Fintype.card g.vertex := by
   by_contra h
-  -- We want to apply the pigeonhole principle to show we must have a vertex appearing twice on the path
-  -- So we're going to use `Fintype.exists_ne_map_eq_of_card_lt`
+  -- We want to apply the pigeonhole principle to show we must have a vertex appearing twice on the path.
+  -- So we're going to use `Fintype.exists_ne_map_eq_of_card_lt` (the pigeonhole principle).
   -- Before that we have to rewrite h into a form we can use
   rw [not_le, path_length_as_fintype_card] at h
   have := Fintype.exists_ne_map_eq_of_card_lt p.vertices.get h
   match this with
   | ⟨i, j, i_neq_j, i_get_eq_j_get⟩ =>
-    have i_eq_j := by apply all_distinct_ne_idx p.vertices p.isPath i j i_get_eq_j_get
+    have i_eq_j := by apply List.all_distinct_get_inj p.vertices p.isPath i j i_get_eq_j_get
     contradiction
 
 -- Same theorem just different proof

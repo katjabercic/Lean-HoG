@@ -6,15 +6,20 @@ namespace HoG
 
 /-- A path is Hamiltonian if it contains every vertex of a graph `g`. -/
 @[simp]
-def Path.isHamiltonian {g : Graph} {u v : g.vertex} (p : Path g u v) : Bool :=
-  ∀ (w : g.vertex), List.contains p.walk.vertices w
+def Path.isHamiltonian {g : Graph} {u v : g.vertex} (p : Path g u v) : Prop :=
+  ∀ (w : g.vertex), w ∈ p.walk.vertices
+
+instance {g : Graph} {u v : g.vertex} {p : Path g u v} :
+  Decidable (p.isHamiltonian) := by
+  simp
+  infer_instance
 
 /-- The class representing a Hamiltonian path of a graph `g`
     going from vertex `u` to vertex `v`.
  -/
 class HamiltonianPath {g : Graph} (u v : g.vertex) where
   path : Path g u v
-  isHamiltonian : path.isHamiltonian = true
+  isHamiltonian : path.isHamiltonian
 
 namespace HamiltonianPath
 
@@ -24,28 +29,31 @@ instance {g : Graph} {u v : g.vertex} : Repr (HamiltonianPath u v) where
 instance {g : Graph} : Repr ((u v : g.vertex ) ×' HamiltonianPath u v) where
   reprPrec p n := reprPrec p.2.2.path n
 
-@[simp]
-def vertices {g : Graph} {u v : g.vertex} : HamiltonianPath u v → List g.vertex :=
+@[simp] def vertices {g : Graph} {u v : g.vertex} : HamiltonianPath u v → List g.vertex :=
   fun p => p.path.vertices
 
-@[simp]
-def vertexMultiset {g : Graph} {u v : g.vertex} : HamiltonianPath u v → Multiset g.vertex :=
+@[simp] lemma vertices_all_distinct {g : Graph} {u v : g.vertex} {hp : HamiltonianPath u v} :
+  hp.vertices.all_distinct := by
+  simp
+  exact hp.path.isPath
+
+@[simp] def vertexMultiset {g : Graph} {u v : g.vertex} : HamiltonianPath u v → Multiset g.vertex :=
   fun p => p.path.vertexMultiset
 
-@[simp]
-lemma vertexMultiset_nodup {g : Graph} {u v : g.vertex} {p : HamiltonianPath u v} :
+@[simp] lemma vertexMultiset_nodup {g : Graph} {u v : g.vertex} {p : HamiltonianPath u v} :
   Multiset.Nodup p.vertexMultiset := by
   apply Iff.mp Multiset.coe_nodup
-  apply Iff.mp all_distinct_nodup
+  apply Iff.mp List.all_distinct_iff_nodup
   apply p.path.isPath
 
-@[simp]
-def vertexFinset {g : Graph} {u v : g.vertex} : HamiltonianPath u v → Finset g.vertex := fun p =>
+@[simp] def vertexFinset {g : Graph} {u v : g.vertex} : HamiltonianPath u v → Finset g.vertex := fun p =>
   ⟨p.vertexMultiset, vertexMultiset_nodup⟩
 
-/-- The length of a Hamiltonian path is just the length of the underlying path. -/
-@[simp]
-def length {g : Graph} {u v : g.vertex} : HamiltonianPath u v → Nat :=
+/-- The length of a Hamiltonian path is just the length of the underlying path.
+    This is not the same as the length of the path, as that is the number of
+    edges of the path.
+-/
+@[simp] def length {g : Graph} {u v : g.vertex} : HamiltonianPath u v → Nat :=
   fun p => p.path.length
 
 lemma lt_count_eq_one {n : Nat} : ∀ (k : Nat), k < n → List.count k (List.range n) = 1 := by
@@ -62,40 +70,22 @@ lemma mem_count_ge_one {α : Type} [DecidableEq α] (l : List α) (x : α) (h : 
 example {α : Type} [DecidableEq α] (l : List α) (d : l.Nodup) : Finset.card (List.toFinset l) = l.length := by
   apply List.toFinset_card_of_nodup d
 
-lemma helper' {n : Nat} {l : List (Fin n)} :
-  ∀ (k : Fin n), k ∈ l → l.length ≥ n := by
-  intros k k_in_l
-  have count_k_ge_one : List.count k l ≥ 1 := mem_count_ge_one l k k_in_l
-  sorry
-
-lemma helper {n : Nat} {l : List (Fin n)} :
-  l.length < n → ¬ ∀ (k : Fin n), k ∈ l := by
-  intro h
-  by_contra h'
-  sorry
-
-lemma list_fin_lt_n_exists_x_nin_list {n : Nat} {l : List (Fin n)} :
-  l.length < n → ∃ (k : Fin n), k ∉ l := by
-  intro h
-  by_contra h'
-  sorry
-
-lemma length_is_num_vertices {g : Graph} {u v : g.vertex} (p : HamiltonianPath u v) :
-  p.length + 1 = g.vertexSize := by
-  apply Iff.mpr Nat.le_antisymm_iff
-  apply And.intro
-  · rw [Graph.vertexSizeCard]
-    apply Path.maxPathLength
-  · by_contra h
-    rw [not_le] at h
-    rw [HamiltonianPath.length, Path.path_length_as_vertices] at h
-    rw [Graph.vertexSizeCard] at h
-    sorry
+/-- The number of vertices on a Hamiltonian path is the number of vertices in the graph. -/
+@[simp] lemma length_eq_num_vertices {g : Graph} {u v : g.vertex} {hp : HamiltonianPath u v} :
+  hp.vertices.length = g.vertexSize := by
+  let l := hp.vertices
+  let ad : l.all_distinct := by apply hp.path.isPath
+  have nd : l.Nodup := by apply Iff.mp List.all_distinct_iff_nodup ad
+  have equiv := List.Nodup.getEquivOfForallMemList l nd hp.isHamiltonian
+  simp at equiv
+  have : List.length l = g.vertexSize := by
+    apply Iff.mp Fin.equiv_iff_eq
+    exact Nonempty.intro equiv
+  exact this
 
 end HamiltonianPath
 
-@[simp]
-def Cycle.isHamiltonian {g : Graph} {u : g.vertex} (c : Cycle g u) : Bool :=
+@[simp] def Cycle.isHamiltonian {g : Graph} {u : g.vertex} (c : Cycle g u) : Bool :=
   ∀ (v : g.vertex), List.contains c.cycle.vertices v
 
 class HamiltonianCycle (g : Graph) (u : g.vertex) where
@@ -108,8 +98,7 @@ instance {g : Graph} {u : g.vertex} : Repr (HamiltonianCycle g u) where
 instance {g : Graph} : Repr ((u : g.vertex ) ×' HamiltonianCycle g u) where
   reprPrec p n := reprPrec p.2.cycle n
 
-@[simp]
-def Graph.isHamiltonian (g : Graph) : Prop :=
+@[simp] def Graph.isHamiltonian (g : Graph) : Prop :=
   ∃ (u : g.vertex) (c : Cycle g u), c.isHamiltonian
 
 class HamiltonianGraph (g : Graph) where
@@ -117,11 +106,9 @@ class HamiltonianGraph (g : Graph) where
   cycle : Cycle g u
   isHamiltonian : cycle.isHamiltonian = true
 
-@[simp]
-def Graph.isNonHamiltonian (g : Graph) : Prop := ¬ g.isHamiltonian
+@[simp] def Graph.isNonHamiltonian (g : Graph) : Prop := ¬ g.isHamiltonian
 
-@[simp]
-def Graph.isNonHamiltonian' {g : Graph} : Prop := ∀ (u : g.vertex) (c : Cycle g u), ¬c.isHamiltonian
+@[simp] def Graph.isNonHamiltonian' {g : Graph} : Prop := ∀ (u : g.vertex) (c : Cycle g u), ¬c.isHamiltonian
 
 theorem equivNonHamiltonianDefs (g : Graph) :
   g.isNonHamiltonian ↔ g.isNonHamiltonian' :=
