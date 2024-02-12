@@ -1,8 +1,9 @@
 import Mathlib
 
-namespace HoG
+-- An order extended with a bottom and a top element at the same time.
+-- This is like simultaneous WithBot and MathLib.Order.
 
--- An order extended with a bottom and a top element
+namespace HoG
 
 inductive Bounded (α : Type) : Type
   | bottom : Bounded α
@@ -115,18 +116,12 @@ instance Bounded_Preorder (α : Type) [Preorder α] : Preorder (Bounded α) wher
   le_refl := by intro a; cases a <;> trivial
   le_trans := by intros a b c; apply Bounded.le_trans
   lt_iff_le_not_le := by
-    intros a b;
-    cases a <;> cases b <;> simp
-    · apply lt_iff_le_not_le
+    intros a b; cases a <;> repeat (first | cases b | tauto | apply lt_iff_le_not_le)
 
 instance Bounded_PartialOrder (α : Type) [PartialOrder α]: PartialOrder (Bounded α) where
   le_antisymm := by
     intros a b h h'
     cases a <;> repeat (first | cases b | rfl | contradiction | simp; apply le_antisymm <;> assumption)
-
--- lemma Decidable.compareBoundedElements (a b : α) [LinearOrder α] : Decidable (element a ≤ element b) := by
---   apply decidable_of_iff (a ≤ b)
---   apply Iff.intro <;> (intro h; assumption)
 
 @[simp]
 instance Bounded_LinearOrder (α : Type) [la : LinearOrder α] [de : DecidableEq α] : LinearOrder (Bounded α) where

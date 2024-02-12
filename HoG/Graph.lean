@@ -1,113 +1,144 @@
-import HoG.OrdEq
-import HoG.TreeSet
-import HoG.TreeMap
+import HoG.SetTree
+import HoG.MapTree
 import HoG.Edge
 
 namespace HoG
 
-structure Graph : Type :=
+structure Graph where
   vertexSize : Nat
-  edgeTree : STree (Edge vertexSize)
-  -- edgeCorrect : edgeTree.correct := by rfl
-deriving Inhabited
+  edgeTree : SetTree (Edge vertexSize)
+  edgeCorrect : edgeTree.isCorrect
 
--- the type of graph vertices
-@[simp, reducible]
-def Graph.vertex (G : Graph) := Fin G.vertexSize
+namespace Graph
 
-lemma Graph.vertexSizeCard {g : Graph} : g.vertexSize = Fintype.card g.vertex := by
+/-- The type of graph vertices -/
+@[reducible]
+def vertex (G : Graph) := Fin G.vertexSize
+
+lemma vertexSizeCard {g : Graph} : g.vertexSize = Fintype.card g.vertex := by
   simp
 
--- the underlying type of edges (pairs (i,j) such that j < i < G.vertexSize)
-@[simp, reducible]
-def Graph.edgeType (G : Graph) := Edge G.vertexSize
+/-- The underlying type of edges, i.e., pairs (i,j) such that j < i < G.vertexSize. -/
+@[reducible]
+def edgeType (G : Graph) := Edge G.vertexSize
 
--- the type of edges
-@[simp, reducible]
-def Graph.edge (G : Graph) := { e : G.edgeType // G.edgeTree.mem e }
+/-- The type of edges -/
+@[reducible]
+def edge (G : Graph) := { e : G.edgeType // G.edgeTree.mem e }
 
-@[simp]
-def Graph.fst {G : Graph} (e : G.edgeType) : G.vertex := e.fst
+@[reducible]
+def fst {G : Graph} (e : G.edgeType) : G.vertex := e.fst
 
-@[simp]
-def Graph.snd {G : Graph} (e : G.edgeType) : G.vertex :=
-  ⟨e.snd, lt_trans e.snd.isLt e.fst.isLt⟩
+@[reducible]
+def snd {G : Graph} (e : G.edgeType) : G.vertex :=
+  ⟨e.snd, e.snd.prop⟩
 
--- the number of eges in a graph
-def Graph.edgeSize (G : Graph) := Fintype.card G.edge
+/-- the number of eges in a graph -/
+def edgeSize (G : Graph) := Fintype.card G.edge
 
--- the vertex adjacency relation
-def Graph.badjacent {G : Graph} : G.vertex → G.vertex → Bool :=
+/-- The vertex adjacency relation as a boolean map -/
+def badjacent {G : Graph} : G.vertex → G.vertex → Bool :=
   fun u v =>
     ltByCases u v
-      (fun u_lt_v => G.edgeTree.mem (Edge.mk v (Fin.mk u u_lt_v)))
+      (fun u_lt_v => G.edgeTree.mem (Edge.mk u v u_lt_v))
       (fun _ => false)
-      (fun v_lt_u => G.edgeTree.mem (Edge.mk u (Fin.mk v v_lt_u)))
+      (fun v_lt_u => G.edgeTree.mem (Edge.mk v u v_lt_u))
 
-def Graph.adjacent {G : Graph} : G.vertex → G.vertex → Prop :=
+/-- The vertex adjacency relations -/
+def adjacent {G : Graph} : G.vertex → G.vertex → Prop :=
   fun u v => G.badjacent u v
 
 instance (G : Graph) : DecidableRel G.adjacent := by
   intros u v
-  unfold Graph.adjacent
+  unfold adjacent
   infer_instance
 
--- There is an edge between adjacent vertices
-def Graph.adjacentEdge {G : Graph} {u v : G.vertex} :
-  G.adjacent u v → { e : G.edge // (G.fst e = u ∧ G.snd e = v) ∨ (G.fst e = v ∧ G.snd e = u) } := by
-  apply ltByCases u v <;> intro H <;> simp [H, not_lt_of_lt, adjacent, badjacent, ltByCases]
-  · intro e_mem
-    let e : G.edge := ⟨ Edge.mk_lt H, (by simp [e_mem, Edge.mk_lt]) ⟩
-    exists e
-    simp [Edge.mk_lt]
-  · intro ; contradiction
-  · intro e_mem
-    let e : G.edge := ⟨ Edge.mk_lt H, (by simp [e_mem, Edge.mk_lt]) ⟩
-    exists e
-    simp [Edge.mk_lt]
+/-- Adjacent vertices are connected by an edge -/
+@[simp] def adjacentEdge {G : Graph} {u v : G.vertex} :
+  G.adjacent u v → G.edge := by
+  apply ltByCases u v
+  · intros u_lt_v uv
+    constructor
+    case val => exact Edge.mk u v u_lt_v
+    case property => simp_all [u_lt_v, ltByCases, adjacent, badjacent]
+  · intro u_eq_v
+    intro H
+    simp [u_eq_v, ltByCases, adjacent, badjacent] at H
+  · intros v_lt_u uv
+    constructor
+    case val => exact Edge.mk v u v_lt_u
+    case property => simp_all [v_lt_u, not_lt_of_lt, ltByCases, adjacent, badjacent]
 
-lemma Graph.irreflexiveNeighbor {G : Graph} {v : G.vertex} : ¬ adjacent v v := by
-  simp [ltByCases, adjacent, badjacent]
+@[simp] lemma edge_adjacent {g : Graph} {e : g.edge} :
+  g.adjacent (g.fst e) (g.snd e) := by
+  simp [adjacent, badjacent]
+  let ⟨e', cond⟩ := e
+  have := e'.ord
+  simp [this, cond]
+  apply ltByCases e'.fst e'.snd
+  repeat aesop
 
-lemma Graph.symmetricNeighbor {G : Graph} {u v : G.vertex} :
-  adjacent u v → adjacent v u := by
-  apply ltByCases u v <;> (intro h ; simp [ltByCases, not_lt_of_lt, h, adjacent, badjacent])
+/-- Adjacency is irreflexive. -/
+@[simp] lemma irreflexiveAdjacent {G : Graph} :
+  ∀ (v : G.vertex), ¬ adjacent v v := by simp [ltByCases, adjacent, badjacent]
 
--- checking that a symetric relations holds for all pairs of adjacent vertices
--- reduces to checking it for all edges
-lemma Graph.adjacentAll {G : Graph}
-  (p : G.vertex → G.vertex → Prop) [DecidableRel p] :
-  G.edgeTree.all (fun e => p (G.fst e) (G.snd e)) → ∀ u v, G.adjacent u v → p u v ∨ p v u := by
-  intros eA u v uv
-  cases G.adjacentEdge uv with
-  | mk e r =>
-    have pe := G.edgeTree.all_forall (fun e => p (G.fst e) (G.snd e)) eA e e.property
-    cases r with
-    | inl eq => apply Or.inl ; rw [←eq.1, ←eq.2] ; exact pe
-    | inr eq => apply Or.inr ; rw [←eq.1, ←eq.2] ; exact pe
+/-- Adjacency is symmetric. -/
+@[simp] lemma symmetricAdjacent {G : Graph} :
+  ∀ (u v : G.vertex), adjacent u v → adjacent v u := by
+    intros u v
+    apply ltByCases u v <;> (intro h ; simp [ltByCases, not_lt_of_lt, h, adjacent, badjacent])
 
-lemma Graph.adajcentAllSymm (G : Graph)
-  (p : G.vertex → G.vertex → Prop) [DecidableRel p]:
-  Symmetric p → G.edgeTree.all (fun e => p (G.fst e) (G.snd e)) → ∀ u v, G.adjacent u v → p u v := by
-  intros sp eA u v uv
-  cases G.adjacentAll p eA u v uv
-  · assumption
-  · apply sp ; assumption
+/-- An efficient way of checking that a statement holds for all edges. -/
+lemma all_edges (G : Graph) (p : G.edgeType → Prop) [DecidablePred p] :
+    SetTree.all G.edgeTree p = true → ∀ (e : G.edge), p e.val
+  := by
+    intro H e
+    exact SetTree.all_forall G.edgeTree p H e e.prop
 
--- the neighborhood of a graph
+/--
+  For a symmetric relation on vertices, if it holds for all endpoints of all edges,
+  then it holds for all pairs of adjacent vertices. This is useful for checking
+  statements about adjacent vertices, as we can just check all edges instead of
+  all pairs of vertices (and skipping the non-adjacent ones).
+-/
+def all_adjacent_of_edges {G : Graph} (R : G.vertex → G.vertex → Prop) :
+    (∀ u v, R u v → R v u) →
+    (∀ (e : G.edge), R e.val.fst e.val.snd) →
+    (∀ u v, G.adjacent u v → R u v)
+  := by
+  intro R_symm all_edge u v uv
+  apply ltByCases u v
+  · intro u_lt_v
+    let A := all_edge (G.adjacentEdge uv)
+    simp [adjacentEdge, ltByCases, u_lt_v] at A
+    exact A
+  · intro eq
+    exfalso
+    apply G.irreflexiveAdjacent u
+    rw [←eq] at uv
+    assumption
+  · intro v_lt_u
+    let A := all_edge (G.adjacentEdge uv)
+    simp [adjacentEdge, ltByCases, v_lt_u, not_lt_of_lt] at A
+    apply R_symm
+    exact A
+
+/-- The neighborhood of a vertex. -/
 @[reducible]
-def Graph.neighborhood (G : Graph) (v : G.vertex) :=
+def neighborhood (G : Graph) (v : G.vertex) :=
   { u : G.vertex // G.badjacent v u }
 
--- the degree of a vertex
-def Graph.degree (G : Graph) (v : G.vertex) : Nat := Fintype.card (G.neighborhood v)
+/-- The degree of a vertex. -/
+def degree (G : Graph) (v : G.vertex) : Nat := Fintype.card (G.neighborhood v)
 
--- the minimal vertex degree
-def Graph.minDegree (G : Graph) : WithTop Nat :=
+/-- The minimal vertex degree, equals ⊤ for empty graph. -/
+def minDegree (G : Graph) : WithTop Nat :=
   Finset.inf (Fin.fintype G.vertexSize).elems (fun v => G.degree v)
 
--- the maximal vertex degree
-def Graph.maxDegree (G : Graph) : WithBot Nat :=
+/-- The maximal vertex degree, equals ⊥ for empty graph. -/
+def maxDegree (G : Graph) : WithBot Nat :=
   Finset.sup (Fin.fintype G.vertexSize).elems (fun v => G.degree v)
+
+end Graph
 
 end HoG

@@ -3,12 +3,11 @@ import Mathlib.Tactic.LibrarySearch
 import HoG.Graph
 import HoG.Invariant.EdgeSize
 import HoG.Invariant.Hamiltonian.Definition
-import HoG.Invariant.Hamiltonian.SatEncoding
 import HoG.Invariant.Hamiltonian.SatHelpersPropFun
 import HoG.Invariant.Hamiltonian.SatHelpers
-import LeanSAT
+import HoG.Util.List
 
-import Duper
+import LeanSAT
 
 namespace HoG
 
@@ -403,14 +402,14 @@ theorem hamiltonian_path_to_sat (g : Graph) (u v : g.vertex)
   (hp : HamiltonianPath u v) :
   ∃ (τ : PropAssignment (Pos g.vertexSize)), τ ⊨ no_non_edges g := by
   let n := g.vertexSize
-  let l := hp.vertices
+  let l := hp.path.walk.vertices
   have h : l.all_distinct := by apply hp.path.isPath
   have l_len : n = l.length := by
     apply Eq.symm HamiltonianPath.length_eq_num_vertices
   let τ : PropAssignment (Pos n) := fun pos =>
     match pos with
-    | (i,j) => if l.get (l_len ▸ j) = i then true else false
-  have x_i_j_def : ∀ i j, (τ ⊨ x j i ↔ l.get (l_len▸i) = j) := by
+    | (i,j) => if l.get (Fin.cast l_len j) = i then true else false
+  have x_i_j_def : ∀ i j, (τ ⊨ x j i ↔ l.get (Fin.cast l_len i) = j) := by
     intros i j
     apply Iff.intro
     · intro t_xji
@@ -423,12 +422,21 @@ theorem hamiltonian_path_to_sat (g : Graph) (u v : g.vertex)
   intros k k' k_rel_k'
   apply Iff.mpr satisfies_e_iff
   intros i j non_edge_i_j
-  have h₁ : τ ⊨ (x i k) ↔ List.get l (l_len ▸ k) = i := x_i_j_def k i
-  have h₂ : τ ⊨ (x j k') ↔ List.get l (l_len ▸ k') = j := x_i_j_def k' j 
+  have h₁ : τ ⊨ (x i k) ↔ List.get l (Fin.cast l_len k) = i := x_i_j_def k i
+  have h₂ : τ ⊨ (x j k') ↔ List.get l (Fin.cast l_len k') = j := x_i_j_def k' j
   by_contra neg
   apply Iff.mp satisfies_neg_or at neg
   apply Iff.mp (Iff.and h₁ h₂) at neg
-  
-
+  have cast : g.vertexSize = hp.path.walk.vertices.length := by
+    rw [← HamiltonianPath.length_eq_num_vertices]
+    rfl
+  have i_adj_j := @Path.consecutive_vertices_adjacent g u v hp.path.walk (Fin.cast cast k) (Fin.cast cast k') k_rel_k'
+  have eq₁ := neg.1
+  have eq₂ := neg.2
+  have that : Graph.adjacent (l.get (Fin.cast l_len k)) (l.get (Fin.cast l_len k')) := by
+    simp [i_adj_j]
+  rw [eq₁, eq₂] at that
+  simp [Graph.adjacent] at that
+  contradiction
 
 end HoG

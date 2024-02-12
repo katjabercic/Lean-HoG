@@ -2,8 +2,9 @@ import Mathlib.Tactic.LibrarySearch
 
 import HoG.Graph
 import HoG.Invariant.EdgeSize
-import HoG.Invariant.Hamiltonian.SatEncoding
 import HoG.Invariant.Hamiltonian.SatHelpers
+import HoG.Util.List
+
 import LeanSAT
 
 namespace HoG
@@ -12,7 +13,9 @@ open LeanSAT Model PropForm
 
 def piglet1 : Graph :=
   { vertexSize := 3,
-    edgeTree := .node (Edge.mk 2 ⟨0, by simp⟩) (.leaf (Edge.mk 1 ⟨0, by simp⟩)) (.leaf (Edge.mk 2 ⟨1, by simp⟩)) }
+    edgeTree := .node (Edge.mk 0 ⟨2, by simp⟩ (by norm_num)) (.leaf (Edge.mk 0 ⟨1, by simp⟩ (by norm_num))) (.leaf (Edge.mk 1 ⟨2, by simp⟩ (by norm_num)))
+    edgeCorrect := by rfl
+  }
 
 @[simp, reducible] def Fin.coe {n k : Nat} {h : k < n} : Fin k → Fin n := fun i =>
   ⟨i, Nat.lt_trans i.isLt h⟩
@@ -78,7 +81,7 @@ abbrev d {n : Nat} (j : Fin n) : PropForm (Pos n) :=
   let ks := List.finRange n
   let pairs := is ×ˢ ks
   let distinct_pairs := List.filter (fun (i,k) => i ≠ k) pairs
-  conj_list (distinct_pairs.map fun (i,k) => disj_list [¬x i j, ¬x k j])
+  conj_list (distinct_pairs.map fun (i,k) => disj_list [neg (x i j), neg (x k j)])
 
 @[simp] lemma satisfies_d_iff {n : Nat} {j : Fin n} {τ : PropAssignment (Pos n)} :
   τ ⊨ d j ↔ (∀ i k, i ≠ k → satisfies τ (neg (x i j)) ∨ satisfies τ (neg (x k j))) := by
