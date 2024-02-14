@@ -216,40 +216,6 @@ abbrev no_non_edges (g : Graph) :=
     aesop_subst a_1
     simp_all only [satisfies_e_iff, Bool.not_eq_true, satisfies_neg, satisfies_var, implies_true]
 
--- @[simp] def distinct_list_to_exactly_one_pos {n : Nat} (l : List (Fin n)) (l_len : n = l.length)
---   (_ : l.all_distinct) :
---   (τ : PropAssignment (Pos n)) ×' τ ⊨ exactly_one_at_pos n := by
---   let τ : PropAssignment (Pos n) := fun pos =>
---     match pos with
---     | (i,j) => if l.get (l_len ▸ j) = i then true else false
---   have x_i_j_def : ∀ i j, (τ ⊨ x j i ↔ l.get (l_len▸i) = j) := by
---     intros i j
---     apply Iff.intro
---     · intro t_xji
---       simp at t_xji
---       by_contra neg
---       apply t_xji neg
---     · aesop
---   have τ_sat_at_least : τ ⊨ at_least_one_at_pos n := by
---     apply Iff.mpr satisfies_at_least_one_at_pos_iff
---     suffices ∀ i, ∃ j, l.get (l_len▸i) = j by aesop
---     aesop
---   have τ_sat_at_most : τ ⊨ at_most_one_at_pos n := by
---     apply Iff.mpr satisfies_at_most_one_at_pos_iff
---     intro j
---     apply Iff.mpr satisfies_d_iff
---     aesop?
---     by_contra h
---     apply Iff.mp not_or at h
---     simp at h
---     let ⟨left, right⟩ := h
---     rw [left] at right
---     contradiction
---   have τ_sat : τ ⊨ exactly_one_at_pos n := by
---     apply Iff.mpr PropFun.satisfies_conj
---     exact ⟨τ_sat_at_least, τ_sat_at_most⟩
---   exact ⟨τ, τ_sat⟩
-
 lemma helper {ν : Type} {φ₁ φ₂ : PropFun ν} {τ : PropAssignment ν} :
   ¬ (τ ⊨ φ₁ᶜ ∨ τ ⊨ φ₂ᶜ) ↔ τ ⊨ φ₁ ∧ τ ⊨ φ₂ := by
   apply Iff.intro
@@ -258,149 +224,24 @@ lemma helper {ν : Type} {φ₁ φ₂ : PropFun ν} {τ : PropAssignment ν} :
   · intro h
     simp_all only [satisfies_neg, not_true_eq_false, or_self, not_false_eq_true]
 
--- @[simp] def distinct_list_to_exactly_one_fin_n {n : Nat} (l : List (Fin n)) (l_len : n = l.length)
---   (dist : l.all_distinct) :
---   (τ : PropAssignment (Pos n)) ×' τ ⊨ exactly_one_fin_n n := by
---   let τ : PropAssignment (Pos n) := fun pos =>
---     match pos with
---     | (i,j) => if l.get (l_len ▸ j) = i then true else false
---   have x_i_j_def : ∀ i j, (τ ⊨ x j i ↔ l.get (l_len▸i) = j) := by
---     intros i j
---     apply Iff.intro
---     · intro t_xji
---       simp at t_xji
---       by_contra neg
---       apply t_xji neg
---     · aesop
---   have τ_sat_at_least : τ ⊨ at_least_one_fin_n n := by
---     apply Iff.mpr satisfies_at_least_one_fin_n_iff
---     intro i
---     apply Iff.mpr satisfies_a_iff
---     suffices ∃ j, l.get (l_len ▸ j) = i from
---       by simp_all only [satisfies_var, ite_eq_left_iff]
---     -- XXX: Why doesn't this work
---     have := @List.all_distinct_exists_mem n l l_len dist i
---     let ⟨j, cond⟩ := this
---     apply Exists.intro (l_len ▸ j)
---     sorry
-
---   have τ_sat_at_most : τ ⊨ at_most_one_fin_n n := by
---     apply Iff.mpr satisfies_at_most_one_fin_n_iff
---     intro i
---     apply Iff.mpr satisfies_b_iff
---     intros j k j_neq_k
---     by_contra h
---     apply Iff.mp helper at h
---     let ⟨h₁, h₂⟩ := h
---     have h₁' : l.get (l_len ▸ j) = i := by
---       simp_all only [h₁]
---     have h₂' : l.get (l_len ▸ k) = i := by simp_all only [h₂]
---     have foo : (l_len ▸ j) = (l_len ▸ k) := by
---       apply List.all_distinct_list_get_inj
---       exact dist
---       rw [h₁', h₂']
---     have H : Fin n = Fin l.length := by simp [l_len]
---     have j_eq_k : j = k := by
---       apply Iff.mp (cast_inj H)
---       aesop_subst h₁'
---       simp_all only [Pos, List.list_to_fun, satisfies_var, ite_eq_left_iff, satisfies_at_least_one_fin_n_iff,
---         satisfies_a_iff, ne_eq, eq_rec_inj]
---     contradiction
---   have τ_sat : τ ⊨ exactly_one_fin_n n := by
---     apply Iff.mpr PropFun.satisfies_conj
---     exact ⟨τ_sat_at_least, τ_sat_at_most⟩
---   exact ⟨τ, τ_sat⟩
-
 lemma get_subst {X : Type} {n : Nat} {l : List X} {l_len : n = l.length} {i : X}
-  {h : ∃ j, l.get j = i} : ∃ j, l.get (l_len ▸ j) = i := by
+  {h : ∃ j, l.get j = i} : ∃ j, l.get (Fin.cast l_len j) = i := by
   subst l_len
   simp [h]
 
 lemma helper' {n : Nat} {l : List (Fin n)} {l_len : n = l.length} {i : Fin n}
-  {h : ∃ j, l.get j = i} : ∃ j, l.get (l_len ▸ j) = i := by
+  {h : ∃ j, l.get j = i} : ∃ j, l.get (Fin.cast l_len j) = i := by
   apply get_subst
   exact h
 
--- set_option maxHeartbeats 800000
--- lemma distinct_list_to_exactly_one {n : Nat} (l : List (Fin n)) (l_len : n = l.length)
---   (h : l.all_distinct) :
---   ∃ (τ : PropAssignment (Pos n)), τ ⊨ exactly_one n := by
---   let τ : PropAssignment (Pos n) := fun pos =>
---     match pos with
---     | (i,j) => if l.get (l_len ▸ j) = i then true else false
---   have x_i_j_def : ∀ i j, (τ ⊨ x j i ↔ l.get (l_len▸i) = j) := by
---     intros i j
---     apply Iff.intro
---     · intro t_xji
---       simp at t_xji
---       by_contra neg
---       apply t_xji neg
---     · aesop
---   have τ_sat_at_least_at_pos : τ ⊨ at_least_one_at_pos n := by
---     apply Iff.mpr satisfies_at_least_one_at_pos_iff
---     suffices ∀ i, ∃ j, l.get (l_len▸i) = j by aesop
---     aesop
+lemma cast_eq {n m : Nat} (h : n = m) (i j : Fin n) (eq : Fin.cast h i = Fin.cast h j) : i = j := by
+  subst h
+  simp_all only [Fin.cast_eq_self]
 
---   have τ_sat_at_most_at_pos : τ ⊨ at_most_one_at_pos n := by
---     apply Iff.mpr satisfies_at_most_one_at_pos_iff
---     intro j
---     apply Iff.mpr satisfies_d_iff
---     aesop?
---     by_contra h
---     apply Iff.mp not_or at h
---     simp at h
---     let ⟨left, right⟩ := h
---     rw [left] at right
---     contradiction
---   have τ_sat_at_pos : τ ⊨ exactly_one_at_pos n := by
---     apply Iff.mpr PropFun.satisfies_conj
---     exact ⟨τ_sat_at_least_at_pos, τ_sat_at_most_at_pos⟩
-
---   have τ_sat_at_least_fin_n : τ ⊨ at_least_one_fin_n n := by
---     apply Iff.mpr satisfies_at_least_one_fin_n_iff
---     intro i
---     apply Iff.mpr satisfies_a_iff
---     suffices ∃ j, l.get (l_len ▸ j) = i from
---       by simp_all only [satisfies_var, ite_eq_left_iff]
---     have := @List.all_distinct_exists_mem n l l_len h i
---     apply helper'
---     exact this
-
---   have τ_sat_at_most_fin_n : τ ⊨ at_most_one_fin_n n := by
---     apply Iff.mpr satisfies_at_most_one_fin_n_iff
---     intro i
---     apply Iff.mpr satisfies_b_iff
---     intros j k j_neq_k
---     by_contra h'
---     apply Iff.mp helper at h'
---     let ⟨h₁, h₂⟩ := h'
---     have h₁' : l.get (l_len ▸ j) = i := by
---       simp_all only [h₁]
---     have h₂' : l.get (l_len ▸ k) = i := by
---       simp_all only [h₂]
---     have foo : (l_len ▸ j) = (l_len ▸ k) := by
---       apply List.all_distinct_list_get_inj
---       exact h
---       rw [h₁', h₂']
---     have H : Fin n = Fin l.length := by simp [l_len]
---     have j_eq_k : j = k := by
---       apply Iff.mp (cast_inj H)
---       aesop_subst h₁'
---       simp_all only [Pos, List.list_to_fun, satisfies_var, ite_eq_left_iff, satisfies_at_least_one_fin_n_iff,
---         satisfies_a_iff, ne_eq, eq_rec_inj]
---     contradiction
-
---   have τ_sat_fin_n : τ ⊨ exactly_one_fin_n n := by
---     apply Iff.mpr PropFun.satisfies_conj
---     exact ⟨τ_sat_at_least_fin_n, τ_sat_at_most_fin_n⟩
-
---   apply Exists.intro τ
---   apply Iff.mpr PropFun.satisfies_conj
---   exact ⟨τ_sat_at_pos, τ_sat_fin_n⟩
-
-theorem hamiltonian_path_to_sat (g : Graph) (u v : g.vertex)
-  (hp : HamiltonianPath u v) :
-  ∃ (τ : PropAssignment (Pos g.vertexSize)), τ ⊨ no_non_edges g := by
+set_option maxHeartbeats 400000
+theorem hamiltonian_path_to_sat (g : Graph) (u v : g.vertex) (hp : HamiltonianPath u v) :
+  ∃ (τ : PropAssignment (Pos g.vertexSize)),
+  τ ⊨ exactly_one g.vertexSize ⊓ no_non_edges g := by
   let n := g.vertexSize
   let l := hp.path.walk.vertices
   have h : l.all_distinct := by apply hp.path.isPath
@@ -418,25 +259,110 @@ theorem hamiltonian_path_to_sat (g : Graph) (u v : g.vertex)
       simp_all only [HamiltonianPath.vertices, Path.vertices, List.list_to_fun, ite_false]
     · aesop
   apply Exists.intro τ
-  apply Iff.mpr satisfies_no_non_edges_iff
-  intros k k' k_rel_k'
-  apply Iff.mpr satisfies_e_iff
-  intros i j non_edge_i_j
-  have h₁ : τ ⊨ (x i k) ↔ List.get l (Fin.cast l_len k) = i := x_i_j_def k i
-  have h₂ : τ ⊨ (x j k') ↔ List.get l (Fin.cast l_len k') = j := x_i_j_def k' j
-  by_contra neg
-  apply Iff.mp satisfies_neg_or at neg
-  apply Iff.mp (Iff.and h₁ h₂) at neg
-  have cast : g.vertexSize = hp.path.walk.vertices.length := by
-    rw [← HamiltonianPath.length_eq_num_vertices]
-    rfl
-  have i_adj_j := @Path.consecutive_vertices_adjacent g u v hp.path.walk (Fin.cast cast k) (Fin.cast cast k') k_rel_k'
-  have eq₁ := neg.1
-  have eq₂ := neg.2
-  have that : Graph.adjacent (l.get (Fin.cast l_len k)) (l.get (Fin.cast l_len k')) := by
-    simp [i_adj_j]
-  rw [eq₁, eq₂] at that
-  simp [Graph.adjacent] at that
-  contradiction
+  apply Iff.mpr PropFun.satisfies_conj
+  apply And.intro
+  have τ_sat_at_least_at_pos : τ ⊨ at_least_one_at_pos n := by
+    apply Iff.mpr satisfies_at_least_one_at_pos_iff
+    suffices ∀ i, ∃ j, l.get (l_len▸i) = j by
+      intro i
+      simp_all only [Pos, satisfies_var, ite_eq_left_iff, imp_false, not_not, implies_true, exists_eq', satisfies_c_iff]
+    intro i
+    simp_all only [Pos, satisfies_var, ite_eq_left_iff, imp_false, not_not, implies_true, exists_eq']
+
+  have τ_sat_at_most_at_pos : τ ⊨ at_most_one_at_pos n := by
+    apply Iff.mpr satisfies_at_most_one_at_pos_iff
+    intro j
+    apply Iff.mpr satisfies_d_iff
+    intros i k i_neq_k
+    by_contra h
+    apply Iff.mp not_or at h
+    simp at h
+    let ⟨left, right⟩ := h
+    rw [left] at right
+    contradiction
+  have τ_sat_at_pos : τ ⊨ exactly_one_at_pos n := by
+    apply Iff.mpr PropFun.satisfies_conj
+    exact ⟨τ_sat_at_least_at_pos, τ_sat_at_most_at_pos⟩
+
+  have τ_sat_at_least_fin_n : τ ⊨ at_least_one_fin_n n := by
+    apply Iff.mpr satisfies_at_least_one_fin_n_iff
+    intro i
+    apply Iff.mpr satisfies_a_iff
+    suffices ∃ j, l.get (Fin.cast l_len j) = i from by
+      let ⟨j, cond⟩ := this
+      apply Exists.intro j
+      apply Iff.mpr (x_i_j_def j i)
+      apply cond
+    have := @List.all_distinct_exists_mem n l l_len h i
+    apply helper'
+    exact this
+
+  have τ_sat_at_most_fin_n : τ ⊨ at_most_one_fin_n n := by
+    apply Iff.mpr satisfies_at_most_one_fin_n_iff
+    intro i
+    apply Iff.mpr satisfies_b_iff
+    intros j k j_neq_k
+    by_contra h'
+    apply Iff.mp helper at h'
+    let ⟨h₁, h₂⟩ := h'
+    have h₁' : l.get (Fin.cast l_len j) = i := by
+      simp_all only [h₁]
+    have h₂' : l.get (Fin.cast l_len k) = i := by
+      simp_all only [h₂]
+    have foo : (Fin.cast l_len j) = (Fin.cast l_len k) := by
+      apply List.all_distinct_list_get_inj
+      exact h
+      rw [h₁', h₂']
+    have H : Fin n = Fin l.length := by simp [l_len]
+    have j_eq_k : j = k := by
+      apply cast_eq l_len j k foo
+    contradiction
+
+  have τ_sat_fin_n : τ ⊨ exactly_one_fin_n n := by
+    apply Iff.mpr PropFun.satisfies_conj
+    exact ⟨τ_sat_at_least_fin_n, τ_sat_at_most_fin_n⟩
+
+  apply Iff.mpr PropFun.satisfies_conj
+  exact ⟨τ_sat_at_pos, τ_sat_fin_n⟩
+
+  have τ_sat_ham : τ ⊨ no_non_edges g := by
+    apply Iff.mpr satisfies_no_non_edges_iff
+    intros k k' k_rel_k'
+    apply Iff.mpr satisfies_e_iff
+    intros i j non_edge_i_j
+    have h₁ : τ ⊨ (x i k) ↔ List.get l (Fin.cast l_len k) = i := x_i_j_def k i
+    have h₂ : τ ⊨ (x j k') ↔ List.get l (Fin.cast l_len k') = j := x_i_j_def k' j
+    by_contra neg
+    apply Iff.mp satisfies_neg_or at neg
+    apply Iff.mp (Iff.and h₁ h₂) at neg
+    have cast : g.vertexSize = hp.path.walk.vertices.length := by
+      rw [← HamiltonianPath.length_eq_num_vertices]
+      rfl
+    have i_adj_j := @Walk.consecutive_vertices_adjacent g u v hp.path.walk (Fin.cast cast k) (Fin.cast cast k') k_rel_k'
+    have eq₁ := neg.1
+    have eq₂ := neg.2
+    have that : Graph.adjacent (l.get (Fin.cast l_len k)) (l.get (Fin.cast l_len k')) := by
+      simp [i_adj_j]
+    rw [eq₁, eq₂] at that
+    simp [Graph.adjacent] at that
+    contradiction
+
+  exact τ_sat_ham
+
+lemma imp_neg {P Q : Prop} (h : P → Q) : ¬ Q → ¬ P := by exact fun a a_1 => a (h a_1)
+
+lemma reformulation {g : Graph} :
+  (∃ (u v : g.vertex) (p : Path g u v), p.isHamiltonian) →
+  (∃ (τ : PropAssignment (Pos g.vertexSize)), τ ⊨ exactly_one g.vertexSize ⊓ no_non_edges g) := by
+  intro h
+  let ⟨u, v, p, ham⟩ := h
+  have hp : HamiltonianPath u v := { path := p, isHamiltonian := ham }
+  apply hamiltonian_path_to_sat g u v hp
+
+theorem unsat_to_no_hamiltonian_path {g : Graph} :
+  (¬ ∃ (τ : PropAssignment (Pos g.vertexSize)), τ ⊨ exactly_one g.vertexSize ⊓ no_non_edges g) →
+  (¬ ∃ (u v : g.vertex) (p : Path g u v), p.isHamiltonian) := by
+  apply imp_neg reformulation
+
 
 end HoG
