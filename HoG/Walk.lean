@@ -12,10 +12,10 @@ namespace HoG
 inductive Walk (g : Graph) : g.vertex → g.vertex → Type
   | trivial (v : g.vertex) : Walk g v v
   | left {s t u : g.vertex} : g.adjacent s t → Walk g t u →  Walk g s u
-  | right {s t u : g.vertex} : Walk g s t → g.adjacent t u → Walk g s u
+  -- | right {s t u : g.vertex} : Walk g s t → g.adjacent t u → Walk g s u
 
 -- -- We probably want some kind of list-like notation for defining paths, i.e. < v₁, v₂, …, vₙ > or something
-macro walk:term " ~- " "{" u:term "," v:term "}" : term => `(Walk.right _ $u $v (by rfl) $walk)
+-- macro walk:term " ~- " "{" u:term "," v:term "}" : term => `(Walk.right _ $u $v (by rfl) $walk)
 macro "{" u:term "," v:term "}" " -~ " walk:term : term => `(Walk.left $u $v _ $walk (by rfl))
 macro " ⬝ " u:term : term => `(Walk.trivial $u)
 
@@ -24,7 +24,7 @@ namespace Walk
 def toString {g : Graph} {s t : g.vertex} : Walk g s t → String
   | .trivial s  => s!"{s}"
   | .left e w => s!"{s} -> {w.toString}"
-  | .right w e => s!"{w.toString} -> {t}"
+  -- | .right w e => s!"{w.toString} -> {t}"
 
 instance walkToString {g : Graph} {s t : g.vertex} : ToString (Walk g s t) where
   toString := fun w => w.toString
@@ -32,10 +32,13 @@ instance walkToString {g : Graph} {s t : g.vertex} : ToString (Walk g s t) where
 instance reprWalk {g : Graph} {u v : g.vertex} : Repr (Walk g u v) where
   reprPrec w _ := w.toString
 
+instance {g : Graph} {u v : g.vertex} {_ : Walk g u v} : Inhabited g.vertex where
+  default := u
+
 def isTrivial {g : Graph} {u v : g.vertex} : Walk g u v → Bool
   | .trivial _ => true
   | .left _ _ => false
-  | .right _ _ => false
+  -- | .right _ _ => false
 
 lemma isTrivial_vertex {g : Graph} {u v : g.vertex} (p : Walk g u v)
   (h : p.isTrivial = true) :
@@ -45,33 +48,33 @@ lemma isTrivial_vertex {g : Graph} {u v : g.vertex} (p : Walk g u v)
 def isNontrivial {g : Graph} {s t : g.vertex} : Walk g s t → Prop
   | .trivial s => False
   | .left _ _ => True
-  | .right _ _ => True
+  -- | .right _ _ => True
 
 def notInWalk {g : Graph} {u v a b : g.vertex} : Walk g u v → g.adjacent a b → Bool
   | .trivial s , e => true
   | .left (t := t) _ p, e => (a != u || b != t) && (a != t || b != u) && notInWalk p e
-  | .right (t := t) p _, e => (a != t || b != v) && (a != v  || b != t) && notInWalk p e
+  -- | .right (t := t) p _, e => (a != t || b != v) && (a != v  || b != t) && notInWalk p e
 
-def reverse {g : Graph} {s t : g.vertex} :  Walk g s t → Walk g t s
-  | .trivial s => .trivial s
-  | .left e p => right (reverse p) (g.symmetricAdjacent _ _ e)
-  | .right p e => left (g.symmetricAdjacent _ _ e) (reverse p)
+-- def reverse {g : Graph} {s t : g.vertex} :  Walk g s t → Walk g t s
+--   | .trivial s => .trivial s
+--   | .left e p => right (reverse p) (g.symmetricAdjacent _ _ e)
+  -- | .right p e => left (g.symmetricAdjacent _ _ e) (reverse p)
 
 macro p:term "↑" : term => `(reverse $p)
 
-def concat {g : Graph} {s t u : g.vertex} : Walk g s t → Walk g t u → Walk g s u := fun p q =>
-  match p with
-  | .trivial s => q
-  | .left e p' =>
-    match q with
-    | .trivial t => left e p'
-    | .left r q' => left e (concat (right p' r) q')
-    | .right q' r => left e (right (concat p' q') r)
-  | p' =>
-    match q with
-    | .trivial t => p'
-    | .left r q' => concat (right p' r) q'
-    | .right q' r => right (concat p' q') r
+-- def concat {g : Graph} {s t u : g.vertex} : Walk g s t → Walk g t u → Walk g s u := fun p q =>
+--   match p with
+--   | .trivial s => q
+--   | .left e p' =>
+--     match q with
+--     | .trivial t => left e p'
+--     | .left r q' => left e (concat (right p' r) q')
+--     | .right q' r => left e (right (concat p' q') r)
+--   | p' =>
+--     match q with
+--     | .trivial t => p'
+--     | .left r q' => concat (right p' r) q'
+--     | .right q' r => right (concat p' q') r
 
 -- macro p:term "++" q:term : term => `(concat $p $q)
 
@@ -83,13 +86,13 @@ def edgeWalk {g : Graph} {s t : g.vertex} (e : g.adjacent s t) : Walk g s t :=
 def length {g : Graph} {s t : g.vertex} : Walk g s t → ℕ
   | .trivial s => 0
   | .left _ p' => length p' + 1
-  | .right p' _ => length p' + 1
+  -- | .right p' _ => length p' + 1
 
 -- The easy direction, just apply induction on the structure of path
 lemma pathImpliesConnected {g : Graph} {s t : g.vertex} : Walk g s t → g.connected s t
   | .trivial s => g.connectedEq s s (Eq.refl s)
   | .left e p' => g.connectedTrans _ _ _ (g.adjacentConnected e) (pathImpliesConnected p')
-  | .right p' e => g.connectedTrans _ _ _ (pathImpliesConnected p') (g.adjacentConnected e)
+  -- | .right p' e => g.connectedTrans _ _ _ (pathImpliesConnected p') (g.adjacentConnected e)
 
 theorem strongInduction
   (α : Type)
@@ -112,14 +115,20 @@ theorem strongInduction
 def vertices {g : Graph} {u v : g.vertex} : Walk g u v -> List g.vertex
   | .trivial v => [v]
   | .left conn_ut walk_tv => u :: walk_tv.vertices
-  | .right walk_ut conn_tv => v :: walk_ut.vertices
+  -- | .right walk_ut conn_tv => walk_ut.vertices ++ [v]
+
+@[simp] lemma vertices_len_pos {g : Graph} {u v : g.vertex} {w : Walk g u v} :
+  0 < w.vertices.length := by
+  induction' w
+  · simp
+  · simp
 
 @[simp] lemma walk_trivial_vertices_length {g : Graph} {u v : g.vertex} (p : Walk g u v)
   (h : p.isTrivial) : p.vertices.length = 1 := by
   induction' p with p ih
   · simp
   · contradiction
-  · contradiction
+  -- · contradiction
 
 def verticesMultiset {g : Graph} {u v : g.vertex} :
   Walk g u v -> Multiset g.vertex := fun w => Multiset.ofList w.vertices
@@ -144,21 +153,15 @@ lemma vertices_left_length {g : Graph} {u v w : g.vertex} {p : Walk g u w} {adj_
   rw [@vertices_sublist_left g u v w p adj_u_v q p_is_left]
   simp
 
-lemma walk_vertices_left_get {g : Graph} {u v w : g.vertex} (p : Walk g u w) (adj_u_v : g.adjacent u v)
-  (q : Walk g v w) (p_is_left : p = left adj_u_v q) (i : Fin q.vertices.length) :
-  q.vertices.get i = p.vertices.get (Fin.cast (@vertices_left_length g u v w p adj_u_v q p_is_left) (Fin.castSucc i)) := by
-  have := @vertices_sublist_left g u v w p adj_u_v q p_is_left
-  sorry
+-- @[simp]
+-- lemma vertices_sublist_right {g : Graph} {u v w : g.vertex} {p : Walk g u w} {adj_v_w : g.adjacent v w}
+--   {q : Walk g u v} {p_is_right : p = right q adj_v_w} : p.vertices = q.vertices ++ [w] := by
+--   aesop  -- Can't just use simp, as it doesn't apply induction
 
-@[simp]
-lemma vertices_sublist_right {g : Graph} {u v w : g.vertex} {p : Walk g u w} {adj_v_w : g.adjacent v w}
-  {q : Walk g u v} {p_is_right : p = right q adj_v_w} : p.vertices = w :: q.vertices := by
-  aesop  -- Can't just use simp, as it doesn't apply induction
-
-lemma vertices_right_length {g : Graph} {u v w : g.vertex} (p : Walk g u w) (adj_v_w : g.adjacent v w)
-  (q : Walk g u v) (p_is_right : p = right q adj_v_w)  : p.vertices.length = q.vertices.length + 1 := by
-  rw [@vertices_sublist_right g u v w p adj_v_w q p_is_right]
-  simp
+-- lemma vertices_right_length {g : Graph} {u v w : g.vertex} (p : Walk g u w) (adj_v_w : g.adjacent v w)
+--   (q : Walk g u v) (p_is_right : p = right q adj_v_w)  : p.vertices.length = q.vertices.length + 1 := by
+--   rw [@vertices_sublist_right g u v w p adj_v_w q p_is_right]
+--   simp
 
 lemma vertices_length_as_multiset {g : Graph} {u v : g.vertex} (w : Walk g u v) :
   w.vertices.length = Fintype.card (Multiset.ofList w.vertices) := by
@@ -169,23 +172,23 @@ lemma length_as_vertices {g : Graph} {u v : g.vertex} (w : Walk g u v) :
   induction' w
   · simp
   · simp; assumption -- just apply induction hypothesis
-  · simp; assumption -- just apply induction hypothesis
+  -- · simp; assumption -- just apply induction hypothesis
 
 @[simp] def edges {g : Graph} {u v : g.vertex} : Walk g u v → List g.edge
   | .trivial v => []
   | .left adj_ut walk_tv =>
     let e := Graph.adjacentEdge adj_ut
     e :: walk_tv.edges
-  | .right walk_ut adj_tv =>
-    let e := Graph.adjacentEdge adj_tv
-    walk_ut.edges ++ [e]
+  -- | .right walk_ut adj_tv =>
+  --   let e := Graph.adjacentEdge adj_tv
+  --   walk_ut.edges ++ [e]
 
 lemma edges_length {g : Graph} {u v : g.vertex} {w : Walk g u v} :
   w.edges.length = w.length := by
   induction w
   · simp
   · simp_all
-  · simp_all
+  -- · simp_all
 
 @[simp]
 lemma edges_sublist_left {g : Graph} {u v w : g.vertex} {p : Walk g u w} {adj_u_v : g.adjacent u v}
@@ -193,11 +196,11 @@ lemma edges_sublist_left {g : Graph} {u v w : g.vertex} {p : Walk g u w} {adj_u_
   p.edges = g.adjacentEdge adj_u_v :: q.edges := by
   aesop
 
-@[simp]
-lemma edges_sublist_right {g : Graph} {u v w : g.vertex} {p : Walk g u w} {adj_v_w : g.adjacent v w}
-  {q : Walk g u v} {p_is_right : p = right q adj_v_w} :
-  p.edges = q.edges ++ [g.adjacentEdge adj_v_w] := by
-  aesop
+-- @[simp]
+-- lemma edges_sublist_right {g : Graph} {u v w : g.vertex} {p : Walk g u w} {adj_v_w : g.adjacent v w}
+--   {q : Walk g u v} {p_is_right : p = right q adj_v_w} :
+--   p.edges = q.edges ++ [g.adjacentEdge adj_v_w] := by
+--   aesop
 
 -- lemma foo {g : Graph} {u v w : g.vertex} {p : Walk g u v} {adj_u_v : g.adjacent u v}
 --   {q : Walk g v p} {p_is_left : p = left adj_u_v q} (e : )
@@ -235,7 +238,6 @@ lemma edge_first_is_vertex {g : Graph} {u v : g.vertex} {w : Walk g u v}
         sorry
       | inr h' => sorry
     | inr h => sorry
-  sorry
 
 @[simp] def boo {g : Graph} {u v : g.vertex} {w : Walk g u v} :
   Fin (w.edges.length + 1) → Fin w.vertices.length := fun i => by
@@ -264,24 +266,77 @@ lemma edge_second_is_vertex {g : Graph} {u v : g.vertex} {w : Walk g u v}
         sorry
       | inr h' => sorry
     | inr h => sorry
-  sorry
+
+lemma lt_lt_succ_lt {a b n : Nat} (h : a < b) (h' : b < Nat.succ n) : a < n := by
+  by_contra h
+  simp at h
+  apply Iff.mp Nat.le_iff_lt_or_eq at h
+  cases h with
+  | inl H =>
+    linarith
+  | inr H =>
+    linarith
+
+lemma succ_consecutive_exists_cast {n : Nat} (i j : Fin (Nat.succ n)) (h : i.val = j.val + 1) :
+  ∃ k : Fin n, Fin.castSucc k = j := by
+  apply Iff.mpr Fin.exists_iff
+  apply Exists.intro j.val
+  have h' : j.val < i.val := by
+    linarith
+  have h : ↑j < n := by
+    apply lt_lt_succ_lt h' i.isLt
+  apply Exists.intro h
+  simp
+
+@[simp] lemma walk_vertices_get_zero {g : Graph} [Inhabited g.vertex] {u v : g.vertex}
+  (w : Walk g u v) (n : Nat) (h : n < 1) :
+  w.vertices.getI n = u := by
+  induction' w
+  · simp_all
+  · simp_all
 
 /-- Two conescutive vertices on a path are adjacent. -/
 lemma consecutive_vertices_adjacent {g : Graph} {u v : g.vertex} {w : Walk g u v}
-  {i j : Fin w.vertices.length} {h : i.val + 1 = j.val}  :
+  {i j : Fin w.vertices.length} {h : i.val + 1 = j.val} :
   g.adjacent (w.vertices.get i) (w.vertices.get j) := by
   have i_lt_j : i < j := by
     apply Iff.mpr Fin.lt_iff_val_lt_val
     rw [← h]
     apply Nat.lt_succ_self
-  simp [Graph.adjacent, Graph.badjacent]
-  let u := w.vertices.get i
-  let v := w.vertices.get j
-  apply ltByCases (w.vertices.get i) (w.vertices.get j)
-  · intro h'
-    simp [ltByCases, h']
-  sorry
-  sorry
+  induction' w with _ s t r adj walk ih
+  · simp_all
+  · simp at i j
+    have h' := Fin.eq_zero_or_eq_succ i
+    cases' h' with h' h'
+    · simp [h']
+      have j_neq_0 : j ≠ 0 := by
+        by_contra h''
+        rw [h', h''] at i_lt_j
+        contradiction
+      let ⟨j', cond'⟩ := Fin.eq_succ_of_ne_zero j_neq_0
+      rw [cond']
+      simp
+      have : Inhabited g.vertex := { default := u }
+      rw [← List.getI_eq_get]
+      rw [walk_vertices_get_zero walk]
+      exact adj
+      simp_all
+    · let ⟨k, cond⟩ := h'
+      simp [cond]
+      have h' := Fin.eq_zero_or_eq_succ j
+      cases' h' with h' h'
+      · rw [h'] at i_lt_j
+        contradiction
+      · let ⟨l, cond'⟩ := h'
+        simp [cond']
+        have k_l : k.val + 1 = l.val := by
+          simp_all
+        have k_lt_l : k < l := by
+          apply Iff.mpr Fin.lt_iff_val_lt_val
+          rw [← k_l]
+          apply Nat.lt_succ_self
+        have adj_k_l := @ih k l k_l k_lt_l
+        exact adj_k_l
 
 end Walk
 
@@ -298,12 +353,11 @@ def ClosedWalk.vertices {g : Graph} {u : g.vertex} : ClosedWalk g u -> List g.ve
   Walk.vertices
 
 @[simp]
-def ClosedWalk.edges {g : Graph} {u : g.vertex} : ClosedWalk g u -> List (Edge g.vertexSize) :=
+def ClosedWalk.edges {g : Graph} {u : g.vertex} : ClosedWalk g u -> List g.edge :=
   Walk.edges
 
 instance {g : Graph} {u : g.vertex} {w : ClosedWalk g u} : Fintype w.verticesMultiset := by
   infer_instance
-
 
 @[simp]
 def Walk.isPath {g : Graph} {u v : g.vertex} : Walk g u v → Bool :=
@@ -329,7 +383,7 @@ instance {g : Graph} : Repr ((u v : g.vertex) ×' Path g u v) where
 def vertices {g : Graph} {u v : g.vertex} : Path g u v → List g.vertex := fun p =>
   Walk.vertices p.walk
 
-@[simp] def edges {g : Graph} {u v : g.vertex} : Path g u v → List (Edge g.vertexSize) :=
+@[simp] def edges {g : Graph} {u v : g.vertex} : Path g u v → List g.edge :=
   fun p => p.walk.edges
 
 @[simp] lemma vertices_all_distinct {g : Graph} {u v : g.vertex} (p : Path g u v) :
@@ -343,12 +397,12 @@ lemma subpathIsPath_left {g : Graph} {u v w : g.vertex} (p : Path g u w) (adj_u_
   have walk_is_path : walk.isPath = true := by apply p.isPath
   aesop
 
-@[simp]
-lemma subpathIsPath_right {g : Graph} {u v w : g.vertex} (p : Path g u w) (adj_v_w : g.adjacent v w)
-  (q : Walk g u v) (p_is_right : p.walk = Walk.right q adj_v_w) : q.isPath = true := by
-  simp
-  have walk_is_path : walk.isPath = true := by apply p.isPath
-  aesop
+-- @[simp]
+-- lemma subpathIsPath_right {g : Graph} {u v w : g.vertex} (p : Path g u w) (adj_v_w : g.adjacent v w)
+--   (q : Walk g u v) (p_is_right : p.walk = Walk.right q adj_v_w) : q.isPath = true := by
+--   simp
+--   have walk_is_path : walk.isPath = true := by apply p.isPath
+--   aesop
 
 /-- Two consecutive vertices on a path cannot be equal, since a path
     never repeats a vertex.
@@ -406,6 +460,7 @@ lemma edges_length {g : Graph} {u v : g.vertex} {p : Path g u v} :
   p.edges.length = p.length := by
   simp [Walk.edges_length]
 
+
 lemma vertexMultiset_card_is_vertices_length {g : Graph} {u v : g.vertex} {p : Path g u v} :
   Multiset.card p.vertexMultiset = p.vertices.length := by
   simp
@@ -454,9 +509,6 @@ theorem maxPathLength' {g : Graph} {u v : g.vertex} (p : Path g u v) :
   by_contra h
   rw [not_le, length_is_num_vertices] at h
   simp_all only [lt_self_iff_false]
-
-@[simp] def firsts {g : Graph} {u v : g.vertex} (p : Path g u v) := p.edges.map Edge.fst
-@[simp] def seconds {g : Graph} {u v : g.vertex} (p : Path g u v) := p.edges.map Edge.snd
 
 end Path
 
