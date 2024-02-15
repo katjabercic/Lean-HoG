@@ -1,13 +1,8 @@
-import Mathlib.Tactic.LibrarySearch
-
 import HoG.Graph
 import HoG.Invariant.EdgeSize
 import HoG.Invariant.Hamiltonian.Definition
-import HoG.Invariant.Hamiltonian.SatHelpersPropFun
 import HoG.Invariant.Hamiltonian.SatHelpers
 import HoG.Util.List
-
-import LeanSAT
 
 namespace HoG
 
@@ -187,13 +182,28 @@ abbrev no_non_edges (g : Graph) :=
   let pairs := pairs.filter fun (k,k') => k.val + 1 = k'.val
   conj_list (pairs.map fun (k, k') => e k k')
 
+abbrev has_hamiltonian_path (g : Graph) :=
+  let n := g.vertexSize
+  exactly_one n ⊓ no_non_edges g
+
 @[simp] lemma satisfies_at_least_one_fin_n_iff {n : Nat} {τ : PropAssignment (Pos n)} :
   τ ⊨ at_least_one_fin_n n ↔ ∀ (i : Fin n), τ ⊨ a i := by
   simp [satisfies_conj_list]
 
 @[simp] lemma satisfies_at_most_one_fin_n_iff {n : Nat} {τ : PropAssignment (Pos n)} :
   τ ⊨ at_most_one_fin_n n ↔ ∀ (j : Fin n), τ ⊨ b j := by
-  simp [satisfies_conj_list]
+  simp only [Pos, satisfies_conj_list, List.mem_map, List.mem_finRange, true_and, forall_exists_index,
+    forall_apply_eq_imp_iff, satisfies_b_iff, ne_eq, satisfies_neg, satisfies_var, Bool.not_eq_true]
+  -- simp [satisfies_conj_list]
+
+@[simp] lemma satisfies_exactly_one_fin_n_iff {n : Nat} {τ : PropAssignment (Pos n)} :
+  τ ⊨ exactly_one_fin_n n ↔
+  (∀ (i : Fin n), ∃ (j : Fin n), τ ⊨ x i j ∧ (∀ j k, j ≠ k → τ ⊨ (x i j)ᶜ ∨ τ ⊨ (x i k)ᶜ))
+  := by
+  simp_all only [Pos, satisfies_conj, satisfies_at_least_one_fin_n_iff, satisfies_a_iff, satisfies_var,
+    satisfies_at_most_one_fin_n_iff, satisfies_b_iff, ne_eq, satisfies_neg, Bool.not_eq_true, exists_and_right,
+    forall_and]
+  -- simp [forall_and]
 
 @[simp] lemma satisfies_at_least_one_at_pos_iff {n : Nat} {τ : PropAssignment (Pos n)} :
   τ ⊨ at_least_one_at_pos n ↔ ∀ (i : Fin n), τ ⊨ c i := by
@@ -203,18 +213,59 @@ abbrev no_non_edges (g : Graph) :=
   τ ⊨ at_most_one_at_pos n ↔ ∀ (j : Fin n), τ ⊨ d j := by
   simp [satisfies_conj_list]
 
+@[simp] lemma satisfies_exactly_one_at_pos_iff {n : Nat} {τ : PropAssignment (Pos n)} :
+  τ ⊨ exactly_one_at_pos n ↔
+  (∀ (j : Fin n), ∃ (i : Fin n), τ ⊨ x i j ∧ (∀ i k, i ≠ k → τ ⊨ (x i j)ᶜ ∨ τ ⊨ (x k j)ᶜ))
+  := by
+  simp [forall_and]
+
+@[simp] lemma satisfies_exactly_one_iff {n : Nat} {τ : PropAssignment (Pos n)} :
+  τ ⊨ exactly_one n ↔
+  (∀ (i : Fin n), ∃ (j : Fin n), τ ⊨ x i j ∧ (∀ j k, j ≠ k → τ ⊨ (x i j)ᶜ ∨ τ ⊨ (x i k)ᶜ)) ∧
+  (∀ (j : Fin n), ∃ (i : Fin n), τ ⊨ x i j ∧ (∀ i k, i ≠ k → τ ⊨ (x i j)ᶜ ∨ τ ⊨ (x k j)ᶜ))
+  := by
+  simp_all only [Pos, satisfies_conj, satisfies_at_least_one_at_pos_iff, satisfies_c_iff, satisfies_var,
+    satisfies_at_most_one_at_pos_iff, satisfies_d_iff, ne_eq, satisfies_neg, Bool.not_eq_true,
+    satisfies_at_least_one_fin_n_iff, satisfies_a_iff, satisfies_at_most_one_fin_n_iff, satisfies_b_iff,
+    exists_and_right]
+  apply Iff.intro
+  · intro a
+    simp_all only [not_false_eq_true, implies_true, and_self]
+  · intro a
+    simp_all only [implies_true, not_false_eq_true, and_self]
+
 @[simp] lemma satisfies_no_non_edges_iff {g : Graph} {τ : PropAssignment (Pos g.vertexSize)} :
   τ ⊨ no_non_edges g ↔
-  ∀ (k k' : Fin g.vertexSize), k.val + 1 =  k'.val → τ ⊨ e k k' := by
+  ∀ (k k' : Fin g.vertexSize), k.val + 1 =  k'.val →
+  ∀ i j, ¬ g.badjacent i j → τ ⊨ (x i k)ᶜ ∨ τ ⊨ (x j k')ᶜ := by
   apply Iff.intro
   · intros h k k' rel
     simp [satisfies_conj_list, List.mem_filter] at h
-    exact h (e k k') k k' rel rfl
+    have := h (e k k') k k' rel rfl
+    apply Iff.mp satisfies_e_iff at this
+    exact this
   · intro h
     simp [satisfies_conj_list, List.mem_filter]
     intro p x x_1 a a_1
     aesop_subst a_1
     simp_all only [satisfies_e_iff, Bool.not_eq_true, satisfies_neg, satisfies_var, implies_true]
+
+@[simp] lemma satisfies_has_hamiltonian_path_iff {g : Graph} {τ : PropAssignment (Pos g.vertexSize)} :
+  τ ⊨ has_hamiltonian_path g ↔
+  (∀ i, ∃ j, τ ⊨ x i j ∧ (∀ j k, j ≠ k → τ ⊨ (x i j)ᶜ ∨ τ ⊨ (x i k)ᶜ)) ∧
+  (∀ j, ∃ i, τ ⊨ x i j ∧ (∀ i k, i ≠ k → τ ⊨ (x i j)ᶜ ∨ τ ⊨ (x k j)ᶜ)) ∧
+  (∀ k k', k.val + 1 =  k'.val →
+    ∀ i j, ¬ g.badjacent i j → τ ⊨ (x i k)ᶜ ∨ τ ⊨ (x j k')ᶜ
+  ) := by
+  simp_all only [Pos, satisfies_conj, satisfies_at_least_one_at_pos_iff, satisfies_c_iff, satisfies_var,
+    satisfies_at_most_one_at_pos_iff, satisfies_d_iff, ne_eq, satisfies_neg, Bool.not_eq_true,
+    satisfies_at_least_one_fin_n_iff, satisfies_a_iff, satisfies_at_most_one_fin_n_iff, satisfies_b_iff,
+    satisfies_no_non_edges_iff, satisfies_e_iff, exists_and_right]
+  apply Iff.intro
+  · intro a
+    simp_all only [not_false_eq_true, implies_true, and_self]
+  · intro a
+    simp_all only [implies_true, not_false_eq_true, and_self]
 
 lemma helper {ν : Type} {φ₁ φ₂ : PropFun ν} {τ : PropAssignment ν} :
   ¬ (τ ⊨ φ₁ᶜ ∨ τ ⊨ φ₂ᶜ) ↔ τ ⊨ φ₁ ∧ τ ⊨ φ₂ := by
@@ -241,7 +292,7 @@ lemma cast_eq {n m : Nat} (h : n = m) (i j : Fin n) (eq : Fin.cast h i = Fin.cas
 set_option maxHeartbeats 400000
 theorem hamiltonian_path_to_sat (g : Graph) (u v : g.vertex) (hp : HamiltonianPath u v) :
   ∃ (τ : PropAssignment (Pos g.vertexSize)),
-  τ ⊨ exactly_one g.vertexSize ⊓ no_non_edges g := by
+  τ ⊨ has_hamiltonian_path g := by
   let n := g.vertexSize
   let l := hp.path.walk.vertices
   have h : l.all_distinct := by apply hp.path.isPath
@@ -313,7 +364,6 @@ theorem hamiltonian_path_to_sat (g : Graph) (u v : g.vertex) (hp : HamiltonianPa
       apply List.all_distinct_list_get_inj
       exact h
       rw [h₁', h₂']
-    have H : Fin n = Fin l.length := by simp [l_len]
     have j_eq_k : j = k := by
       apply cast_eq l_len j k foo
     contradiction
@@ -328,7 +378,6 @@ theorem hamiltonian_path_to_sat (g : Graph) (u v : g.vertex) (hp : HamiltonianPa
   have τ_sat_ham : τ ⊨ no_non_edges g := by
     apply Iff.mpr satisfies_no_non_edges_iff
     intros k k' k_rel_k'
-    apply Iff.mpr satisfies_e_iff
     intros i j non_edge_i_j
     have h₁ : τ ⊨ (x i k) ↔ List.get l (Fin.cast l_len k) = i := x_i_j_def k i
     have h₂ : τ ⊨ (x j k') ↔ List.get l (Fin.cast l_len k') = j := x_i_j_def k' j
@@ -353,16 +402,37 @@ lemma imp_neg {P Q : Prop} (h : P → Q) : ¬ Q → ¬ P := by exact fun a a_1 =
 
 lemma reformulation {g : Graph} :
   (∃ (u v : g.vertex) (p : Path g u v), p.isHamiltonian) →
-  (∃ (τ : PropAssignment (Pos g.vertexSize)), τ ⊨ exactly_one g.vertexSize ⊓ no_non_edges g) := by
+  (∃ (τ : PropAssignment (Pos g.vertexSize)), τ ⊨ has_hamiltonian_path g) := by
   intro h
   let ⟨u, v, p, ham⟩ := h
   have hp : HamiltonianPath u v := { path := p, isHamiltonian := ham }
   apply hamiltonian_path_to_sat g u v hp
 
+lemma expanded {g : Graph} :
+  (∃ (u v : g.vertex) (p : Path g u v), p.isHamiltonian) →
+  (∃ (τ : PropAssignment (Pos g.vertexSize)),
+    (∀ i, ∃ j, τ ⊨ x i j ∧ (∀ j k, j ≠ k → τ ⊨ (x i j)ᶜ ∨ τ ⊨ (x i k)ᶜ)) ∧
+    (∀ j, ∃ i, τ ⊨ x i j ∧ (∀ i k, i ≠ k → τ ⊨ (x i j)ᶜ ∨ τ ⊨ (x k j)ᶜ)) ∧
+    (∀ k k', k.val + 1 =  k'.val →
+      ∀ i j, ¬ g.badjacent i j → τ ⊨ (x i k)ᶜ ∨ τ ⊨ (x j k')ᶜ))
+  := by
+  intro h
+  let ⟨τ, cond⟩ := reformulation h
+  apply Exists.intro τ
+  apply Iff.mp satisfies_has_hamiltonian_path_iff cond
+
 theorem unsat_to_no_hamiltonian_path {g : Graph} :
-  (¬ ∃ (τ : PropAssignment (Pos g.vertexSize)), τ ⊨ exactly_one g.vertexSize ⊓ no_non_edges g) →
+  (¬ ∃ (τ : PropAssignment (Pos g.vertexSize)), τ ⊨ has_hamiltonian_path g) →
   (¬ ∃ (u v : g.vertex) (p : Path g u v), p.isHamiltonian) := by
   apply imp_neg reformulation
 
+theorem unsat_to_no_hamiltonian_path_expanded {g : Graph} :
+  (¬ ∃ (τ : PropAssignment (Pos g.vertexSize)),
+    (∀ i, ∃ j, τ ⊨ x i j ∧ (∀ j k, j ≠ k → τ ⊨ (x i j)ᶜ ∨ τ ⊨ (x i k)ᶜ)) ∧
+    (∀ j, ∃ i, τ ⊨ x i j ∧ (∀ i k, i ≠ k → τ ⊨ (x i j)ᶜ ∨ τ ⊨ (x k j)ᶜ)) ∧
+    (∀ k k', k.val + 1 =  k'.val →
+      ∀ i j, ¬ g.badjacent i j → τ ⊨ (x i k)ᶜ ∨ τ ⊨ (x j k')ᶜ)) →
+  (¬ ∃ (u v : g.vertex) (p : Path g u v), p.isHamiltonian) := by
+  apply imp_neg expanded
 
 end HoG

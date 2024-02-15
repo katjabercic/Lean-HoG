@@ -1,4 +1,3 @@
-import Mathlib.Tactic.LibrarySearch
 import HoG.Graph
 import HoG.Walk
 
