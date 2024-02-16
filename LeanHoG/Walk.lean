@@ -149,6 +149,59 @@ lemma edges_sublist_left {g : Graph} {u v w : g.vertex} {p : Walk g u w} {adj_u_
   p.edges = g.adjacentEdge adj_u_v :: q.edges := by
   aesop
 
+lemma edge_fst_in_vertices {g : Graph} {u v : g.vertex} {w : Walk g u v}
+  {i : Fin w.edges.length} :
+  g.fst (w.edges.get i) ∈ w.vertices := by
+  induction' w with _ s t r adj walk ih
+  · simp at i
+    have := Fin.prop i
+    contradiction
+  · simp_all
+    simp at i
+    have h := Fin.eq_zero_or_eq_succ i
+    apply ltByCases s t
+    · intro s_lt_t
+      cases' h with h h
+      · apply Or.inl
+        simp [h]
+        apply Graph.adjacentEdge_fst
+        assumption
+      · apply Or.inr
+        let ⟨j, cond⟩ := h
+        simp [cond]
+        have := @ih j
+        exact this
+    · intro s_eq_t
+      sorry
+    · intro t_lt_s
+      apply Or.inr
+      cases' h with h h
+      · simp_all [Graph.adjacentEdge]
+      · let ⟨j, cond⟩ := h
+        have := @ih j
+        simp [cond]
+        exact this
+
+lemma edges_all_distinct {g : Graph} {u v : g.vertex} (w : Walk g u v)
+  (h : w.vertices.all_distinct) :
+  w.edges.all_distinct := by
+  by_contra h'
+  apply List.not_all_distinct_exists_duplicate at h'
+  let ⟨i, j, cond⟩ := h'
+  let ⟨i_neq_j, get_i_eq_get_j⟩ := cond
+  let e := List.get w.edges i
+  let e' := List.get w.edges j
+  let u := g.fst e
+  let v := g.fst e'
+  have u_in_vertices : u ∈ w.vertices := by apply edge_fst_in_vertices
+  have v_in_vertices : v ∈ w.vertices := by apply edge_fst_in_vertices
+  have u_has_ind := by apply Iff.mp List.mem_iff_get u_in_vertices
+  have v_has_ind := by apply Iff.mp List.mem_iff_get v_in_vertices
+  let ⟨u_ind, u_cond⟩ := u_has_ind
+  let ⟨v_ind, v_cond⟩ := v_has_ind
+  sorry
+
+
 lemma edges_in_edges {g : Graph} {u v : g.vertex} {w : Walk g u v} :
   ∀ e ∈ w.edges, g.edgeTree.mem e.val := by
   intro e e_in_et

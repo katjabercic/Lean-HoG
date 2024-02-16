@@ -81,6 +81,22 @@ lemma Graph.all_edges (G : Graph) (p : G.edgeType → Prop) [DecidablePred p] :
     intro H e
     exact SetTree.all_forall G.edgeTree p H e e.prop
 
+lemma Graph.adjacentEdge_fst {G : Graph} {u v : G.vertex} {h : G.adjacent u v} :
+  u < v → G.fst (G.adjacentEdge h) = u := by
+  simp_all [Graph.adjacentEdge, Graph.adjacent]
+
+lemma Graph.adjacentEdge_fst' {G : Graph} {u v : G.vertex} {h : G.adjacent u v} :
+  v < u → G.fst (G.adjacentEdge h) = v := by
+  simp_all [Graph.adjacentEdge, Graph.adjacent]
+
+lemma Graph.adjacentEdge_snd {G : Graph} {u v : G.vertex} {h : G.adjacent u v} :
+  u < v → G.snd (G.adjacentEdge h) = v := by
+  simp_all [Graph.adjacentEdge, Graph.adjacent]
+
+lemma Graph.adjacentEdge_snd' {G : Graph} {u v : G.vertex} {h : G.adjacent u v} :
+  v < u → G.snd (G.adjacentEdge h) = u := by
+  simp_all [Graph.adjacentEdge, Graph.adjacent]
+
 /--
   For a symmetric relation on vertices, if it holds for all endpoints of all edges,
   then it holds for all pairs of adjacent vertices. This is useful for checking
