@@ -2,6 +2,7 @@ import LeanHoG.Graph
 
 namespace LeanHoG
 
+
 /- Basic facts about connected and disconnected graphs. -/
 
 /-- Vertices are connected iff they are relaeted by the equivalence envelope of adjacency -/
@@ -24,7 +25,7 @@ lemma Graph.connected_trans {G : Graph} (u v w : G.vertex) :
   EqvGen.trans u v w
 
 /-- We may extend connectedness by an edge -/
-lemma Graph.adjacentConnected {G : Graph} (u v w : G.vertex) :
+lemma Graph.adjacent_connected {G : Graph} (u v w : G.vertex) :
   G.adjacent u v → G.connected v w → G.connected u w := by
   intros uv vw
   apply connected_trans (v := v)
@@ -80,7 +81,7 @@ lemma connectedToRoot (G : Graph) [C : ConnectivityCertificate G] :
   cases (Decidable.eq_or_ne v C.root)
   case inl eq => apply G.connected_of_eq ; assumption
   case inr neq =>
-    apply G.adjacentConnected v (C.next v) C.root
+    apply G.adjacent_connected v (C.next v) C.root
     · apply C.nextAdjacent ; assumption
     · apply ih
       apply C.distNext
