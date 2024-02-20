@@ -137,6 +137,9 @@ lemma length_as_vertices {g : Graph} {u v : g.vertex} (w : Walk g u v) :
     let e := Graph.adjacentEdge adj_ut
     e :: walk_tv.edges
 
+instance {g : Graph} {u v : g.vertex} : Lean.ToJson (Walk g u v) where
+  toJson w := Lean.toJson w.edges
+
 lemma edges_length {g : Graph} {u v : g.vertex} {w : Walk g u v} :
   w.edges.length = w.length := by
   induction w
@@ -259,7 +262,7 @@ end ClosedWalk
 
 class Path (g : Graph) (u v : g.vertex) where
   walk : Walk g u v
-  isPath : walk.isPath = true
+  isPath : walk.isPath = true := by rfl
 
 namespace Path
 
@@ -270,8 +273,15 @@ instance trivialPath {g : Graph} (u : g.vertex) : Path g u u where
 instance {g : Graph} {u v : g.vertex} : Repr (Path g u v) where
   reprPrec p n := reprPrec p.walk n
 
+instance {g : Graph} {u v : g.vertex} : ToString (Path g u v) where
+  toString p := toString p.walk
+
+
 instance {g : Graph} : Repr ((u v : g.vertex) ×' Path g u v) where
   reprPrec p n := reprPrec p.2.2 n
+
+instance {g : Graph} {u v : g.vertex} : Lean.ToJson (Path g u v) where
+  toJson p := Lean.toJson p.walk.edges
 
 @[simp]
 def vertices {g : Graph} {u v : g.vertex} : Path g u v → List g.vertex := fun p =>

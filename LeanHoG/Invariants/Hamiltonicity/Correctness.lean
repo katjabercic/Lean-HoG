@@ -281,7 +281,7 @@ lemma cast_eq {n m : Nat} (h : n = m) (i j : Fin n) (eq : Fin.cast h i = Fin.cas
   simp_all only [Fin.cast_eq_self]
 
 set_option maxHeartbeats 400000
-theorem hamiltonian_path_to_sat (g : Graph) (u v : g.vertex) (hp : HamiltonianPath u v) :
+theorem hamiltonian_path_to_sat (g : Graph) (hp : HamiltonianPath g) :
   ∃ (τ : PropAssignment (Pos g.vertexSize)),
   τ ⊨ has_hamiltonian_path g := by
   let n := g.vertexSize
@@ -378,7 +378,7 @@ theorem hamiltonian_path_to_sat (g : Graph) (u v : g.vertex) (hp : HamiltonianPa
     have cast : g.vertexSize = hp.path.walk.vertices.length := by
       rw [← HamiltonianPath.length_eq_num_vertices]
       rfl
-    have i_adj_j := @Walk.consecutive_vertices_adjacent g u v hp.path.walk (Fin.cast cast k) (Fin.cast cast k') k_rel_k'
+    have i_adj_j := @Walk.consecutive_vertices_adjacent g hp.u hp.v hp.path.walk (Fin.cast cast k) (Fin.cast cast k') k_rel_k'
     have eq₁ := neg.1
     have eq₂ := neg.2
     have that : Graph.adjacent (l.get (Fin.cast l_len k)) (l.get (Fin.cast l_len k')) := by
@@ -396,8 +396,8 @@ lemma hamiltonian_path_to_assignment {g : Graph} :
   (∃ (τ : PropAssignment (Pos g.vertexSize)), τ ⊨ has_hamiltonian_path g) := by
   intro h
   let ⟨u, v, p, ham⟩ := h
-  have hp : HamiltonianPath u v := { path := p, isHamiltonian := ham }
-  apply hamiltonian_path_to_sat g u v hp
+  have hp : HamiltonianPath g := { path := p, isHamiltonian := ham }
+  apply hamiltonian_path_to_sat g hp
 
 lemma hamiltonian_path_to_assignment_expanded {g : Graph} :
   (∃ (u v : g.vertex) (p : Path g u v), p.isHamiltonian) →

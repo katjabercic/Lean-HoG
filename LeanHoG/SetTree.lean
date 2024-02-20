@@ -11,6 +11,11 @@ inductive SetTree.{u} (α : Type u) : Type u
   | node : α → SetTree α → SetTree α → SetTree α
 deriving Repr, Inhabited
 
+def SetTree.toList.{u} {α : Type u} : SetTree α → List α
+  | .empty => []
+  | .leaf x => [x]
+  | .node x l r => x :: l.toList ++ r.toList
+
 /--
   The given tree is a valid search tree with elements within given bounds.
 -/
@@ -94,7 +99,7 @@ theorem SetTree.all_forall {α : Type} [LinearOrder α] (t : SetTree α) (p : α
     intros py x
     cases (lt_trichotomy x y) with
     | inl x_lt_y => simp [compare_lt_iff_lt.mpr x_lt_y]
-    | inr G =>  
+    | inr G =>
       cases G with
       | inl x_eq_y => simp [compare_eq_iff_eq.mpr x_eq_y] ; rw [x_eq_y] ; assumption
       | inr y_lt_x => simp [compare_gt_iff_gt.mpr (gt_iff_lt.mpr y_lt_x)]
