@@ -1,3 +1,4 @@
+import Lean
 import Qq
 import LeanHoG.SetTree
 import LeanHoG.MapTree
@@ -6,9 +7,12 @@ import LeanHoG.Connectivity
 import LeanHoG.Certificate
 import LeanHoG.JsonData
 
+import LeanSAT
+import LeanHoG.Invariants.Hamiltonicity.SatEncoding
+
 namespace LeanHoG
 
-open Qq
+open Qq LeanSAT Lean Meta
 
 /-- Lifting from exception monad to the Elab.Command monad -/
 def liftExcept {α : Type} {m} [Monad m] [Lean.MonadError m] : Except String α → m α
@@ -19,8 +23,10 @@ def liftExcept {α : Type} {m} [Monad m] [Lean.MonadError m] : Except String α 
 def certificateName (graphName: Lean.Name) (certName: String) : Lean.Name :=
   (.str graphName certName)
 
+instance : Solver IO := (Solver.Impl.DimacsCommand "kissat")
+
 /-- A special command for loading a graph -/
-elab "load_graph" graphName:ident fileName:str : command => do
+elab "load_graph" graphName:ident fileName:str tryHam:(" tryHam ")? : command => unsafe do
   let graphName := graphName.getId
   let gapData ← loadGAPData fileName.getString
   have graphQ := graphOfData gapData.graph
@@ -66,6 +72,43 @@ elab "load_graph" graphName:ident fileName:str : command => do
       hints := .regular 0
       safety := .safe
     }
-    Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance disconnectivityCertificateName .scoped 42 
+    Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance disconnectivityCertificateName .scoped 42
+
+  match gapData.pathData? with
+  | .none =>
+    match tryHam with
+    | none => pure ()
+    | some _ =>
+      let g ← Elab.Command.liftTermElabM (evalExpr Graph q(Graph) graph)
+      let mbHp ← tryFindHamiltonianPath g
+      match mbHp with
+      | .none => pure ()
+      | .some hp =>
+        let data : PathData := { vertices := hp.vertices }
+        let hamiltonianPathName := certificateName graphName "hamiltonianPath"
+        let hpQ := hamiltonianPathOfData graph data
+        Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
+          name := hamiltonianPathName
+          levelParams := []
+          type := q(HamiltonianPath $graph)
+          value := hpQ
+          hints := .regular 0
+          safety := .safe
+        }
+        Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance hamiltonianPathName .scoped 42
+  | .some data =>
+    let hamiltonianPathName := certificateName graphName "hamiltonianPath"
+    let hpQ := hamiltonianPathOfData graph data
+    Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
+      name := hamiltonianPathName
+      levelParams := []
+      type := q(HamiltonianPath $graph)
+      value := hpQ
+      hints := .regular 0
+      safety := .safe
+    }
+    Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance hamiltonianPathName .scoped 42
+
+
 
 end LeanHoG

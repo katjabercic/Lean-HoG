@@ -5,7 +5,6 @@ import LeanSAT
 import Qq
 
 open Lean Widget Elab Command Term Meta LeanSAT Qq
-
 namespace LeanHoG
 
 @[widget_module]
@@ -26,14 +25,14 @@ def HamiltonianPath.toVisualizationFormat (G : Graph) :
     ("hamiltonianPath", Lean.toJson hp.path)
   ]
 
-instance : Solver IO := (Solver.Impl.DimacsCommand "kissat")
+instance widgetInstance : Solver IO := (Solver.Impl.DimacsCommand "kissat")
 
 def IO.unsafeGet {α} [Inhabited α] (val : IO α) : α := Id.run do
   let .ok val' s := val.run () | return default
   return val'
 
 def HamiltonianPath.toVisualizationFormat? (G : Graph) : IO Json := do
-  let hp ← showNoHamiltonianPath G
+  let hp ← tryFindHamiltonianPath G
   match hp with
   | some hp =>
     return Json.mkObj [
@@ -74,16 +73,16 @@ unsafe def elabVisualizeHamiltonianPathCmd : CommandElab
 
   | _ => throwUnsupportedSyntax
 
-syntax (name := visualizeHamiltonianPathOptCmd) "#visualizeHamiltonianPath?" term : command
+-- syntax (name := visualizeHamiltonianPathOptCmd) "#visualizeHamiltonianPath?" term : command
 
-@[command_elab visualizeHamiltonianPathOptCmd]
-unsafe def elabVisualizeHamiltonianPathOptCmd : CommandElab
-  | stx@`(#visualizeHamiltonianPath? $g) => liftTermElabM do
-    let wi : Expr ←
-      elabWidgetInstanceSpecAux (mkIdent `visualize) (← `(IO.unsafeGet (HamiltonianPath.toVisualizationFormat? $g)))
-    let wi : WidgetInstance ← evalWidgetInstance wi
-    savePanelWidgetInfo wi.javascriptHash wi.props stx
-  | _ => throwUnsupportedSyntax
+-- @[command_elab visualizeHamiltonianPathOptCmd]
+-- unsafe def elabVisualizeHamiltonianPathOptCmd : CommandElab
+--   | stx@`(#visualizeHamiltonianPath? $g) => liftTermElabM do
+--     let wi : Expr ←
+--       elabWidgetInstanceSpecAux (mkIdent `visualize) (← `(IO.unsafeGet (HamiltonianPath.toVisualizationFormat? $g)))
+--     let wi : WidgetInstance ← evalWidgetInstance wi
+--     savePanelWidgetInfo wi.javascriptHash wi.props stx
+--   | _ => throwUnsupportedSyntax
 
 def a := 30
 

@@ -174,7 +174,7 @@ def buildPath {g : Graph} : Option (List (g.vertex)) → Option (HamiltonianPath
       | none => none
     | none => none
 
-def showNoHamiltonianPath [Solver IO] (g : Graph) :
+def tryFindHamiltonianPath [Solver IO] (g : Graph) :
   -- IO (Option ((g : Graph) ×' (¬ ∃ (u v : g.vertex) (p : Path g u v), p.isHamiltonian))) := do
   -- Elab.Term.TermElabM (Option (HamiltonianPath g)) := Core.liftIOCore do
   IO (Option (HamiltonianPath g)) := do
@@ -182,7 +182,6 @@ def showNoHamiltonianPath [Solver IO] (g : Graph) :
   let foo := EncCNF.run enc.val
   let cnf := foo.2.cnf
   let map := foo.2.vMap
-  -- IO.println s!"{cnf}"
   match ← Solver.solve cnf with
   | .error =>
     IO.println "error"
