@@ -1,16 +1,9 @@
 /-
-import Lean
-import Std
-import Qq
-import Mathlib
-import LeanHoG.JsonData
+This file contains help functions and theorems to build the Std red black trees from a sorted array in linear time.
 
-open Std
-open Std.RBColor
-open Std.RBNode
-open Qq
+This is my first real Lean code and I am pretty sure the code can be greatly improved. My deepest apologies for any eyesores.
+Gauvain
 -/
-
 import Std.Data.RBMap
 import Mathlib.Init.Data.Nat.Bitwise
 import Mathlib.Data.Nat.Order.Basic
