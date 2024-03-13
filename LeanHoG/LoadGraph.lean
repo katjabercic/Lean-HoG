@@ -1,6 +1,4 @@
 import Qq
-import LeanHoG.SetTree
-import LeanHoG.MapTree
 import LeanHoG.Graph
 import LeanHoG.Connectivity
 import LeanHoG.Certificate
@@ -66,6 +64,6 @@ elab "load_graph" graphName:ident fileName:str : command => do
       hints := .regular 0
       safety := .safe
     }
-    Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance disconnectivityCertificateName .scoped 42 
+    Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance disconnectivityCertificateName .scoped 42
 
 end LeanHoG

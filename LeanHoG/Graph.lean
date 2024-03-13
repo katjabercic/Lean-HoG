@@ -1,13 +1,12 @@
-import LeanHoG.SetTree
-import LeanHoG.MapTree
 import LeanHoG.Edge
+import Std
+import Std.Data.RBMap.Basic
 
 namespace LeanHoG
 
 structure Graph where
   vertexSize : Nat
-  edgeTree : SetTree (Edge vertexSize)
-  edgeCorrect : edgeTree.isCorrect
+  edgeTree : Std.RBSet (Edge vertexSize) Edge.linearOrder.compare
 
 /-- The type of graph vertices -/
 @[reducible]
@@ -19,7 +18,7 @@ def Graph.edgeType (G : Graph) := Edge G.vertexSize
 
 /-- The type of edges -/
 @[reducible]
-def Graph.edge (G : Graph) := { e : G.edgeType // G.edgeTree.mem e }
+def Graph.edge (G : Graph) := { e : G.edgeType // G.edgeTree.contains e }
 
 @[reducible]
 def Graph.fst {G : Graph} (e : G.edgeType) : G.vertex := e.fst
@@ -35,9 +34,9 @@ def Graph.edgeSize (G : Graph) := Fintype.card G.edge
 def Graph.badjacent {G : Graph} : G.vertex → G.vertex → Bool :=
   fun u v =>
     ltByCases u v
-      (fun u_lt_v => G.edgeTree.mem (Edge.mk u v u_lt_v))
+      (fun u_lt_v => G.edgeTree.contains (Edge.mk u v u_lt_v))
       (fun _ => false)
-      (fun v_lt_u => G.edgeTree.mem (Edge.mk v u v_lt_u))
+      (fun v_lt_u => G.edgeTree.contains (Edge.mk v u v_lt_u))
 
 /-- The vertex adjacency relations -/
 def Graph.adjacent {G : Graph} : G.vertex → G.vertex → Prop :=
@@ -74,12 +73,60 @@ lemma Graph.symmetricAdjacent (G : Graph) :
     intros u v
     apply ltByCases u v <;> (intro h ; simp [ltByCases, not_lt_of_lt, h, adjacent, badjacent])
 
+lemma edge_cmp_eq_impl_eq (G: Graph) (e1 e2 : G.edgeType) : Edge.linearOrder.compare e1 e2 = Ordering.eq → e1 = e2 := by
+  intro H
+  rw [compare_eq_iff_eq] at H
+  assumption
+
+lemma member_rbset (G: Graph) (e : G.edgeType) : e ∈ G.edgeTree ↔ G.edgeTree.Mem e := by
+  constructor
+  · intro H
+    exact H
+  · intro H
+    exact H
+
+lemma member_rbnode (G: Graph) (e : G.edgeType) : e ∈ G.edgeTree.1 ↔ G.edgeTree.1.EMem e := by
+  constructor
+  · intro H
+    exact H
+  · intro H
+    exact H
+
+lemma edge_in_node (G : Graph) (e : G.edgeType) : e ∈ G.edgeTree → e ∈ G.edgeTree.1 := by
+  rw [member_rbset, member_rbnode]
+  unfold Std.RBSet.Mem
+  unfold Std.RBNode.EMem
+  unfold Std.RBSet.MemP
+  unfold Std.RBNode.MemP
+  rw [Std.RBNode.Any_def]
+  rw [Std.RBNode.Any_def]
+  intro H
+  apply Exists.elim H
+  intro a H'
+  obtain ⟨belongs, compare⟩ := H'
+  apply edge_cmp_eq_impl_eq at compare
+  use a
+
+
+/-
+The problem here is that the RBSet checks for membership using the cmp function while the RBNode checks if we have this exact element
+-/
 /-- An efficient way of checking that a statement holds for all edges. -/
 lemma Graph.all_edges (G : Graph) (p : G.edgeType → Prop) [DecidablePred p] :
-    SetTree.all G.edgeTree p = true → ∀ (e : G.edge), p e.val
+    G.edgeTree.all p = true → ∀ (e : G.edge), p e.val
   := by
+    unfold Std.RBSet.all
+    rw [Std.RBNode.all_iff]
+    rw [Std.RBNode.All_def]
     intro H e
-    exact SetTree.all_forall G.edgeTree p H e e.prop
+    specialize H e
+    have member : e.1 ∈ G.edgeTree := by
+      rw [← Std.RBSet.contains_iff]
+      exact e.2
+    apply edge_in_node at member
+    apply H at member
+    apply of_decide_eq_true at member
+    exact member
 
 /--
   For a symmetric relation on vertices, if it holds for all endpoints of all edges,
