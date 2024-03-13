@@ -8,9 +8,6 @@ import Std.Data.RBMap
 import Mathlib.Init.Data.Nat.Bitwise
 import Mathlib.Data.Nat.Order.Basic
 import Qq
-import LeanHoG.JsonData
-import LeanHoG.Certificate
-import LeanHoG.Edge
 open Qq
 open Std.RBNode
 
@@ -255,48 +252,3 @@ def build_RBMap {α β : Q(Type)} (arr : Array Q($α × $β)) (linOrder : Q(Line
   have treeQ : Q(Std.RBSet ($α × $β) (Ordering.byKey Prod.fst ($linOrder).compare)) := (q(⟨$nodeQ, $isWF⟩))
   have mapQ : Q(Std.RBMap $α $β ($linOrder).compare) := treeQ
   mapQ
-
-
-elab "load_rbset" name:ident filename:str : command => do
-  let treeName := name.getId
-  let data ← LeanHoG.loadGAPData filename.getString
-  have vertexSize : Q(Nat) := Lean.mkRawNatLit data.graph.vertexSize
-  have linOrder : Q(LinearOrder (LeanHoG.Edge $vertexSize)) := q(LeanHoG.Edge.linearOrder)
-  have arrQ : Array Q(LeanHoG.Edge $vertexSize) := data.graph.edges.map (LeanHoG.edgeOfData vertexSize)
-  have treeQ : Q(Std.RBSet (LeanHoG.Edge $vertexSize) $(linOrder).compare) := build_RBSet arrQ q($linOrder)
-  Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
-    name := treeName
-    levelParams := []
-    type := q(Std.RBSet (LeanHoG.Edge $vertexSize) ($linOrder).compare)
-    value := q($treeQ)
-    hints := .regular 0
-    safety := .safe
-  }
-
-
-elab "load_rbmap" name:ident filename:str : command => do
-  let treeName := name.getId
-  let data ← LeanHoG.loadGAPData filename.getString
-  match data.connectivityData? with
-  | .none => pure ()
-  | .some data =>
-    have linOrder : Q(LinearOrder ℕ) := q(Nat.linearOrder)
-    have arrQ : Array Q(ℕ × ℕ) := data.next.map (fun (i,j) => (q(($i, $j))))
-    have treeQ : Q(Std.RBMap ℕ ℕ $(linOrder).compare) := build_RBMap arrQ q($linOrder)
-    Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
-      name := treeName
-      levelParams := []
-      type := q(Std.RBMap ℕ ℕ ($linOrder).compare)
-      value := q($treeQ)
-      hints := .regular 0
-      safety := .safe
-    }
-
-load_rbset Set1 "examples/cube5.json"
-load_rbmap Map1 "examples/cube5.json"
-
-#check Set1
-#eval Set1
-
-#check Map1
-#eval Map1.find! 6
