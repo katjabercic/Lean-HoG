@@ -62,6 +62,6 @@ To build the widgets library run the command
 Once you built the widgets, you can try them out by opening the `Examples.lean` file
 and clicking on the line `#visualizeGraph Cycle7`. In the info view you should now see
 something like this:
-
+![image](https://github.com/katjabercic/Lean-HoG/assets/6967728/f4ee94ab-4d31-4192-ac80-7e35323e5c4b)
 
 
