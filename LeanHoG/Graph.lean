@@ -1,5 +1,3 @@
-import LeanHoG.SetTree
-import LeanHoG.MapTree
 import LeanHoG.Edge
 import Std
 import Std.Data.RBMap.Basic

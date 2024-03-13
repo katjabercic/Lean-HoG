@@ -1,6 +1,5 @@
 import Qq
 import LeanHoG.JsonData
-import LeanHoG.SetTree
 import LeanHoG.Edge
 import LeanHoG.Graph
 import LeanHoG.Connectivity
@@ -9,76 +8,6 @@ import LeanHoG.RBSetUtils
 namespace LeanHoG
 
 open Qq
-
-/--
-  Given a subarray of values, generate the corresponding balanced search tree.
-  NB: The subarray must be sorted by keys.
--/
-partial def setTreeOfSubarray {α : Q(Type)} (arr : Array Q($α)) (low high : Nat) : Q(SetTree $α) :=
-  if ltSize : low < arr.size ∧ high <= arr.size then
-    if _ : low >= high then
-      q(.empty)
-    else if low + 1 = high then
-      let x := arr[low]'(ltSize.1)
-      q(.leaf $x)
-    else
-      let middle := (low + high).div2
-      let left :=  setTreeOfSubarray arr low middle
-      let right := setTreeOfSubarray arr (middle + 1) high
-      have middle_valid : (low + high).div2 < arr.size := (by
-        rw [Nat.div2_val]
-        have h : (low + high < arr.size + arr.size) → ((low + high) / 2 < arr.size) := (by
-          intro ab_lt_nn
-          rw [←Nat.two_mul] at ab_lt_nn
-          apply Nat.div_lt_of_lt_mul ab_lt_nn)
-        apply h
-        apply Nat.lt_of_le_of_lt (Nat.add_le_add_left ltSize.2 low) (Nat.add_lt_add_right ltSize.1 arr.size))
-      let x := arr[middle]'middle_valid
-      q(.node $x $left $right)
-  else
-    q(.empty)
-
-/--
-  Given an array of values, generate the corresponding balanced search tree.
-  NB: The array must be sorted by keys.
--/
-def setTreeOfArray {α : Q(Type)} (arr : Array Q($α)) : Q(SetTree $α) :=
-  setTreeOfSubarray arr 0 arr.size
-
-/--
-  Given a subarray of key-value pairs, generate the corresponding balanced map tree.
-  NB: The subarray must be sorted by keys.
--/
-partial def mapTreeOfSubarray {α β : Q(Type)} (arr : Array (Q($α) × Q($β))) (low high : Nat) : Q(MapTree $α $β) :=
-  if ltSize : low < arr.size ∧ high <= arr.size then
-    if _ : low >= high then
-      q(.empty)
-    else if low + 1 = high then
-      let (x, y) := arr[low]'(ltSize.1)
-      q(.leaf $x $y)
-    else
-      let middle := (low + high).div2
-      let left :=  mapTreeOfSubarray arr low middle
-      let right := mapTreeOfSubarray arr (middle + 1) high
-      have middle_valid : (low + high).div2 < arr.size := (by
-        rw [Nat.div2_val]
-        have h : (low + high < arr.size + arr.size) → ((low + high) / 2 < arr.size) := (by
-          intro ab_lt_nn
-          rw [←Nat.two_mul] at ab_lt_nn
-          apply Nat.div_lt_of_lt_mul ab_lt_nn)
-        apply h
-        apply Nat.lt_of_le_of_lt (Nat.add_le_add_left ltSize.2 low) (Nat.add_lt_add_right ltSize.1 arr.size))
-      let (x, y) := arr[middle]'middle_valid
-      q(.node $x $y $left $right)
-  else
-    q(.empty)
-
-/--
-  Given an array of key-value pairs, generate the corresponding balanced search tree.
-  NB: The array must be sorted by keys.
--/
-def mapTreeOfArray {α β : Q(Type)} (arr : Array (Q($α) × Q($β))) : Q(MapTree $α $β) :=
-  mapTreeOfSubarray arr 0 arr.size
 
 /-- Construct a quoted edge from a pair of numbers -/
 def edgeOfData (n : Q(Nat)) : Nat × Nat → Q(Edge $n) :=

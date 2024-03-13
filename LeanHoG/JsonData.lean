@@ -1,5 +1,4 @@
 import Lean
-import LeanHoG.MapTree
 import LeanHoG.Graph
 
 namespace LeanHoG
