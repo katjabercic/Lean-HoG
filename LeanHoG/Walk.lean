@@ -1,6 +1,5 @@
 import LeanHoG.Graph
 import LeanHoG.Connectivity
-import LeanHoG.SetTree
 import LeanHoG.Util.List
 
 namespace LeanHoG
@@ -151,12 +150,6 @@ lemma edges_sublist_left {g : Graph} {u v w : g.vertex} {p : Walk g u w} {adj_u_
   {q : Walk g v w} {p_is_left : p = left adj_u_v q} :
   p.edges = g.adjacentEdge adj_u_v :: q.edges := by
   aesop
-
-lemma edges_in_edges {g : Graph} {u v : g.vertex} {w : Walk g u v} :
-  ∀ e ∈ w.edges, g.edgeTree.mem e.val := by
-  intro e e_in_et
-  have ⟨_, cond⟩ := e
-  apply cond
 
 lemma lt_lt_succ_lt {a b n : Nat} (h : a < b) (h' : b < Nat.succ n) : a < n := by
   by_contra h
