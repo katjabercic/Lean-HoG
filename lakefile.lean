@@ -22,11 +22,3 @@ lean_exe get_graphs where
 
 lean_exe build_widgets where
   root := `js.Build
-
-post_update pkg do
-  let exitCode ← IO.Process.spawn {
-    cmd := "lake"
-    args := #["exe", "build_widgets"]
-  } >>= (·.wait)
-  if exitCode ≠ 0 then
-    logError s!"{pkg.name}: failed to build widgets"

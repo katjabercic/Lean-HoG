@@ -6,7 +6,7 @@ def main : IO Unit := do
   } >>= (·.wait)
   if exitCode ≠ 0 then
     IO.eprintln s!"failed install npm packages"
-
+    return
   let exitCode ← IO.Process.spawn {
     cwd := "js"
     cmd := "npm"
