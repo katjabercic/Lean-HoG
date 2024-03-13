@@ -1,7 +1,5 @@
 import Lean
 import Qq
-import LeanHoG.SetTree
-import LeanHoG.MapTree
 import LeanHoG.Graph
 import LeanHoG.Connectivity
 import LeanHoG.Certificate
