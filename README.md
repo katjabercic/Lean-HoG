@@ -59,6 +59,8 @@ Requirements:
 To build the widgets library run the command
 * `lake exe build_widgets`
 
+To use the visualization widget in a file you have to add the import `import LeanHog.Widgets`.
+
 Once you built the widgets, you can try them out by opening the `Examples.lean` file
 and clicking on the line `#visualizeGraph Cycle7`. In the info view you should now see
 something like this:
