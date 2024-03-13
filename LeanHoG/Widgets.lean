@@ -22,7 +22,7 @@ def HamiltonianPath.toVisualizationFormat (G : Graph) :
   Json.mkObj [
     ("vertexSize", G.vertexSize),
     ("edgeList", Lean.toJson G.edgeTree.toList),
-    ("hamiltonianPath", Lean.toJson hp.path)
+    ("hamiltonianPath", Lean.toJson hp.path.vertices)
   ]
 
 instance widgetInstance : Solver IO := (Solver.Impl.DimacsCommand "kissat")
@@ -73,17 +73,5 @@ unsafe def elabVisualizeHamiltonianPathCmd : CommandElab
 
   | _ => throwUnsupportedSyntax
 
--- syntax (name := visualizeHamiltonianPathOptCmd) "#visualizeHamiltonianPath?" term : command
-
--- @[command_elab visualizeHamiltonianPathOptCmd]
--- unsafe def elabVisualizeHamiltonianPathOptCmd : CommandElab
---   | stx@`(#visualizeHamiltonianPath? $g) => liftTermElabM do
---     let wi : Expr ←
---       elabWidgetInstanceSpecAux (mkIdent `visualize) (← `(IO.unsafeGet (HamiltonianPath.toVisualizationFormat? $g)))
---     let wi : WidgetInstance ← evalWidgetInstance wi
---     savePanelWidgetInfo wi.javascriptHash wi.props stx
---   | _ => throwUnsupportedSyntax
-
-def a := 30
 
 end LeanHoG

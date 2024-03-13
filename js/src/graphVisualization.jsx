@@ -25,15 +25,26 @@ export default function (props) {
         )
     }
 
+
     let hamiltonianPath = [];
     if (hamiltonianPathEdges != null) {
-        for (const edge of hamiltonianPathEdges) {
+        for (let i = 1; i < hamiltonianPathEdges.length; i++) {
+            const u = hamiltonianPathEdges[i-1];
+            const v = hamiltonianPathEdges[i];
             hamiltonianPath.push(
-                { data: { source: edge[0], target: edge[1] },
+                { data: { source: u, target: v },
                   classes: ['hamiltonianPath']
                 }
             )
         }
+        let source = hamiltonianPathEdges[0];
+        let target = hamiltonianPathEdges[hamiltonianPathEdges.length - 1];
+        vertices[source] = { data: { id: source, label: `${source}` },
+            classes: ['source']
+        };
+        vertices[target] = ({ data: { id: target, label: `${target}` },
+            classes: ['target']
+        });
     }
 
     const stylesheet = [
@@ -62,7 +73,27 @@ export default function (props) {
                 'target-arrow-color': 'green',
                 'curve-style': 'straight'
             }
-        }
+        },
+        {
+            selector: '.source',
+            style: {
+                'background-color': 'red',
+                'label': 'data(label)',
+                'color': 'black',
+                'text-valign': 'center',
+                'text-halign': 'center'
+            }
+        },
+        {
+            selector: '.target',
+            style: {
+                'background-color': 'blue',
+                'label': 'data(label)',
+                'color': 'black',
+                'text-valign': 'center',
+                'text-halign': 'center'
+            }
+        },
     ];
 
     const layout = { name: 'cose' }

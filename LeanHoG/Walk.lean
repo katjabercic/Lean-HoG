@@ -260,11 +260,21 @@ end ClosedWalk
 @[simp] def Walk.isPath {g : Graph} {u v : g.vertex} : Walk g u v → Bool :=
   List.all_distinct ∘ vertices
 
-class Path (g : Graph) (u v : g.vertex) where
+structure Path (g : Graph) (u v : g.vertex) where
   walk : Walk g u v
   isPath : walk.isPath = true := by rfl
 
 namespace Path
+
+theorem ext_iff {g : Graph} {u v : g.vertex} (p q : Path g u v) :
+  p = q ↔ p.walk = q.walk := by
+  rcases p with ⟨p_walk, _⟩
+  rcases q with ⟨q_walk, _⟩
+  simp
+
+@[ext] theorem ext {g : Graph} (u v : g.vertex) (p q : Path g u v)
+  (h : p.walk = q.walk) : p = q :=
+  (ext_iff p q).mpr h
 
 instance trivialPath {g : Graph} (u : g.vertex) : Path g u u where
   walk := Walk.trivial u
@@ -299,7 +309,7 @@ def vertices {g : Graph} {u v : g.vertex} : Path g u v → List g.vertex := fun 
 lemma subpathIsPath_left {g : Graph} {u v w : g.vertex} (p : Path g u w) (adj_u_v : g.adjacent u v)
   (q : Walk g v w) (p_is_left : p.walk = Walk.left adj_u_v q) : q.isPath = true := by
   simp
-  have walk_is_path : walk.isPath = true := by apply p.isPath
+  have walk_is_path : p.walk.isPath = true := by apply p.isPath
   aesop
 
 /-- Two consecutive vertices on a path cannot be equal, since a path
@@ -407,6 +417,18 @@ theorem maxPathLength' {g : Graph} {u v : g.vertex} (p : Path g u v) :
   rw [not_le, length_is_num_vertices] at h
   simp_all only [lt_self_iff_false]
 
+def isShortest {g : Graph} {u v : g.vertex} (p : Path g u v) : Prop :=
+  ∀ (u' v': g.vertex) (q : Path g u' v'), p.length ≤ q.length
+
+def isShortestFromTo {g : Graph} (u v : g.vertex) (p : Path g u v) : Prop :=
+  ∀ (q : Path g u v), p.length ≤ q.length
+
+def isLongest {g : Graph} {u v : g.vertex} (p : Path g u v) : Prop :=
+  ∀ (u' v' : g.vertex) (q : Path g u' v'), q.length ≤ p.length
+
+def isLongestFromTo {g : Graph} (u v : g.vertex) (p : Path g u v) : Prop :=
+  ∀ (q : Path g u v), q.length ≤ p.length
+
 end Path
 
 @[simp]
@@ -418,11 +440,21 @@ def ClosedWalk.isCycle {g : Graph} {u : g.vertex} : ClosedWalk g u → Bool := f
   | _ :: vertices =>
     vertices.all_distinct && edges.all_distinct
 
-class Cycle (g : Graph) (u : g.vertex) where
+structure Cycle (g : Graph) (u : g.vertex) where
   cycle : ClosedWalk g u
   isCycle : ClosedWalk.isCycle cycle
 
 namespace Cycle
+
+theorem ext_iff {g : Graph} {u : g.vertex} (c d : Cycle g u) :
+  c = d ↔ c.cycle = d.cycle := by
+  rcases c with ⟨c_cycle, _⟩
+  rcases d with ⟨c_cycle, _⟩
+  simp
+
+@[ext] theorem ext {g : Graph} (u : g.vertex) (c d : Cycle g u)
+  (h : c.cycle = d.cycle) : c = d :=
+  (ext_iff c d).mpr h
 
 instance {g : Graph} {u : g.vertex} : Repr (Cycle g u) where
   reprPrec p n := reprPrec p.cycle n
@@ -430,6 +462,64 @@ instance {g : Graph} {u : g.vertex} : Repr (Cycle g u) where
 instance {g : Graph} : Repr ((u : g.vertex) ×' Cycle g u) where
   reprPrec p n := reprPrec p.2 n
 
+def length {g : Graph} {u : g.vertex} (c : Cycle g u) : Nat := c.cycle.length
+
+def edges {g : Graph} {u : g.vertex} (c : Cycle g u) := c.cycle.edges
+
+def isShortest {g : Graph} (u : g.vertex) (c : Cycle g u) : Prop :=
+  ∀ (u' : g.vertex) (c' : Cycle g u'), c.length ≤ c'.length
+
+def isLongest {g : Graph} (u : g.vertex) (c : Cycle g u) : Prop :=
+  ∀ (u' : g.vertex) (c' : Cycle g u'), c'.length ≤ c.length
+
+def isEulerian {g : Graph} {u : g.vertex} (c : Cycle g u) : Prop :=
+  ∀ (e : g.edge), e ∈ c.edges
+
 end Cycle
+
+class ShortestPath (g : Graph) where
+  u : g.vertex
+  v : g.vertex
+  path : Path g u v
+  isShortest : path.isShortest
+
+class LongestPath (g : Graph) where
+  u : g.vertex
+  v : g.vertex
+  path : Path g u v
+  isLongest : path.isLongest
+
+class ShortestCycle (g : Graph) where
+  u : g.vertex
+  cycle : Cycle g u
+  isShortest : cycle.isShortest
+
+class LongestCycle (g : Graph) where
+  u : g.vertex
+  cycle : Cycle g u
+  isLongest : cycle.isLongest
+
+/-- A graph is acyclic if it doesn't contain a cycle. -/
+def Graph.isAcyclic (g : Graph) : Prop :=
+  ¬ ∃ (u : g.vertex) (c : ClosedWalk g u), c.isCycle
+
+def Graph.girth (g : Graph) [c : ShortestCycle g] : Nat := c.cycle.length
+
+def Graph.circumference (g : Graph) [c : LongestCycle g] : Nat := c.cycle.length
+
+def Graph.lengthOfLongestPath (g : Graph) [p : LongestPath g] : Nat := p.path.length
+
+def Graph.distance (g : Graph) (u v : g.vertex) (p : Path g u v)
+  (_ : p.isShortestFromTo u v) : Nat := p.length
+
+def Graph.isEulerian (g : Graph) : Prop :=
+  ∃ (u : g.vertex) (c : Cycle g u), c.isEulerian
+
+def Cycle.isTriangle {g : Graph} {u : g.vertex} (c : Cycle g u) : Prop :=
+  c.length = 3
+
+def Graph.allPaths (g : Graph) := { p : (u v : g.vertex) ×' Path g u v | true }
+
+def Graph.allPathsFromTo (g : Graph) (u v : g.vertex) := { p : Path g u v | true }
 
 end LeanHoG

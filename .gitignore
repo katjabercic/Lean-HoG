@@ -4,4 +4,6 @@ lake-manifest.json
 /lake-packages
 /archive/*
 js/node_modules
-build/js
+build
+Convert/__pycache__
+.venv

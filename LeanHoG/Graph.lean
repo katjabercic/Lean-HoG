@@ -13,6 +13,12 @@ structure Graph where
 @[reducible]
 def Graph.vertex (G : Graph) := Fin G.vertexSize
 
+def Graph.vertexSet (G : Graph) : Set G.vertex := { u : G.vertex | u = u }
+
+lemma Graph.vertexSetFinite (G : Graph) : Set.Finite G.vertexSet := by
+  apply Iff.mp Set.finite_coe_iff
+  infer_instance
+
 /-- The underlying type of edges, i.e., pairs (i,j) such that j < i < G.vertexSize. -/
 @[reducible]
 def Graph.edgeType (G : Graph) := Edge G.vertexSize
