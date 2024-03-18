@@ -203,7 +203,17 @@ instance {G : Graph} [C : ComponentsCertificate G] : ConnectedComponents G :=
         case mpr.trans eq₁ eq₂ => apply Eq.trans eq₁ eq₂
   }
 
-theorem Graph.is_connected (G: Graph) [C : ConnectedComponents G]: C.val = 1 → ∀ (u v : G.vertex), G.connected u v := by
+-- A derived invariant: connectedness
+
+def Graph.is_connected (G : Graph) := ∀ (u v : G.vertex), G.connected u v
+
+theorem Graph.component_le_1_connected (G: Graph) [C : ConnectedComponents G]: C.val <= 1 → ∀ (u v : G.vertex), G.connected u v := by
+  sorry
+
+theorem Graph.component_gt_1_connected (G: Graph) [C : ConnectedComponents G]: C.val > 1 → ¬ ∀ (u v : G.vertex), G.connected u v := by
+  sorry
+
+theorem Graph.one_component_connected (G: Graph) [C : ConnectedComponents G]: C.val = 1 → ∀ (u v : G.vertex), G.connected u v := by
   intro val_one u v
   have same_comp : C.component u = C.component v := by
     let cu := C.component u
@@ -223,5 +233,11 @@ theorem Graph.is_connected (G: Graph) [C : ConnectedComponents G]: C.val = 1 →
     rw [cu_eq_zero, cv_eq_zero]
   rw [← C.correct]
   exact same_comp
+
+instance Graph.decide_connectivity (G : Graph) [C : ConnectedComponents G] : Decidable G.is_connected :=
+  if e : C.val <= 1 then
+    isTrue (G.component_le_1_connected e)
+  else
+    isFalse (G.component_gt_1_connected (by linarith))
 
 end LeanHoG
