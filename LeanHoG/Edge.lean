@@ -1,5 +1,8 @@
 import Lean
-import Mathlib
+import Mathlib.Data.Fintype.Basic
+import Mathlib.Tactic.DeriveFintype
+import Mathlib.Order.Basic
+import Mathlib.Data.Prod.Lex
 
 namespace LeanHoG
 
