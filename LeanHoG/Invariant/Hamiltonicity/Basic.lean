@@ -16,43 +16,44 @@ instance {g : Graph} {u v : g.vertex} {p : Path g u v} :
 /-- The class representing a Hamiltonian path of a graph `g`
     going from vertex `u` to vertex `v`.
  -/
-class HamiltonianPath {g : Graph} (u v : g.vertex) where
+class HamiltonianPath (g : Graph) where
+  u : g.vertex
+  v : g.vertex
   path : Path g u v
-  isHamiltonian : path.isHamiltonian
-
+  isHamiltonian : path.isHamiltonian := by decide
 namespace HamiltonianPath
 
-instance {g : Graph} {u v : g.vertex} : Repr (HamiltonianPath u v) where
+instance {g : Graph} : Repr (HamiltonianPath g) where
   reprPrec p n := reprPrec p.path n
 
-instance {g : Graph} : Repr ((u v : g.vertex ) ×' HamiltonianPath u v) where
-  reprPrec p n := reprPrec p.2.2.path n
+instance {g : Graph} : ToString (HamiltonianPath g) where
+  toString p := toString p.path
 
-@[simp] def vertices {g : Graph} {u v : g.vertex} : HamiltonianPath u v → List g.vertex :=
+@[simp] def vertices {g : Graph} : HamiltonianPath g → List g.vertex :=
   fun p => p.path.vertices
 
-@[simp] lemma vertices_all_distinct {g : Graph} {u v : g.vertex} {hp : HamiltonianPath u v} :
+@[simp] lemma vertices_all_distinct {g : Graph} {hp : HamiltonianPath g} :
   hp.vertices.all_distinct := by
   simp
   exact hp.path.isPath
 
-@[simp] def vertexMultiset {g : Graph} {u v : g.vertex} : HamiltonianPath u v → Multiset g.vertex :=
+@[simp] def vertexMultiset {g : Graph} : HamiltonianPath g → Multiset g.vertex :=
   fun p => p.path.vertexMultiset
 
-@[simp] lemma vertexMultiset_nodup {g : Graph} {u v : g.vertex} {p : HamiltonianPath u v} :
+@[simp] lemma vertexMultiset_nodup {g : Graph} {p : HamiltonianPath g} :
   Multiset.Nodup p.vertexMultiset := by
   apply Iff.mp Multiset.coe_nodup
   apply Iff.mp List.all_distinct_iff_nodup
   apply p.path.isPath
 
-@[simp] def vertexFinset {g : Graph} {u v : g.vertex} : HamiltonianPath u v → Finset g.vertex := fun p =>
+@[simp] def vertexFinset {g : Graph} : HamiltonianPath g → Finset g.vertex := fun p =>
   ⟨p.vertexMultiset, vertexMultiset_nodup⟩
 
 /-- The length of a Hamiltonian path is just the length of the underlying path.
     This is not the same as the length of the path, as that is the number of
     edges of the path.
 -/
-@[simp] def length {g : Graph} {u v : g.vertex} : HamiltonianPath u v → Nat :=
+@[simp] def length {g : Graph} : HamiltonianPath g → Nat :=
   fun p => p.path.length
 
 lemma lt_count_eq_one {n : Nat} : ∀ (k : Nat), k < n → List.count k (List.range n) = 1 := by
@@ -70,7 +71,7 @@ example {α : Type} [DecidableEq α] (l : List α) (d : l.Nodup) : Finset.card (
   apply List.toFinset_card_of_nodup d
 
 /-- The number of vertices on a Hamiltonian path is the number of vertices in the graph. -/
-@[simp] lemma length_eq_num_vertices {g : Graph} {u v : g.vertex} {hp : HamiltonianPath u v} :
+@[simp] lemma length_eq_num_vertices {g : Graph} {hp : HamiltonianPath g} :
   hp.vertices.length = g.vertexSize := by
   let l := hp.vertices
   let ad : l.all_distinct := by apply hp.path.isPath
@@ -87,31 +88,27 @@ end HamiltonianPath
 @[simp] def Cycle.isHamiltonian {g : Graph} {u : g.vertex} (c : Cycle g u) : Bool :=
   ∀ (v : g.vertex), List.contains c.cycle.vertices v
 
-class HamiltonianCycle (g : Graph) (u : g.vertex) where
+class HamiltonianCycle (g : Graph)  where
+  u : g.vertex
   cycle : Cycle g u
   isHamiltonian : cycle.isHamiltonian = true
 
-instance {g : Graph} {u : g.vertex} : Repr (HamiltonianCycle g u) where
+instance {g : Graph} : Repr (HamiltonianCycle g) where
   reprPrec p n := reprPrec p.cycle n
 
-instance {g : Graph} : Repr ((u : g.vertex ) ×' HamiltonianCycle g u) where
+instance {g : Graph} : Repr (HamiltonianCycle g) where
   reprPrec p n := reprPrec p.2.cycle n
 
 @[simp] def Graph.isHamiltonian (g : Graph) : Prop :=
   ∃ (u : g.vertex) (c : Cycle g u), c.isHamiltonian
 
-class HamiltonianGraph (g : Graph) where
-  u : g.vertex
-  cycle : Cycle g u
-  isHamiltonian : cycle.isHamiltonian = true
-
 @[simp] def Graph.isNonHamiltonian (g : Graph) : Prop := ¬ g.isHamiltonian
 
-@[simp] def Graph.isNonHamiltonian' {g : Graph} : Prop := ∀ (u : g.vertex) (c : Cycle g u), ¬c.isHamiltonian
+@[simp] def Graph.isNonHamiltonian' {g : Graph} : Prop :=
+  ∀ (u : g.vertex) (c : Cycle g u), ¬c.isHamiltonian
 
 theorem equivNonHamiltonianDefs (g : Graph) :
   g.isNonHamiltonian ↔ g.isNonHamiltonian' :=
   by simp
-
 
 end LeanHoG

@@ -1,5 +1,7 @@
 import Lean
 import LeanHoG.Graph
+import LeanHoG.Walk
+import LeanHoG.Invariant.Hamiltonicity.Basic
 
 namespace LeanHoG
 
@@ -48,6 +50,10 @@ structure DisconnectivityData : Type where
   vertex1 : Nat
 deriving Lean.FromJson
 
+structure PathData : Type where
+  vertices : List Nat
+deriving Lean.FromJson
+
 /--
   A structure that corresponds to the JSON description of a graph and optional
   connectivity and disconnectivity certificates.
@@ -56,6 +62,7 @@ structure GAPData : Type where
   graph : GraphData
   connectivityData? : Option ConnectivityData
   disconnectivityData? : Option DisconnectivityData
+  pathData? : Option PathData
 deriving Lean.FromJson
 
 def loadGAPData (filePath : System.FilePath) : IO GAPData := do
