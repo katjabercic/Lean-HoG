@@ -1,7 +1,8 @@
 import Qq
 import LeanHoG.Graph
 --import LeanHoG.Connectivity
-import LeanHoG.ConnectedComponents
+--import LeanHoG.Invariant.Connectivity.Certificate
+import LeanHoG.Invariant.ConnectedComponents.Certificate
 import LeanHoG.Certificate
 import LeanHoG.JsonData
 
