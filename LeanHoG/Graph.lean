@@ -73,10 +73,8 @@ lemma Graph.symmetricAdjacent (G : Graph) :
     intros u v
     apply ltByCases u v <;> (intro h ; simp [ltByCases, not_lt_of_lt, h, adjacent, badjacent])
 
-lemma edge_cmp_eq_impl_eq (G: Graph) (e1 e2 : G.edgeType) : Edge.linearOrder.compare e1 e2 = Ordering.eq → e1 = e2 := by
-  intro H
-  rw [compare_eq_iff_eq] at H
-  assumption
+lemma edge_cmp_eq_impl_eq (G: Graph) (e1 e2 : G.edgeType) : Edge.linearOrder.compare e1 e2 = Ordering.eq ↔ e1 = e2 := by
+  exact compare_eq_iff_eq
 
 lemma member_rbset (G: Graph) (e : G.edgeType) : e ∈ G.edgeTree ↔ G.edgeTree.Mem e := by
   constructor
@@ -92,21 +90,43 @@ lemma member_rbnode (G: Graph) (e : G.edgeType) : e ∈ G.edgeTree.1 ↔ G.edgeT
   · intro H
     exact H
 
-lemma edge_in_node (G : Graph) (e : G.edgeType) : e ∈ G.edgeTree → e ∈ G.edgeTree.1 := by
-  rw [member_rbset, member_rbnode]
-  unfold Std.RBSet.Mem
-  unfold Std.RBNode.EMem
-  unfold Std.RBSet.MemP
-  unfold Std.RBNode.MemP
-  rw [Std.RBNode.Any_def]
-  rw [Std.RBNode.Any_def]
-  intro H
-  apply Exists.elim H
-  intro a H'
-  obtain ⟨belongs, compare⟩ := H'
-  apply edge_cmp_eq_impl_eq at compare
-  use a
+lemma edge_in_node (G : Graph) (e : G.edgeType) : e ∈ G.edgeTree ↔ e ∈ G.edgeTree.1 := by
+  apply Iff.intro
+  · rw [member_rbset, member_rbnode]
+    unfold Std.RBSet.Mem
+    unfold Std.RBNode.EMem
+    unfold Std.RBSet.MemP
+    unfold Std.RBNode.MemP
+    rw [Std.RBNode.Any_def]
+    rw [Std.RBNode.Any_def]
+    intro H
+    apply Exists.elim H
+    intro a H'
+    obtain ⟨belongs, compare⟩ := H'
+    rw [edge_cmp_eq_impl_eq] at compare
+    use a
+  · rw [member_rbset, member_rbnode]
+    unfold Std.RBSet.Mem
+    unfold Std.RBNode.EMem
+    unfold Std.RBSet.MemP
+    unfold Std.RBNode.MemP
+    rw [Std.RBNode.Any_def]
+    rw [Std.RBNode.Any_def]
+    intro H
+    apply Exists.elim H
+    intro a H'
+    obtain ⟨belongs, compare⟩ := H'
+    rw [← edge_cmp_eq_impl_eq] at compare
+    use a
 
+
+lemma Graph.adj_impl_ex_edge (G: Graph) (u v : G.vertex) (e : G.edge) : (adj : G.adjacent u v) → u < v → G.adjacentEdge adj = e → G.fst e = u ∧ G.snd e = v := by
+  intro adj comp
+  unfold adjacentEdge
+  simp [comp]
+  intro v
+  subst v
+  simp
 
 /-
 The problem here is that the RBSet checks for membership using the cmp function while the RBNode checks if we have this exact element
@@ -123,7 +143,7 @@ lemma Graph.all_edges (G : Graph) (p : G.edgeType → Prop) [DecidablePred p] :
     have member : e.1 ∈ G.edgeTree := by
       rw [← Std.RBSet.contains_iff]
       exact e.2
-    apply edge_in_node at member
+    rw [edge_in_node] at member
     apply H at member
     apply of_decide_eq_true at member
     exact member

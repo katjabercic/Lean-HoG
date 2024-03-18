@@ -1,6 +1,7 @@
 import Qq
 import LeanHoG.Graph
-import LeanHoG.Connectivity
+--import LeanHoG.Connectivity
+import LeanHoG.ConnectedComponents
 import LeanHoG.Certificate
 import LeanHoG.JsonData
 
@@ -34,6 +35,22 @@ elab "load_graph" graphName:ident fileName:str : command => do
   Lean.setReducibleAttribute graphName
   have graph : Q(Graph) := Lean.mkConst graphName []
 
+  match gapData.componentsData? with
+  | .none => pure ()
+  | .some data =>
+    let componentsCertificateName := certificateName graphName "CertificateI"
+    let componentsCertificateQ : Q(ComponentsCertificate $graph) := componentsCertificateOfData graph data
+    Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
+      name := componentsCertificateName
+      levelParams := []
+      type := q(ComponentsCertificate $graph)
+      value := componentsCertificateQ
+      hints := .regular 0
+      safety := .safe
+    }
+    Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance componentsCertificateName .scoped 42
+
+/-
   -- load the connectivity certificate, if present
   match gapData.connectivityData? with
   | .none => pure ()
@@ -65,5 +82,6 @@ elab "load_graph" graphName:ident fileName:str : command => do
       safety := .safe
     }
     Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance disconnectivityCertificateName .scoped 42
+-/
 
 end LeanHoG
