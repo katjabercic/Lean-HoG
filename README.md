@@ -1,6 +1,6 @@
 # Lean-HoG
 
-A library for computational graph theory in [Lean 4](https://leanprover.github.io), with emphasis on verification of large datasets of graphs, an in particular the [House of Graphs](http://hog.grinvin.org/) into .
+A library for computational graph theory in [Lean 4](https://leanprover.github.io), with emphasis on verification of large datasets of graphs; in particular the [House of Graphs](http://hog.grinvin.org/).
 
 ## Installation
 
