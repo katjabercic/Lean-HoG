@@ -321,7 +321,7 @@ declare_syntax_cat boolean_invariant
 syntax "acyclic" : boolean_invariant
 syntax "bipartite" : boolean_invariant
 syntax "connected" : boolean_invariant
-syntax "claw free" : boolean_invariant
+syntax "clawFree" : boolean_invariant
 syntax "eulerian" : boolean_invariant
 syntax "hamiltonian" : boolean_invariant
 syntax "hypohamiltonian" : boolean_invariant
@@ -329,7 +329,7 @@ syntax "hypotraceable" : boolean_invariant
 syntax "planar" : boolean_invariant
 syntax "regular" : boolean_invariant
 syntax "traceable" : boolean_invariant
-syntax "twin free" : boolean_invariant
+syntax "twinFree" : boolean_invariant
 
 declare_syntax_cat integral_invariant
 
@@ -409,7 +409,7 @@ syntax:max "(" hog_query ")" : hog_query
   | `(hog{bipartite = $b}) => `([[HoGEnquiry.BoolEnquiry ⟨.Bipartite, $b⟩]])
   | `(hog{acyclic = $b}) => `([[HoGEnquiry.BoolEnquiry ⟨.Acyclic, $b ⟩]])
   | `(hog{connected = $b}) => `([[HoGEnquiry.BoolEnquiry ⟨.Connected, $b ⟩]])
-  | `(hog{claw free = $b}) => `([[HoGEnquiry.BoolEnquiry ⟨.ClawFree, $b ⟩]])
+  | `(hog{clawFree = $b}) => `([[HoGEnquiry.BoolEnquiry ⟨.ClawFree, $b ⟩]])
   | `(hog{eulerian = $b}) => `([[HoGEnquiry.BoolEnquiry ⟨.Eulerian, $b ⟩]])
   | `(hog{hamiltonian = $b}) => `([[HoGEnquiry.BoolEnquiry ⟨.Hamiltonian, $b ⟩]])
   | `(hog{hypohamiltonian = $b}) => `([[HoGEnquiry.BoolEnquiry ⟨.Hypohamiltonian, $b ⟩]])
@@ -417,7 +417,7 @@ syntax:max "(" hog_query ")" : hog_query
   | `(hog{planar = $b}) => `([[HoGEnquiry.BoolEnquiry ⟨.Planar, $b ⟩]])
   | `(hog{regular = $b}) => `([[HoGEnquiry.BoolEnquiry ⟨.Regular, $b ⟩]])
   | `(hog{traceable = $b}) => `([[HoGEnquiry.BoolEnquiry ⟨.Traceable, $b ⟩]])
-  | `(hog{twin free = $b}) => `([[HoGEnquiry.BoolEnquiry ⟨.TwinFree, $b ⟩]])
+  | `(hog{twinFree = $b}) => `([[HoGEnquiry.BoolEnquiry ⟨.TwinFree, $b ⟩]])
 
   -- Numerical invariants
   | `(hog{algebraicConnectivity $op $x}) => `([[HoGEnquiry.NumericalEnquiry ⟨.AlgebraicConnectivity, op!{$op}, $x⟩]])
