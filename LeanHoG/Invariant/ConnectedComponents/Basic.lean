@@ -11,30 +11,30 @@ namespace LeanHoG
 def Graph.connected {G : Graph} : G.vertex → G.vertex → Prop := EqvGen G.adjacent
 
 -- Neighbors are connected
-lemma Graph.adjacentConected {G : Graph} {u v : G.vertex} : G.adjacent u v → G.connected u v :=
+lemma Graph.connected_of_adjacent {G : Graph} {u v : G.vertex} : G.adjacent u v → G.connected u v :=
   EqvGen.rel u v
 
 -- Equal vertices are connected
-lemma Graph.connectedEq {G : Graph} (u v : G.vertex) : u = v → G.connected u v := by
+lemma Graph.connected_of_eq {G : Graph} (u v : G.vertex) : u = v → G.connected u v := by
   intro eq
   rw [eq]
   apply EqvGen.refl
 
 -- Connectedness is transitive
 @[simp]
-lemma Graph.connectedTrans {G : Graph} (u v w : G.vertex) :
+lemma Graph.connected_trans {G : Graph} (u v w : G.vertex) :
   G.connected u v → G.connected v w → G.connected u w :=
   EqvGen.trans u v w
 
-lemma Graph.adjacentConnected {G : Graph} (u v w : G.vertex) :
+lemma Graph.connected_adj {G : Graph} (u v w : G.vertex) :
   G.adjacent u v → G.connected v w → G.connected u w := by
   intros uv vw
-  apply connectedTrans (v := v)
+  apply Graph.connected_trans (v := v)
   · apply EqvGen.rel ; assumption
   · exact vw
 
 @[simp]
-lemma Graph.connectedSymm {G : Graph} (u v : G.vertex) :
+lemma Graph.connected_symm {G : Graph} (u v : G.vertex) :
   G.connected u v → G.connected v u :=
   EqvGen.symm u v
 
@@ -170,10 +170,10 @@ lemma connectedToRoot (G : Graph) [C : ComponentsCertificate G] :
   apply heightInduction C.distToRoot (fun v => G.connected v (C.rootOf v))
   intros v ih
   cases Nat.eq_zero_or_pos (C.distToRoot v)
-  · apply G.connectedEq
+  · apply G.connected_of_eq
     apply C.distZeroRoot v
     assumption
-  · apply G.adjacentConnected v (C.next v) (C.rootOf v)
+  · apply G.connected_adj v (C.next v) (C.rootOf v)
     · apply C.nextAdjacent ; assumption
     · rw [Eq.symm (C.rootOfNext v)]
       apply ih
@@ -189,9 +189,9 @@ instance {G : Graph} [C : ComponentsCertificate G] : ConnectedComponents G :=
       intros u v
       apply Iff.intro
       · intro eq
-        apply G.connectedTrans u (C.rootOf u) v
+        apply G.connected_trans u (C.rootOf u) v
         · apply connectedToRoot
-        · apply Graph.connectedSymm
+        · apply Graph.connected_symm
           unfold ComponentsCertificate.rootOf
           rw [eq]
           apply connectedToRoot

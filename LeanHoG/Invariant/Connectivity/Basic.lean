@@ -87,7 +87,7 @@ lemma connectedToRoot (G : Graph) [C : ConnectivityCertificate G] :
       apply C.distNext
       assumption
 
-/-- A graph is connected it is has a connectivity certificate.  -/
+/-- A graph is connected if it has a connectivity certificate.  -/
 theorem Graph.is_connected (G : Graph) [C : ConnectivityCertificate G] : ∀ u v, G.connected u v := by
   intros u v
   apply G.connected_trans

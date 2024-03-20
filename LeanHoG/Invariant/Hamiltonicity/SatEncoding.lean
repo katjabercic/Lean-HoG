@@ -1,13 +1,14 @@
 import LeanHoG.Graph
 import LeanHoG.Walk
-import LeanHoG.Connectivity
-import LeanHoG.Invariants.Hamiltonicity.Definition
+import LeanHoG.Invariant.ConnectedComponents.Basic
+import LeanHoG.Invariant.Hamiltonicity.Basic
+import Lean
 
 import LeanSAT
 
 namespace LeanHoG
 
-open LeanSAT Encode VEncCNF
+open Lean LeanSAT Encode VEncCNF Meta
 
 /-- `Var i j = true` means: "at position j on the path is vertex i". -/
 structure Var (n : Nat) where
@@ -125,18 +126,83 @@ def path_encoding (g : Graph) : VEncCNF (Literal (Var g.vertexSize)) Unit (fun �
 
 def hamiltonian_path_encoding (g : Graph) := seq (list_of_distinct_vertices_encoding g) (path_encoding g)
 
-def showNoHamiltonianPath [Solver IO] (g : Graph) :
+/--
+  Given a list of vertices of a graph, try to construct a `Path` in the graph from them.
+  If the construction fails, return `none`.
+-/
+def buildPath {g : Graph} : Option (List (g.vertex)) → Option (HamiltonianPath g)
+  | none => none
+  | some [] => none
+  | some (v :: vs) =>
+    let rec fold (t : g.vertex) :
+      List (g.vertex) → Option ((s : g.vertex) ×' Path g s t)
+    | [] => none
+    | [v] =>
+      if h : v = t then
+        some ⟨v , (h ▸ Path.trivialPath v)⟩
+      else
+        dbg_trace "[v] not equal to s and t"
+        none
+    | u :: v :: vs =>
+      if h : g.adjacent u v then
+        match fold t (v :: vs) with
+        | some ⟨s, p⟩ =>
+          if h' : s = v then
+            let w := (Walk.left h (h' ▸ p.walk))
+            if h' : Walk.isPath w = true then
+              some ⟨u, ⟨w, h'⟩⟩
+            else
+              dbg_trace "walk not path"
+              none
+          else
+            dbg_trace s!"{s} ≠ {v}"
+            none
+        | none =>
+          dbg_trace "recursive path not found"
+          none
+      else
+        dbg_trace s!"not adjacent {u}, {v}"
+        none
+    match List.getLast? vs with
+    | some t =>
+      match fold t (v :: vs) with
+      | some ⟨_, p⟩ =>
+        if h : p.isHamiltonian then
+          some { path := p, isHamiltonian := h }
+        else
+          none
+      | none => none
+    | none => none
+
+def tryFindHamiltonianPath [Solver IO] (g : Graph) :
   -- IO (Option ((g : Graph) ×' (¬ ∃ (u v : g.vertex) (p : Path g u v), p.isHamiltonian))) := do
-  IO Unit := do
+  -- Elab.Term.TermElabM (Option (HamiltonianPath g)) := Core.liftIOCore do
+  IO (Option (HamiltonianPath g)) := do
   let enc := hamiltonian_path_encoding g
-  let cnf := enc.val.toICnf
-  -- IO.println s!"{enc}"
+  let foo := EncCNF.run enc.val
+  let cnf := foo.2.cnf
+  let map := foo.2.vMap
   match ← Solver.solve cnf with
   | .error =>
     IO.println "error"
+    return none
   | .unsat =>
     IO.println "unsat"
-  | .sat _ =>
-    return ()
+    return none
+  | .sat assn =>
+    if h : 0 < g.vertexSize then
+      let mut path : Array (g.vertex) := Array.mkArray g.vertexSize ⟨0, h⟩
+      for i in List.fins g.vertexSize do
+        for j in List.fins g.vertexSize do
+          match assn.find? (map (Var.mk i j))  with
+          | none => panic! "wtf"
+          | some true =>
+            path := path.set! j i
+          | some false =>
+            path := path
+      let p := buildPath (some path.toList)
+      return p
+    else
+      return none
 
 end LeanHoG

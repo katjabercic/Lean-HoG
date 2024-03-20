@@ -1,10 +1,13 @@
 import LeanHoG.LoadGraph
 import LeanHoG.Invariant.ConnectedComponents.Basic
+import LeanHoG.Widgets
 
 namespace LeanHoG
 
 -- Load the cycle on 7 vertices from JSON file
 load_graph Cycle7 "examples/cycle7.json"
+
+#visualizeGraph Cycle7
 
 -- Check that Cycle7 is connected
 #eval Cycle7.is_connected

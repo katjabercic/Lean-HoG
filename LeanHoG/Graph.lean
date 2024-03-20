@@ -1,6 +1,7 @@
 import LeanHoG.Edge
 import Std
 import Std.Data.RBMap.Basic
+import Mathlib.Data.Set.Finite
 
 namespace LeanHoG
 
@@ -11,6 +12,12 @@ structure Graph where
 /-- The type of graph vertices -/
 @[reducible]
 def Graph.vertex (G : Graph) := Fin G.vertexSize
+
+def Graph.vertexSet (G : Graph) : Set G.vertex := { u : G.vertex | u = u }
+
+lemma Graph.vertexSetFinite (G : Graph) : Set.Finite G.vertexSet := by
+  apply Iff.mp Set.finite_coe_iff
+  infer_instance
 
 /-- The underlying type of edges, i.e., pairs (i,j) such that j < i < G.vertexSize. -/
 @[reducible]

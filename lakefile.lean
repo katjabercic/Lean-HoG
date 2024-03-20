@@ -13,3 +13,12 @@ require «lean-sat» from git
 
 @[default_target]
 lean_lib LeanHoG
+
+lean_lib Convert
+lean_lib js
+
+lean_exe get_graphs where
+  root := `Convert.GetGraphs
+
+lean_exe build_widgets where
+  root := `js.Build

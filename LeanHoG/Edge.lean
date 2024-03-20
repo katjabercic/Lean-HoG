@@ -12,6 +12,9 @@ structure Edge (m : Nat) where
   ord : (fst : Nat) < snd
 deriving Fintype, Repr
 
+instance (m : Nat) : Lean.ToJson (Edge m) where
+  toJson e := Lean.Json.arr #[e.fst, e.snd]
+
 def Edge.fromNats {m : Nat} (i j : Nat) (h₁ : i < j) (h₂ : j < m) : Edge m :=
   {
     fst := ⟨i, lt_trans h₁ h₂⟩,
