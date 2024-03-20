@@ -207,11 +207,14 @@ instance {G : Graph} [C : ComponentsCertificate G] : ConnectedComponents G :=
 
 def Graph.is_connected (G : Graph) := ∀ (u v : G.vertex), G.connected u v
 
-theorem Graph.component_le_1_connected (G: Graph) [C : ConnectedComponents G]: C.val <= 1 → ∀ (u v : G.vertex), G.connected u v := by
-  sorry
+theorem Graph.zero_component_connected (G: Graph) [C : ConnectedComponents G]: C.val = 0 → ∀ (u v : G.vertex), G.connected u v := by
+  intro val_zero u v
+  rw [← C.correct]
+  let cu := C.component u
+  simp [val_zero] at cu
+  have neg : cu.val < 0 := cu.isLt
+  contradiction
 
-theorem Graph.component_gt_1_connected (G: Graph) [C : ConnectedComponents G]: C.val > 1 → ¬ ∀ (u v : G.vertex), G.connected u v := by
-  sorry
 
 theorem Graph.one_component_connected (G: Graph) [C : ConnectedComponents G]: C.val = 1 → ∀ (u v : G.vertex), G.connected u v := by
   intro val_one u v
@@ -219,20 +222,46 @@ theorem Graph.one_component_connected (G: Graph) [C : ConnectedComponents G]: C.
     let cu := C.component u
     have cu_eq : cu = C.component u := by rfl
     let cv := C.component v
-    have cu_eq_zero : cu.val = 0 := by
+    have comp_eq_zero : ∀ v : (Fin C.val), v.val = 0 := by
+      intro v
       rw [← Nat.lt_one_iff]
       rw [← val_one]
-      exact cu.isLt
-    have cv_eq_zero : cv.val = 0 := by
-      rw [← Nat.lt_one_iff]
-      rw [← val_one]
-      exact cv.isLt
+      exact v.isLt
     have cv_eq : cv = C.component v := by rfl
     rw [← cu_eq, ← cv_eq]
     rw [← Fin.val_eq_val]
-    rw [cu_eq_zero, cv_eq_zero]
+    rw [comp_eq_zero, comp_eq_zero]
   rw [← C.correct]
   exact same_comp
+
+theorem Graph.component_le_1_connected (G: Graph) [C : ConnectedComponents G]: C.val <= 1 → ∀ (u v : G.vertex), G.connected u v := by
+  rw [le_iff_lt_or_eq]
+  intro ineq
+  cases ineq with
+  | inl lt_one =>
+    rw [Nat.lt_one_iff] at lt_one
+    exact Graph.zero_component_connected G lt_one
+  | inr eq_one =>
+    exact Graph.one_component_connected G eq_one
+
+
+theorem Graph.component_gt_1_connected (G: Graph) [C : ConnectedComponents G]: C.val > 1 → ¬ ∀ (u v : G.vertex), G.connected u v := by
+  intro gt_one
+  intro connected
+  let root_index_zero : Fin C.val := Fin.mk 0 (by linarith)
+  let root_index_one : Fin C.val := Fin.mk 1 (by linarith)
+  have root_index_zero_zero : root_index_zero.val = 0 := by rfl
+  have root_index_one_one : root_index_one.val = 1 := by rfl
+  have diff_indices : root_index_zero.val ≠ root_index_one.val := by simp [root_index_zero_zero, root_index_one_one]
+  rw [Fin.val_ne_iff] at diff_indices
+  have exist_u : ∃ u : G.vertex, C.component u = root_index_zero := C.componentInhabited root_index_zero
+  have exist_v : ∃ v : G.vertex, C.component v = root_index_one := C.componentInhabited root_index_one
+  obtain ⟨u, prop_u⟩ := exist_u
+  obtain ⟨v, prop_v⟩ := exist_v
+  specialize connected u v
+  rw [← C.correct] at connected
+  rw [prop_u, prop_v] at connected
+  contradiction
 
 instance Graph.decide_connectivity (G : Graph) [C : ConnectedComponents G] : Decidable G.is_connected :=
   if e : C.val <= 1 then
