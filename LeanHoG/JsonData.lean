@@ -59,6 +59,7 @@ deriving Lean.FromJson
   connectivity and disconnectivity certificates.
 -/
 structure GAPData : Type where
+  hogId : Option Nat
   graph : GraphData
   connectivityData? : Option ConnectivityData
   disconnectivityData? : Option DisconnectivityData
