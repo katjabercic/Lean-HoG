@@ -54,25 +54,6 @@ structure PathData : Type where
   vertices : List Nat
 deriving Lean.FromJson
 
-/--
-  A structure that corresponds to the JSON description of a graph and optional
-  connectivity and disconnectivity certificates.
--/
-structure GAPData : Type where
-  graph : GraphData
-  connectivityData? : Option ConnectivityData
-  disconnectivityData? : Option DisconnectivityData
-  pathData? : Option PathData
-deriving Lean.FromJson
-
-def loadGAPData (filePath : System.FilePath) : IO GAPData := do
-  let fileContent ← IO.FS.readFile filePath
-  match Lean.Json.parse fileContent >>= Lean.FromJson.fromJson? (α := GAPData) with
-  | .ok data => pure data
-  | .error msg => throw (.userError msg)
-
-
-
 
 /--
   A structure that corresponds to the JSON description of bipartiteness certificate.
@@ -88,6 +69,29 @@ structure BipartitenessData : Type where
   /-- A vertex of color 1-/
   vertex1 : Nat
 deriving Lean.FromJson
+
+
+
+/--
+  A structure that corresponds to the JSON description of a graph and optional
+  connectivity and disconnectivity certificates.
+-/
+structure GAPData : Type where
+  graph : GraphData
+  connectivityData? : Option ConnectivityData
+  disconnectivityData? : Option DisconnectivityData
+  pathData? : Option PathData
+  bipartitenessData? : Option BipartitenessData
+deriving Lean.FromJson
+
+def loadGAPData (filePath : System.FilePath) : IO GAPData := do
+  let fileContent ← IO.FS.readFile filePath
+  match Lean.Json.parse fileContent >>= Lean.FromJson.fromJson? (α := GAPData) with
+  | .ok data => pure data
+  | .error msg => throw (.userError msg)
+
+
+
 
 
 end LeanHoG
