@@ -544,5 +544,3 @@ unsafe def searchForExampleImpl : CommandElab
       (return json% { html: $(← Server.RpcEncodable.rpcEncode (putInDiv links)) }) stx
 
   | _ => throwUnsupportedSyntax
-
--- #search_hog hog{ bipartite = true ∧ (numberOfEdges = 1 ∨ numberOfVertices < 2) }
