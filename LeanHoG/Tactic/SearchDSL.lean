@@ -270,6 +270,15 @@ structure ConstructedQuery where
   query : Json
   hash : UInt64
 
+structure Queries where
+  queries : List ConstructedQuery
+
+def Queries.hash : Queries → UInt64 := fun ⟨qs⟩ =>
+  let rec helper : List ConstructedQuery → UInt64
+  | [] => 0
+  | q :: qs => mixHash q.hash (helper qs)
+  helper qs
+
 open Lean in
 def HoGQuery.build : List HoGEnquiry → ConstructedQuery := fun q =>
   let rec helper : List HoGEnquiry → StateM QueryState HoGQuery
@@ -296,12 +305,16 @@ def HoGQuery.build : List HoGEnquiry → ConstructedQuery := fun q =>
   let (j, _) := helper q ([],[])
   ⟨toJson j, hash j⟩
 
--- def distributeEnquiries : List List HoGEnquiry → List List HoGEnquiry → List List HoGEnquiry
---   | [], [] => []
---   | qs, [] => qs
---   | [], qs => qs
---   | q :: qs, qs' =>
---     qs'.map (fun q' => )
+def distributeLeft {α : Type} : List α → List (List α) → List (List α)
+  | _, [] => []
+  | q, q' :: qs' => List.append q q' :: distributeLeft q qs'
+
+def distribute {α : Type} : List (List α) → List (List α) → List (List α)
+  | _, [] => []
+  | [], _ => []
+  | q :: qs, qs' =>
+    let foo := distributeLeft q qs'
+    List.append foo (distribute qs qs')
 
 declare_syntax_cat boolean_invariant
 
@@ -387,77 +400,74 @@ declare_syntax_cat hog_query
 syntax (name := hog) "hog{ " hog_query " }" : term
 syntax:40 boolean_invariant:41 " = " term:40 : hog_query
 syntax:40 comparison_invariant:41 operation term:40 : hog_query
-
 syntax:35 hog_query:36 " ∧ " hog_query:35 : hog_query
--- syntax:30 hog_query:31 " ∨ " hog_query:30 : hog_query
+syntax:30 hog_query:31 " ∨ " hog_query:30 : hog_query
 syntax:max "(" hog_query ")" : hog_query
 
--- macro_rules
 @[macro hog] def hogQueryImpl : Macro
   -- Boolean invariants
-  | `(hog{bipartite = $b}) => `([HoGEnquiry.BoolEnquiry ⟨.Bipartite, $b⟩])
-  | `(hog{acyclic = $b}) => `([HoGEnquiry.BoolEnquiry ⟨.Acyclic, $b ⟩])
-  | `(hog{connected = $b}) => `([HoGEnquiry.BoolEnquiry ⟨.Connected, $b ⟩])
-  | `(hog{claw free = $b}) => `([HoGEnquiry.BoolEnquiry ⟨.ClawFree, $b ⟩])
-  | `(hog{eulerian = $b}) => `([HoGEnquiry.BoolEnquiry ⟨.Eulerian, $b ⟩])
-  | `(hog{hamiltonian = $b}) => `([HoGEnquiry.BoolEnquiry ⟨.Hamiltonian, $b ⟩])
-  | `(hog{hypohamiltonian = $b}) => `([HoGEnquiry.BoolEnquiry ⟨.Hypohamiltonian, $b ⟩])
-  | `(hog{hypotraceable = $b}) => `([HoGEnquiry.BoolEnquiry ⟨.Hypotraceable, $b ⟩])
-  | `(hog{planar = $b}) => `([HoGEnquiry.BoolEnquiry ⟨.Planar, $b ⟩])
-  | `(hog{regular = $b}) => `([HoGEnquiry.BoolEnquiry ⟨.Regular, $b ⟩])
-  | `(hog{traceable = $b}) => `([HoGEnquiry.BoolEnquiry ⟨.Traceable, $b ⟩])
-  | `(hog{twin free = $b}) => `([HoGEnquiry.BoolEnquiry ⟨.TwinFree, $b ⟩])
+  | `(hog{bipartite = $b}) => `([[HoGEnquiry.BoolEnquiry ⟨.Bipartite, $b⟩]])
+  | `(hog{acyclic = $b}) => `([[HoGEnquiry.BoolEnquiry ⟨.Acyclic, $b ⟩]])
+  | `(hog{connected = $b}) => `([[HoGEnquiry.BoolEnquiry ⟨.Connected, $b ⟩]])
+  | `(hog{claw free = $b}) => `([[HoGEnquiry.BoolEnquiry ⟨.ClawFree, $b ⟩]])
+  | `(hog{eulerian = $b}) => `([[HoGEnquiry.BoolEnquiry ⟨.Eulerian, $b ⟩]])
+  | `(hog{hamiltonian = $b}) => `([[HoGEnquiry.BoolEnquiry ⟨.Hamiltonian, $b ⟩]])
+  | `(hog{hypohamiltonian = $b}) => `([[HoGEnquiry.BoolEnquiry ⟨.Hypohamiltonian, $b ⟩]])
+  | `(hog{hypotraceable = $b}) => `([[HoGEnquiry.BoolEnquiry ⟨.Hypotraceable, $b ⟩]])
+  | `(hog{planar = $b}) => `([[HoGEnquiry.BoolEnquiry ⟨.Planar, $b ⟩]])
+  | `(hog{regular = $b}) => `([[HoGEnquiry.BoolEnquiry ⟨.Regular, $b ⟩]])
+  | `(hog{traceable = $b}) => `([[HoGEnquiry.BoolEnquiry ⟨.Traceable, $b ⟩]])
+  | `(hog{twin free = $b}) => `([[HoGEnquiry.BoolEnquiry ⟨.TwinFree, $b ⟩]])
 
   -- Numerical invariants
-  | `(hog{algebraicConnectivity $op $x}) => `([HoGEnquiry.NumericalEnquiry ⟨.AlgebraicConnectivity, op!{$op}, $x⟩])
-  | `(hog{averageDegree $op $x}) => `([HoGEnquiry.NumericalEnquiry ⟨.AverageDegree, op!{$op}, $x⟩])
-  | `(hog{index $op $x}) => `([HoGEnquiry.NumericalEnquiry ⟨.Index, op!{$op}, $x⟩])
-  | `(hog{laplacianLargestEigenvalue $op $x}) => `([HoGEnquiry.NumericalEnquiry ⟨.LaplacianLargestEigenvalue, op!{$op}, $x⟩])
-  | `(hog{secondLargestEigenvalue $op $x}) => `([HoGEnquiry.NumericalEnquiry ⟨.SecondLargestEigenvalue, op!{$op}, $x⟩])
-  | `(hog{smallestEigenvalue $op $x}) => `([HoGEnquiry.NumericalEnquiry ⟨.SmallestEigenvalue, op!{$op}, $x⟩])
+  | `(hog{algebraicConnectivity $op $x}) => `([[HoGEnquiry.NumericalEnquiry ⟨.AlgebraicConnectivity, op!{$op}, $x⟩]])
+  | `(hog{averageDegree $op $x}) => `([[HoGEnquiry.NumericalEnquiry ⟨.AverageDegree, op!{$op}, $x⟩]])
+  | `(hog{index $op $x}) => `([[HoGEnquiry.NumericalEnquiry ⟨.Index, op!{$op}, $x⟩]])
+  | `(hog{laplacianLargestEigenvalue $op $x}) => `([[HoGEnquiry.NumericalEnquiry ⟨.LaplacianLargestEigenvalue, op!{$op}, $x⟩]])
+  | `(hog{secondLargestEigenvalue $op $x}) => `([[HoGEnquiry.NumericalEnquiry ⟨.SecondLargestEigenvalue, op!{$op}, $x⟩]])
+  | `(hog{smallestEigenvalue $op $x}) => `([[HoGEnquiry.NumericalEnquiry ⟨.SmallestEigenvalue, op!{$op}, $x⟩]])
 
   -- Integral invariants
-
-  | `(hog{chromaticIndex $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.ChromaticIndex, op!{$op}, $n⟩])
-  | `(hog{chromaticNumber $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.ChromaticNumber, op!{$op}, $n⟩])
-  | `(hog{circumference $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.Circumference, op!{$op}, $n⟩])
-  | `(hog{cliqueNumber $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.CliqueNumber, op!{$op}, $n⟩])
-  | `(hog{degeneracy $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.Degeneracy, op!{$op}, $n⟩])
-  | `(hog{density $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.Density, op!{$op}, $n⟩])
-  | `(hog{diameter $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.Diameter, op!{$op}, $n⟩])
-  | `(hog{dominationNumber $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.DominationNumber, op!{$op}, $n⟩])
-  | `(hog{edgeConnectivity $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.EdgeConnectivity, op!{$op}, $n⟩])
-  | `(hog{feedbackVertexSetNumber $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.FeedbackVertexSetNumber, op!{$op}, $n⟩])
-  | `(hog{genus $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.Genus, op!{$op}, $n⟩])
-  | `(hog{girth $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.Girth, op!{$op}, $n⟩])
-  | `(hog{groupSize $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.GroupSize, op!{$op}, $n⟩])
-  | `(hog{independenceNumber $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.IndependenceNumber, op!{$op}, $n⟩])
-  | `(hog{lengthOfLongestInducedCycle $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.LengthOfLongestInducedCycle, op!{$op}, $n⟩])
-  | `(hog{lengthOfLongestInducedPath $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.LengthOfLongestInducedPath, op!{$op}, $n⟩])
-  | `(hog{lengthOfLongestPath $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.LengthOfLongestPath, op!{$op}, $n⟩])
-  | `(hog{matchingNumber $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.MatchingNumber, op!{$op}, $n⟩])
-  | `(hog{maximumDegree $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.MaximumDegree, op!{$op}, $n⟩])
-  | `(hog{minimumDegree $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.MinimumDegree, op!{$op}, $n⟩])
-  | `(hog{numberOfComponents $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.NumberOfComponents, op!{$op}, $n⟩])
-  | `(hog{numberOfEdges $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.NumberOfEdges, op!{$op}, $n⟩])
-  | `(hog{numberOfSpanningTrees $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.NumberOfSpanningTrees, op!{$op}, $n⟩])
-  | `(hog{numberOfTriangles $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.NumberOfTriangles, op!{$op}, $n⟩])
-  | `(hog{numberOfVertexOrbits $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.NumberOfVertexOrbits, op!{$op}, $n⟩])
-  | `(hog{numberOfVertices $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.NumberOfVertices, op!{$op}, $n⟩])
-  | `(hog{numberOfZeroEigenvalues $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.NumberOfZeroEigenvalues, op!{$op}, $n⟩])
-  | `(hog{radius $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.Radius, op!{$op}, $n⟩])
-  | `(hog{treewidth $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.Treewidth, op!{$op}, $n⟩])
-  | `(hog{vertexConnectivity $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.VertexConnectivity, op!{$op}, $n⟩])
-  | `(hog{vertexCoverNumber $op $n}) => `([HoGEnquiry.IntegralEnquiry ⟨.VertexCoverNumber, op!{$op}, $n⟩])
+  | `(hog{chromaticIndex $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.ChromaticIndex, op!{$op}, $n⟩]])
+  | `(hog{chromaticNumber $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.ChromaticNumber, op!{$op}, $n⟩]])
+  | `(hog{circumference $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.Circumference, op!{$op}, $n⟩]])
+  | `(hog{cliqueNumber $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.CliqueNumber, op!{$op}, $n⟩]])
+  | `(hog{degeneracy $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.Degeneracy, op!{$op}, $n⟩]])
+  | `(hog{density $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.Density, op!{$op}, $n⟩]])
+  | `(hog{diameter $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.Diameter, op!{$op}, $n⟩]])
+  | `(hog{dominationNumber $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.DominationNumber, op!{$op}, $n⟩]])
+  | `(hog{edgeConnectivity $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.EdgeConnectivity, op!{$op}, $n⟩]])
+  | `(hog{feedbackVertexSetNumber $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.FeedbackVertexSetNumber, op!{$op}, $n⟩]])
+  | `(hog{genus $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.Genus, op!{$op}, $n⟩]])
+  | `(hog{girth $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.Girth, op!{$op}, $n⟩]])
+  | `(hog{groupSize $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.GroupSize, op!{$op}, $n⟩]])
+  | `(hog{independenceNumber $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.IndependenceNumber, op!{$op}, $n⟩]])
+  | `(hog{lengthOfLongestInducedCycle $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.LengthOfLongestInducedCycle, op!{$op}, $n⟩]])
+  | `(hog{lengthOfLongestInducedPath $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.LengthOfLongestInducedPath, op!{$op}, $n⟩]])
+  | `(hog{lengthOfLongestPath $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.LengthOfLongestPath, op!{$op}, $n⟩]])
+  | `(hog{matchingNumber $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.MatchingNumber, op!{$op}, $n⟩]])
+  | `(hog{maximumDegree $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.MaximumDegree, op!{$op}, $n⟩]])
+  | `(hog{minimumDegree $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.MinimumDegree, op!{$op}, $n⟩]])
+  | `(hog{numberOfComponents $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.NumberOfComponents, op!{$op}, $n⟩]])
+  | `(hog{numberOfEdges $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.NumberOfEdges, op!{$op}, $n⟩]])
+  | `(hog{numberOfSpanningTrees $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.NumberOfSpanningTrees, op!{$op}, $n⟩]])
+  | `(hog{numberOfTriangles $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.NumberOfTriangles, op!{$op}, $n⟩]])
+  | `(hog{numberOfVertexOrbits $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.NumberOfVertexOrbits, op!{$op}, $n⟩]])
+  | `(hog{numberOfVertices $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.NumberOfVertices, op!{$op}, $n⟩]])
+  | `(hog{numberOfZeroEigenvalues $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.NumberOfZeroEigenvalues, op!{$op}, $n⟩]])
+  | `(hog{radius $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.Radius, op!{$op}, $n⟩]])
+  | `(hog{treewidth $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.Treewidth, op!{$op}, $n⟩]])
+  | `(hog{vertexConnectivity $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.VertexConnectivity, op!{$op}, $n⟩]])
+  | `(hog{vertexCoverNumber $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.VertexCoverNumber, op!{$op}, $n⟩]])
 
   | `(hog{( $q )}) =>
     `(hog{$q})
 
   | `(hog{$q₁ ∧ $q₂}) =>
-    `(List.append hog{$q₁} hog{$q₂})
+    `(distribute hog{$q₁} hog{$q₂})
 
-  -- | `(hog{$q₁ ∨ $q₂}) =>
-  --   `([hog{$q₁}, hog{$q₂}])
+  | `(hog{$q₁ ∨ $q₂}) =>
+    `(List.append hog{$q₁} hog{$q₂})
 
   | _ => Macro.throwUnsupported
 
@@ -487,48 +497,52 @@ open ProofWidgets in
 @[command_elab searchForExample]
 unsafe def searchForExampleImpl : CommandElab
   | stx@`(#search_hog $q ) => do
-    let qj ← liftTermElabM do
+    let qs ← liftTermElabM do
       let qe : Expr ← elabTerm q none
-      let query ← mkAppM ``HoGQuery.build #[qe]
-      let qq : ConstructedQuery ← evalExpr' ConstructedQuery ``ConstructedQuery query
-      return qq
-    let exitCode ← IO.Process.spawn {
-      cmd := "python"
-      args := #["Convert/searchHoG.py", s!"{qj.query}", s!"{qj.hash}"]
-    } >>= (·.wait)
-    if exitCode ≠ 0 then
-      IO.eprintln s!"failed to download graphs"
-    else
-      let path : System.FilePath := System.mkFilePath ["build", s!"search_results_{qj.hash}"]
-      let contents ← path.readDir
-      let resultsList := contents.toList
-      let mut i := 1
-      let mut ids := []
-      let mut graphId := ""
-      let mut links := []
-      for result in resultsList do
-        let path := result.path
-        let gapData ← loadGAPData path
-        match gapData.hogId with
-        | none =>
-          graphId := s!"result_{i}"
-          i := i + 1
-          let graphWLink : DivWithLink := ⟨s!"Found solution {graphId}", "", ""⟩
-          links := graphWLink :: links
-        | some id =>
-          graphId := s!"hog_{id}"
-          ids := id :: ids
-          let houseofgraphsLink := s!"https://houseofgraphs.org/graphs/{id}"
-          let graphWLink : DivWithLink := ⟨"Found solution ", houseofgraphsLink, graphId⟩
-          links := graphWLink :: links
-        let graphName := mkIdent (Name.mkSimple graphId)
-        loadGraphAux graphName.getId gapData false
+      let query ← mkAppM ``Queries.mk #[(← mkAppM ``List.map #[(← mkAppM ``HoGQuery.build #[]), qe])]
+      let qs : Queries ← evalExpr' Queries ``Queries query
+      return qs
 
-      let text : DivWithLink := ⟨s!"Found {resultsList.length} graphs satisfying given properties", "", ""⟩
-      links := text :: links
-      Widget.savePanelWidgetInfo (hash HtmlDisplayPanel.javascript)
-        (return json% { html: $(← Server.RpcEncodable.rpcEncode (putInDiv links)) }) stx
+    let queryHash := qs.hash
+    for q in qs.queries do
+      let exitCode ← IO.Process.spawn {
+        cmd := "python"
+        args := #["Convert/searchHoG.py", s!"{q.query}", s!"{queryHash}"]
+      } >>= (·.wait)
+      if exitCode ≠ 0 then
+        IO.eprintln s!"failed to download graphs"
+        return
+
+    let path : System.FilePath := System.mkFilePath ["build", s!"search_results_{queryHash}"]
+    let contents ← path.readDir
+    let resultsList := contents.toList
+    let mut i := 1
+    let mut ids := []
+    let mut graphId := ""
+    let mut links := []
+    for result in resultsList do
+      let path := result.path
+      let gapData ← loadGAPData path
+      match gapData.hogId with
+      | none =>
+        graphId := s!"result_{i}"
+        i := i + 1
+        let graphWLink : DivWithLink := ⟨s!"Found solution {graphId}", "", ""⟩
+        links := graphWLink :: links
+      | some id =>
+        graphId := s!"hog_{id}"
+        ids := id :: ids
+        let houseofgraphsLink := s!"https://houseofgraphs.org/graphs/{id}"
+        let graphWLink : DivWithLink := ⟨"Found solution ", houseofgraphsLink, graphId⟩
+        links := graphWLink :: links
+      let graphName := mkIdent (Name.mkSimple graphId)
+      loadGraphAux graphName.getId gapData false
+
+    let text : DivWithLink := ⟨s!"Found {resultsList.length} graphs satisfying given query", "", ""⟩
+    links := text :: links
+    Widget.savePanelWidgetInfo (hash HtmlDisplayPanel.javascript)
+      (return json% { html: $(← Server.RpcEncodable.rpcEncode (putInDiv links)) }) stx
 
   | _ => throwUnsupportedSyntax
 
--- #search_hog hog{ bipartite = true ∧ numberOfEdges = 1 ∧ numberOfVertices < 7 }
+-- #search_hog hog{ bipartite = true ∧ (numberOfEdges = 1 ∨ numberOfVertices < 2) }
