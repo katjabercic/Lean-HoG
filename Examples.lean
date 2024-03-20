@@ -17,6 +17,10 @@ load_graph Cube5 "examples/cube5.json"
 -- Check that Cube5 is connected
 #check Cube5.is_connected
 
+-- Check that Cube5 is bipartite
+-- #check Cube5.is_bipartite
+-- TODO: load the certificate if it exists
+
 -- Discrete graph on two points
 load_graph Two "examples/two.json"
 #check Two.is_disconnected
