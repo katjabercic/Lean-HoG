@@ -23,9 +23,13 @@ class BipartitenessCertificate (G : Graph) where
   vertex1Color : color vertex1 = 1
 
 
-/-- A graph is connected if it has a bipartiteness certificate.  -/
-theorem Graph.is_bipartite (G : Graph) [B : BipartitenessCertificate G] :
-  ∃ (c : G.vertex → Fin 2), ∃ (v0 v1 : G.vertex), c v0 ≠ c v1 ∧ ∀ (e : G.edge), c e.val.fst ≠ c e.val.snd := by
+@[simp] def Graph.isBipartite (G : Graph) : Prop :=
+  ∃ (c : G.vertex → Fin 2), ∃ (v0 v1 : G.vertex), c v0 ≠ c v1 ∧ ∀ (e : G.edge), c e.val.fst ≠ c e.val.snd
+
+
+/-- A graph is bipartite if it has a bipartiteness certificate.  -/
+theorem Graph.is_bipartite_if_has_certificate (G : Graph) [B : BipartitenessCertificate G] :
+  G.isBipartite := by
   use B.color, B.vertex0, B.vertex1
   constructor
   · rw [B.vertex0Color, B.vertex1Color]
