@@ -57,7 +57,7 @@ deriving Lean.FromJson
 /--
   A structure that corresponds to the JSON description of connected components certificate.
 -/
-structure ComponentsData : Type where
+structure ConnectedComponentsData : Type where
   /-- The number of connected components. -/
   val : Nat
 
@@ -94,7 +94,7 @@ structure JSONData : Type where
   /-connectivityData? : Option ConnectivityData
   disconnectivityData? : Option DisconnectivityData
   -/
-  componentsData? : Option ComponentsData
+  connectedComponentsData? : Option ConnectedComponentsData
   pathData? : Option PathData
 deriving Lean.FromJson
 

@@ -42,15 +42,15 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) (tryHam : Bool)
   Lean.setReducibleAttribute graphName
   have graph : Q(Graph) := Lean.mkConst graphName []
 
-    match jsonData.componentsData? with
+    match jsonData.connectedComponentsData? with
     | .none => pure ()
     | .some data =>
       let componentsCertificateName := certificateName graphName "CertificateI"
-      let componentsCertificateQ : Q(ComponentsCertificate $graph) := componentsCertificateOfData graph data
+      let componentsCertificateQ : Q(ConnectedComponentsCertificate $graph) := connectedComponentsCertificateOfData graph data
       Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
         name := componentsCertificateName
         levelParams := []
-        type := q(ComponentsCertificate $graph)
+        type := q(ConnectedComponentsCertificate $graph)
         value := componentsCertificateQ
         hints := .regular 0
         safety := .safe

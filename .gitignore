@@ -7,3 +7,5 @@ js/node_modules
 build
 Convert/__pycache__
 .venv
+venv
+.DS_Store
