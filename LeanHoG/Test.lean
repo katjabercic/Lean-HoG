@@ -33,7 +33,7 @@ end LeanHoG
 
 elab "load_rbset" name:ident filename:str : command => do
   let treeName := name.getId
-  let data ← LeanHoG.loadGAPData filename.getString
+  let data ← LeanHoG.loadJSONData filename.getString
   have vertexSize : Q(Nat) := Lean.mkRawNatLit data.graph.vertexSize
   have linOrder : Q(LinearOrder (LeanHoG.Edge $vertexSize)) := q(LeanHoG.Edge.linearOrder)
   have arrQ : Array Q(LeanHoG.Edge $vertexSize) := data.graph.edges.map (LeanHoG.edgeOfData vertexSize)
@@ -50,7 +50,7 @@ elab "load_rbset" name:ident filename:str : command => do
 
 elab "load_rbmap" name:ident filename:str : command => do
   let treeName := name.getId
-  let data ← LeanHoG.loadGAPData filename.getString
+  let data ← LeanHoG.loadJSONData filename.getString
   match data.connectivityData? with
   | .none => pure ()
   | .some data =>

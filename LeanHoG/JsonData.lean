@@ -58,7 +58,8 @@ deriving Lean.FromJson
   A structure that corresponds to the JSON description of a graph and optional
   connectivity and disconnectivity certificates.
 -/
-structure GAPData : Type where
+
+structure JSONData : Type where
   hogId : Option Nat
   graph : GraphData
   connectivityData? : Option ConnectivityData
@@ -66,9 +67,9 @@ structure GAPData : Type where
   pathData? : Option PathData
 deriving Lean.FromJson
 
-def loadGAPData (filePath : System.FilePath) : IO GAPData := do
+def loadJSONData (filePath : System.FilePath) : IO JSONData := do
   let fileContent ← IO.FS.readFile filePath
-  match Lean.Json.parse fileContent >>= Lean.FromJson.fromJson? (α := GAPData) with
+  match Lean.Json.parse fileContent >>= Lean.FromJson.fromJson? (α := JSONData) with
   | .ok data => pure data
   | .error msg => throw (.userError msg)
 

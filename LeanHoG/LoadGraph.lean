@@ -26,8 +26,8 @@ instance : Solver IO := (Solver.Impl.DimacsCommand "kissat")
 
 syntax (name := loadGraph) "load_graph" ident str (" try_ham ")? : command
 
-unsafe def loadGraphAux (graphName : Name) (gapData : GAPData) (tryHam : Bool) : CommandElabM Unit := do
-  have graphQ := graphOfData gapData.graph
+unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) (tryHam : Bool) : CommandElabM Unit := do
+  have graphQ := graphOfData jsonData.graph
   -- load the graph
   Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
     name := graphName
@@ -41,7 +41,7 @@ unsafe def loadGraphAux (graphName : Name) (gapData : GAPData) (tryHam : Bool) :
   have graph : Q(Graph) := Lean.mkConst graphName []
 
   -- load the connectivity certificate, if present
-  match gapData.connectivityData? with
+  match jsonData.connectivityData? with
   | .none => pure ()
   | .some data =>
     let connectivityCertificateName := certificateName graphName "connectivityCertificateI"
@@ -57,7 +57,7 @@ unsafe def loadGraphAux (graphName : Name) (gapData : GAPData) (tryHam : Bool) :
     Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance connectivityCertificateName .scoped 42
 
   -- load the disconnectivity certificate, if present
-  match gapData.disconnectivityData? with
+  match jsonData.disconnectivityData? with
   | .none => pure ()
   | .some data =>
     let disconnectivityCertificateName := certificateName graphName "disconnectivityCertificateI"
@@ -72,7 +72,7 @@ unsafe def loadGraphAux (graphName : Name) (gapData : GAPData) (tryHam : Bool) :
     }
     Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance disconnectivityCertificateName .scoped 42
 
-    match gapData.pathData? with
+    match jsonData.pathData? with
     | .none =>
       if tryHam then
         let g ← Elab.Command.liftTermElabM (evalExpr Graph q(Graph) graph)
@@ -117,7 +117,7 @@ unsafe def loadGraphImpl : CommandElab
   | `(load_graph $graphName $fileName) => do
     let graphName := graphName.getId
     let gapData ← loadGAPData fileName.getString
-    loadGraphAux graphName gapData false
+    loadGraphAux graphName jsonData false
 
   | _ => throwUnsupportedSyntax
 
