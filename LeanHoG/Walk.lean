@@ -1,6 +1,9 @@
 import LeanHoG.Graph
-import LeanHoG.Invariant.Connectivity.Basic
+import LeanHoG.Edge
+import LeanHoG.Invariant.ConnectedComponents.Basic
 import LeanHoG.Util.List
+import Mathlib.Data.Multiset.Fintype
+import Mathlib.Lean.Json
 
 namespace LeanHoG
 

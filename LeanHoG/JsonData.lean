@@ -73,20 +73,53 @@ deriving Lean.FromJson
 
 
 /--
+  A structure that corresponds to the JSON description of connected components certificate.
+-/
+structure ComponentsData : Type where
+  /-- The number of connected components. -/
+  val : Nat
+
+  /--
+  For each vertex, the number of its connected component.
+  -/
+  component : Array (Nat × Nat)
+
+  /-- The roots of the spanning tree for each component. -/
+  root : Array (Nat × Nat)
+
+  /--
+  For each vertex that is not a root, the next step of the path leading to the
+  root (and the root maps to itself).
+  -/
+  next : Array (Nat × Nat)
+
+  /--
+  To ensure that next is cycle-free, we witness the fact that "next" takes us closer to the root.
+  the distance of a vertex to its component root
+  -/
+  distToRoot : Array (Nat × Nat)
+
+deriving Lean.FromJson
+
+/--
   A structure that corresponds to the JSON description of a graph and optional
   connectivity and disconnectivity certificates.
 -/
-structure GAPData : Type where
+
+structure JSONData : Type where
+  hogId : Option Nat
   graph : GraphData
-  connectivityData? : Option ConnectivityData
+  /-connectivityData? : Option ConnectivityData
   disconnectivityData? : Option DisconnectivityData
+  -/
+  componentsData? : Option ComponentsData
   pathData? : Option PathData
   bipartitenessData? : Option BipartitenessData
 deriving Lean.FromJson
 
-def loadGAPData (filePath : System.FilePath) : IO GAPData := do
+def loadJSONData (filePath : System.FilePath) : IO JSONData := do
   let fileContent ← IO.FS.readFile filePath
-  match Lean.Json.parse fileContent >>= Lean.FromJson.fromJson? (α := GAPData) with
+  match Lean.Json.parse fileContent >>= Lean.FromJson.fromJson? (α := JSONData) with
   | .ok data => pure data
   | .error msg => throw (.userError msg)
 
