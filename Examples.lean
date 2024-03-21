@@ -1,5 +1,6 @@
 import LeanHoG.LoadGraph
 import LeanHoG.Widgets
+import LeanHoG.Tactic.SearchDSL
 
 namespace LeanHoG
 
@@ -24,5 +25,7 @@ load_graph Two "examples/two.json"
 -- Load the disjoint union of 3- and 4-cycle
 load_graph Cow "examples/cycle3-cycle4.json"
 #check Cow.is_disconnected
+
+#search_hog hog{ bipartite = true ∧ (numberOfEdges = 1 ∨ numberOfVertices < 6) }
 
 end LeanHoG

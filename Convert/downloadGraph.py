@@ -32,6 +32,7 @@ def download_graph(graph_id_1 : str, graph_id_2 : str):
 
     print('Done')
 
-graph_id_1 = sys.argv[1]
-graph_id_2 = sys.argv[2]
-download_graph(graph_id_1, graph_id_2)
+if __name__ == '__main__':
+    graph_id_1 = sys.argv[1]
+    graph_id_2 = sys.argv[2]
+    download_graph(graph_id_1, graph_id_2)

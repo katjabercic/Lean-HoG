@@ -5,6 +5,7 @@ from graph import Graph
 def graph_to_json(graph : Graph) -> dict:
     if graph.hamiltonianPath:
         return {
+            "hogId" : graph.HoG_id,
             "graph" : graph,
             "pathData" : {
                 "vertices": graph.hamiltonianPath
@@ -12,6 +13,7 @@ def graph_to_json(graph : Graph) -> dict:
         }
     else:
         return {
+            "hogId" : graph.HoG_id,
             "graph" : graph,
         }
 
