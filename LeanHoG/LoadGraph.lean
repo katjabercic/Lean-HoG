@@ -46,40 +46,6 @@ unsafe def loadGraphImpl : CommandElab
     Lean.setReducibleAttribute graphName
     have graph : Q(Graph) := Lean.mkConst graphName []
 
-    /-
-    -- load the connectivity certificate, if present
-    match gapData.connectivityData? with
-    | .none => pure ()
-    | .some data =>
-      let connectivityCertificateName := certificateName graphName "connectivityCertificateI"
-      let connectivityCertificateQ : Q(ConnectivityCertificate $graph) := connectivityCertificateOfData graph data
-      Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
-        name := connectivityCertificateName
-        levelParams := []
-        type := q(ConnectivityCertificate $graph)
-        value := connectivityCertificateQ
-        hints := .regular 0
-        safety := .safe
-      }
-      Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance connectivityCertificateName .scoped 42
-
-    -- load the disconnectivity certificate, if present
-    match gapData.disconnectivityData? with
-    | .none => pure ()
-    | .some data =>
-      let disconnectivityCertificateName := certificateName graphName "disconnectivityCertificateI"
-      let disconnectivityCertificateQ : Q(DisconnectivityCertificate $graph) := disconnectivityCertificateOfData graph data
-      Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
-        name := disconnectivityCertificateName
-        levelParams := []
-        type := q(DisconnectivityCertificate $graph)
-        value := disconnectivityCertificateQ
-        hints := .regular 0
-        safety := .safe
-      }
-      Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance disconnectivityCertificateName .scoped 42
-    -/
-
     match gapData.componentsData? with
     | .none => pure ()
     | .some data =>
@@ -143,40 +109,6 @@ unsafe def loadGraphImpl : CommandElab
 
     Lean.setReducibleAttribute graphName
     have graph : Q(Graph) := Lean.mkConst graphName []
-
-  /-
-    -- load the connectivity certificate, if present
-    match gapData.connectivityData? with
-    | .none => pure ()
-    | .some data =>
-      let connectivityCertificateName := certificateName graphName "connectivityCertificateI"
-      let connectivityCertificateQ : Q(ConnectivityCertificate $graph) := connectivityCertificateOfData graph data
-      Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
-        name := connectivityCertificateName
-        levelParams := []
-        type := q(ConnectivityCertificate $graph)
-        value := connectivityCertificateQ
-        hints := .regular 0
-        safety := .safe
-      }
-      Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance connectivityCertificateName .scoped 42
-
-    -- load the disconnectivity certificate, if present
-    match gapData.disconnectivityData? with
-    | .none => pure ()
-    | .some data =>
-      let disconnectivityCertificateName := certificateName graphName "disconnectivityCertificateI"
-      let disconnectivityCertificateQ : Q(DisconnectivityCertificate $graph) := disconnectivityCertificateOfData graph data
-      Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
-        name := disconnectivityCertificateName
-        levelParams := []
-        type := q(DisconnectivityCertificate $graph)
-        value := disconnectivityCertificateQ
-        hints := .regular 0
-        safety := .safe
-      }
-      Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance disconnectivityCertificateName .scoped 42
-    -/
 
     match gapData.componentsData? with
     | .none => pure ()
