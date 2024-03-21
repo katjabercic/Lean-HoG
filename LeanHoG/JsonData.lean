@@ -54,6 +54,24 @@ structure PathData : Type where
   vertices : List Nat
 deriving Lean.FromJson
 
+
+/--
+  A structure that corresponds to the JSON description of bipartiteness certificate.
+-/
+structure BipartitenessData : Type where
+
+  /-- A coloring of vertices by two colors -/
+  color : Array (Nat × Nat)
+
+  /-- A vertex of color 0 -/
+  vertex0 : Nat
+
+  /-- A vertex of color 1-/
+  vertex1 : Nat
+deriving Lean.FromJson
+
+
+
 /--
   A structure that corresponds to the JSON description of connected components certificate.
 -/
@@ -96,6 +114,7 @@ structure JSONData : Type where
   -/
   componentsData? : Option ComponentsData
   pathData? : Option PathData
+  bipartitenessData? : Option BipartitenessData
 deriving Lean.FromJson
 
 def loadJSONData (filePath : System.FilePath) : IO JSONData := do
@@ -103,5 +122,9 @@ def loadJSONData (filePath : System.FilePath) : IO JSONData := do
   match Lean.Json.parse fileContent >>= Lean.FromJson.fromJson? (α := JSONData) with
   | .ok data => pure data
   | .error msg => throw (.userError msg)
+
+
+
+
 
 end LeanHoG
