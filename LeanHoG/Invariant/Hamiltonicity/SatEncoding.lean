@@ -1,6 +1,6 @@
 import LeanHoG.Graph
 import LeanHoG.Walk
-import LeanHoG.Invariant.Connectivity.Basic
+import LeanHoG.Invariant.ConnectedComponents.Basic
 import LeanHoG.Invariant.Hamiltonicity.Basic
 import Lean
 

@@ -22,4 +22,7 @@ def graphOfData (D : GraphData) : Q(Graph) :=
   have edges : Q(Std.RBSet (LeanHoG.Edge $vertexSize) LeanHoG.Edge.linearOrder.compare) := build_RBSet arrQ q(LeanHoG.Edge.linearOrder)
   q(Graph.mk $vertexSize $edges)
 
+def forallFin {n : Nat} (p : Fin n → Prop) [DecidablePred p] : Bool := decide (∀ x, p x)
+def forallVertex {G : Graph} (p : G.vertex → Prop) [DecidablePred p] : Bool := decide (∀ v, p v)
+
 end LeanHoG

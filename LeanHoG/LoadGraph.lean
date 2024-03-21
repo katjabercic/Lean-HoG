@@ -1,7 +1,9 @@
 import Lean
 import Qq
 import LeanHoG.Graph
-import LeanHoG.Invariant.Connectivity.Certificate
+--import LeanHoG.Connectivity
+--import LeanHoG.Invariant.Connectivity.Certificate
+import LeanHoG.Invariant.ConnectedComponents.Certificate
 import LeanHoG.Certificate
 import LeanHoG.JsonData
 
@@ -40,37 +42,20 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) (tryHam : Bool)
   Lean.setReducibleAttribute graphName
   have graph : Q(Graph) := Lean.mkConst graphName []
 
-  -- load the connectivity certificate, if present
-  match jsonData.connectivityData? with
-  | .none => pure ()
-  | .some data =>
-    let connectivityCertificateName := certificateName graphName "connectivityCertificateI"
-    let connectivityCertificateQ : Q(ConnectivityCertificate $graph) := connectivityCertificateOfData graph data
-    Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
-      name := connectivityCertificateName
-      levelParams := []
-      type := q(ConnectivityCertificate $graph)
-      value := connectivityCertificateQ
-      hints := .regular 0
-      safety := .safe
-    }
-    Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance connectivityCertificateName .scoped 42
-
-  -- load the disconnectivity certificate, if present
-  match jsonData.disconnectivityData? with
-  | .none => pure ()
-  | .some data =>
-    let disconnectivityCertificateName := certificateName graphName "disconnectivityCertificateI"
-    let disconnectivityCertificateQ : Q(DisconnectivityCertificate $graph) := disconnectivityCertificateOfData graph data
-    Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
-      name := disconnectivityCertificateName
-      levelParams := []
-      type := q(DisconnectivityCertificate $graph)
-      value := disconnectivityCertificateQ
-      hints := .regular 0
-      safety := .safe
-    }
-    Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance disconnectivityCertificateName .scoped 42
+    match jsonData.componentsData? with
+    | .none => pure ()
+    | .some data =>
+      let componentsCertificateName := certificateName graphName "CertificateI"
+      let componentsCertificateQ : Q(ComponentsCertificate $graph) := componentsCertificateOfData graph data
+      Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
+        name := componentsCertificateName
+        levelParams := []
+        type := q(ComponentsCertificate $graph)
+        value := componentsCertificateQ
+        hints := .regular 0
+        safety := .safe
+      }
+      Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance componentsCertificateName .scoped 42
 
     match jsonData.pathData? with
     | .none =>
