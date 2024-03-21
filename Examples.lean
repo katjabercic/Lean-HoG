@@ -1,6 +1,7 @@
 import LeanHoG.LoadGraph
 import LeanHoG.Invariant.ConnectedComponents.Basic
 import LeanHoG.Widgets
+import LeanHoG.Tactic.SearchDSL
 
 namespace LeanHoG
 
@@ -27,5 +28,7 @@ load_graph Cow "examples/cycle3-cycle4.json"
 -- Discrete graph on two points
 load_graph Two "examples/two.json"
 #eval Two.numberOfComponents
+
+#search_hog hog{ bipartite = true ∧ (numberOfEdges = 1 ∨ numberOfVertices < 6) }
 
 end LeanHoG

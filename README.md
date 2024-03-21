@@ -66,4 +66,46 @@ and clicking on the line `#visualizeGraph Cycle7`. In the info view you should n
 something like this:
 ![image](https://github.com/katjabercic/Lean-HoG/assets/6967728/f4ee94ab-4d31-4192-ac80-7e35323e5c4b)
 
+### Search HoG database from Lean
 
+You can query the houseofgraphs.org database from within Lean via the `#search_hog`
+command. To use it you have to construct a valid `hog_query` and enclose it into
+`hog{ }` syntax. It has the following syntax:
+```
+hog_query q ::= boolean_invariant = b | numerical_invariant op x | ( q ) | q ∧ q | q ∨ q
+```
+where `b` is a boolean value, `x` is a numerical value 
+(`Int` for invariants with integral values, `Float` for invariants with continous values)
+and
+```
+op ::= < | <= | > | >= | =
+```
+The list of available invariants can be found at https://houseofgraphs.org/help#invariants.
+The naming convention here is that the invariants are writted using [lower camel case](https://en.wikipedia.org/wiki/Camel_case).
+
+#### Example
+
+```
+#search_hog hog{ bipartite = true ∧ (numberOfEdges = 1 ∨ numberOfVertices < 6) }
+```
+
+Should display in the infoview:
+
+```
+Found 9 graphs satisfying given query
+Found solution hog_302
+Found solution hog_300
+Found solution hog_296
+Found solution hog_294
+Found solution hog_310
+Found solution hog_298
+Found solution hog_304
+Found solution hog_19655
+Found solution hog_49432
+```
+
+with links pointing to the houseofgraphs page for each graph.
+The graphs are also available in Lean, which you can check with e.g.
+```lean
+#check hog_302
+```
