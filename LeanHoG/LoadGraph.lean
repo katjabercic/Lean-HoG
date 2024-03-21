@@ -111,12 +111,12 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) (tryHam : Bool)
 unsafe def loadGraphImpl : CommandElab
   | `(load_graph $graphName $fileName try_ham ) => do
     let graphName := graphName.getId
-    let gapData ← loadGAPData fileName.getString
-    loadGraphAux graphName gapData true
+    let jsonData ← loadJSONData fileName.getString
+    loadGraphAux graphName jsonData true
 
   | `(load_graph $graphName $fileName) => do
     let graphName := graphName.getId
-    let gapData ← loadGAPData fileName.getString
+    let jsonData ← loadJSONData fileName.getString
     loadGraphAux graphName jsonData false
 
   | _ => throwUnsupportedSyntax

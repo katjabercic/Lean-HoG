@@ -522,8 +522,8 @@ unsafe def searchForExampleImpl : CommandElab
     let mut links := []
     for result in resultsList do
       let path := result.path
-      let gapData ← loadGAPData path
-      match gapData.hogId with
+      let jsonData ← loadJSONData path
+      match jsonData.hogId with
       | none =>
         graphId := s!"result_{i}"
         i := i + 1
@@ -536,7 +536,7 @@ unsafe def searchForExampleImpl : CommandElab
         let graphWLink : DivWithLink := ⟨"Found solution ", houseofgraphsLink, graphId⟩
         links := graphWLink :: links
       let graphName := mkIdent (Name.mkSimple graphId)
-      loadGraphAux graphName.getId gapData false
+      loadGraphAux graphName.getId jsonData false
 
     let text : DivWithLink := ⟨s!"Found {resultsList.length} graphs satisfying given query", "", ""⟩
     links := text :: links
