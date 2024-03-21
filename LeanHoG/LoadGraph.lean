@@ -30,8 +30,8 @@ syntax (name := loadGraph) "load_graph" ident str (" tryHam ")? : command
 unsafe def loadGraphImpl : CommandElab
   | `(load_graph $graphName $fileName tryHam ) => do
     let graphName := graphName.getId
-    let gapData ← loadGAPData fileName.getString
-    have graphQ := graphOfData gapData.graph
+    let jsonData ← loadJSONData fileName.getString
+    have graphQ := graphOfData jsonData.graph
     -- load the graph
     Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
       name := graphName
@@ -45,7 +45,7 @@ unsafe def loadGraphImpl : CommandElab
     have graph : Q(Graph) := Lean.mkConst graphName []
 
     -- load the connectivity certificate, if present
-    match gapData.connectivityData? with
+    match jsonData.connectivityData? with
     | .none => pure ()
     | .some data =>
       let connectivityCertificateName := certificateName graphName "connectivityCertificateI"
@@ -61,7 +61,7 @@ unsafe def loadGraphImpl : CommandElab
       Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance connectivityCertificateName .scoped 42
 
     -- load the disconnectivity certificate, if present
-    match gapData.disconnectivityData? with
+    match jsonData.disconnectivityData? with
     | .none => pure ()
     | .some data =>
       let disconnectivityCertificateName := certificateName graphName "disconnectivityCertificateI"
@@ -76,7 +76,7 @@ unsafe def loadGraphImpl : CommandElab
       }
       Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance disconnectivityCertificateName .scoped 42
 
-    match gapData.pathData? with
+    match jsonData.pathData? with
     | .none =>
       let g ← Elab.Command.liftTermElabM (evalExpr Graph q(Graph) graph)
       let mbHp ← tryFindHamiltonianPath g
@@ -110,8 +110,8 @@ unsafe def loadGraphImpl : CommandElab
 
   | `(load_graph $graphName $fileName) => do
     let graphName := graphName.getId
-    let gapData ← loadGAPData fileName.getString
-    have graphQ := graphOfData gapData.graph
+    let jsonData ← loadJSONData fileName.getString
+    have graphQ := graphOfData jsonData.graph
     -- load the graph
     Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
       name := graphName
@@ -125,7 +125,7 @@ unsafe def loadGraphImpl : CommandElab
     have graph : Q(Graph) := Lean.mkConst graphName []
 
     -- load the connectivity certificate, if present
-    match gapData.connectivityData? with
+    match jsonData.connectivityData? with
     | .none => pure ()
     | .some data =>
       let connectivityCertificateName := certificateName graphName "connectivityCertificateI"
@@ -141,7 +141,7 @@ unsafe def loadGraphImpl : CommandElab
       Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance connectivityCertificateName .scoped 42
 
     -- load the disconnectivity certificate, if present
-    match gapData.disconnectivityData? with
+    match jsonData.disconnectivityData? with
     | .none => pure ()
     | .some data =>
       let disconnectivityCertificateName := certificateName graphName "disconnectivityCertificateI"
@@ -156,7 +156,7 @@ unsafe def loadGraphImpl : CommandElab
       }
       Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance disconnectivityCertificateName .scoped 42
 
-    match gapData.pathData? with
+    match jsonData.pathData? with
     | .none =>
       pure ()
     | .some data =>
