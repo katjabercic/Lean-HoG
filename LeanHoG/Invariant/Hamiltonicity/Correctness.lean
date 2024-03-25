@@ -3,6 +3,8 @@ import LeanHoG.Invariant.Hamiltonicity.Basic
 import LeanHoG.Invariant.Hamiltonicity.SatHelpers
 import LeanHoG.Util.List
 
+import Mathlib.Data.List.ProdSigma
+
 namespace LeanHoG
 
 open LeanSAT Model PropFun
