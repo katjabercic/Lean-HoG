@@ -3,6 +3,8 @@ import Qq
 import Lean.Data.Json.Basic
 import LeanHoG.LoadGraph
 import LeanHoG.Widgets
+import LeanHoG.Util.IO
+import LeanHoG.Options
 
 import ProofWidgets.Component.HtmlDisplay
 
@@ -504,13 +506,15 @@ unsafe def searchForExampleImpl : CommandElab
       return qs
 
     let queryHash := qs.hash
+    let opts ← getOptions
+    let py := opts.get hog.pythonExecutable.name hog.pythonExecutable.defValue
     for q in qs.queries do
       let exitCode ← IO.Process.spawn {
-        cmd := "python"
+        cmd := py
         args := #["Convert/searchHoG.py", s!"{q.query}", s!"{queryHash}"]
       } >>= (·.wait)
       if exitCode ≠ 0 then
-        IO.eprintln s!"failed to download graphs"
+        IO.eprintln s!"failed to download graph"
         return
 
     let path : System.FilePath := System.mkFilePath ["build", s!"search_results_{queryHash}"]
@@ -544,3 +548,5 @@ unsafe def searchForExampleImpl : CommandElab
       (return json% { html: $(← Server.RpcEncodable.rpcEncode (putInDiv links)) }) stx
 
   | _ => throwUnsupportedSyntax
+
+-- #search_hog hog{ bipartite = true ∧ (numberOfEdges = 1 ∨ numberOfVertices < 6) }

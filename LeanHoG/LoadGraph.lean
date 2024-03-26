@@ -1,8 +1,8 @@
 import Lean
 import Qq
+
 import LeanHoG.Graph
---import LeanHoG.Connectivity
---import LeanHoG.Invariant.Connectivity.Certificate
+import LeanHoG.Invariant.Bipartiteness.Certificate
 import LeanHoG.Invariant.ConnectedComponents.Certificate
 import LeanHoG.Certificate
 import LeanHoG.JsonData
@@ -91,6 +91,22 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) (tryHam : Bool)
         safety := .safe
       }
       Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance hamiltonianPathName .scoped 42
+
+    match jsonData.bipartitenessData? with
+    | .none => pure ()
+    | .some data =>
+      let bipartitenessCertificateName := certificateName graphName "bipartitenessCertificateI"
+      let bipartitenessCertificateQ : Q(BipartitenessCertificate $graph) := bipartitenessCertificateOfData graph data
+      Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
+        name := bipartitenessCertificateName
+        levelParams := []
+        type := q(BipartitenessCertificate $graph)
+        value := bipartitenessCertificateQ
+        hints := .regular 0
+        safety := .safe
+      }
+      Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance bipartitenessCertificateName .scoped 42
+
 
 @[command_elab loadGraph]
 unsafe def loadGraphImpl : CommandElab

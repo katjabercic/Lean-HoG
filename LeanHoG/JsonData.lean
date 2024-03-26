@@ -13,32 +13,15 @@ structure GraphData : Type where
   edges : Array (Nat × Nat)
 deriving Lean.FromJson
 
-/--
-  A structure that corresponds to the JSON description of connectivity certificate.
--/
-structure ConnectivityData : Type where
-  /-- The root of the spanning tree. -/
-  root : Nat
-
-  /--
-  For each vertex that is not a root, the next step of the path leading to the
-  root (and the root maps to itself).
-  -/
-  next : Array (Nat × Nat)
-
-  /--
-  To ensure that next is cycle-free, we witness the fact that "next" takes us closer to the root.
-  the distance of a vertex to its component root
-  -/
-  distToRoot : Array (Nat × Nat)
-
+structure PathData : Type where
+  vertices : List Nat
 deriving Lean.FromJson
 
 
 /--
-  A structure that corresponds to the JSON description of disconnectivity certificate.
+  A structure that corresponds to the JSON description of bipartiteness certificate.
 -/
-structure DisconnectivityData : Type where
+structure BipartitenessData : Type where
 
   /-- A coloring of vertices by two colors -/
   color : Array (Nat × Nat)
@@ -50,9 +33,7 @@ structure DisconnectivityData : Type where
   vertex1 : Nat
 deriving Lean.FromJson
 
-structure PathData : Type where
-  vertices : List Nat
-deriving Lean.FromJson
+
 
 /--
   A structure that corresponds to the JSON description of connected components certificate.
@@ -96,6 +77,7 @@ structure JSONData : Type where
   -/
   connectedComponentsData? : Option ConnectedComponentsData
   pathData? : Option PathData
+  bipartitenessData? : Option BipartitenessData
 deriving Lean.FromJson
 
 def loadJSONData (filePath : System.FilePath) : IO JSONData := do
@@ -103,5 +85,9 @@ def loadJSONData (filePath : System.FilePath) : IO JSONData := do
   match Lean.Json.parse fileContent >>= Lean.FromJson.fromJson? (α := JSONData) with
   | .ok data => pure data
   | .error msg => throw (.userError msg)
+
+
+
+
 
 end LeanHoG
