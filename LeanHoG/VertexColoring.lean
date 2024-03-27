@@ -34,9 +34,8 @@ lemma adjacent_impl_color_ne {Color : Type} (G : Graph) [DecidableEq Color] (c :
     apply (c.colorCorrect edge_v_u)
 
 /-TODO: Rename this. I lacked imagination...-/
-lemma fin_2_stuff (a b c : Fin 2) : a ≠ c → b ≠ c → a = b := by
+lemma fin_2_ne_c_impl_eq (a b c : Fin 2) : a ≠ c → b ≠ c → a = b := by
   intro a_ne_b b_ne_c
-  --apply lt_or_gt_of_ne at a_ne_b
   have c_le_1 : c ≤ 1 := by
     apply Fin.le_last
   apply Nat.lt_or_eq_of_le at c_le_1
@@ -65,13 +64,7 @@ lemma fin_2_stuff (a b c : Fin 2) : a ≠ c → b ≠ c → a = b := by
     apply v_eq_zero at a_ne_b
     apply v_eq_zero at b_ne_c
     rw [a_ne_b, b_ne_c]
-  /-
-  cases a_ne_b with
-  | inl a_lt_c =>
-    sorry
-  | inr a_gt_c =>
-    sorry
--/
+
 lemma EvenOddWalkEndpointEquality
   {G : Graph}
   {vₛ vₜ : G.vertex}
@@ -114,7 +107,7 @@ lemma EvenOddWalkEndpointEquality
         apply ih.left at wEv
         have s_t_diff_color := adjacent_impl_color_ne G p vₛ vᵤ adj_vₛ_vᵤ
         symm at wEv
-        exact fin_2_stuff (p.color vₛ) (p.color vₜ) (p.color vᵤ) s_t_diff_color wEv
+        exact fin_2_ne_c_impl_eq (p.color vₛ) (p.color vₜ) (p.color vᵤ) s_t_diff_color wEv
 
 end VertexColoring
 
