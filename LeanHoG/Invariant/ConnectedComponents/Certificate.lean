@@ -12,7 +12,7 @@ open Qq
 
 namespace LeanHoG
 
-def componentsCertificateOfData (G : Q(Graph)) (C : ComponentsData) : Q(ComponentsCertificate $G) :=
+def connectedComponentsCertificateOfData (G : Q(Graph)) (C : ConnectedComponentsData) : Q(ConnectedComponentsCertificate $G) :=
   have n : Q(Nat) := q(Graph.vertexSize $G)
   have val : Q(Nat) := Lean.mkRawNatLit C.val
   have zeroVal : Q(Fin $val) := finOfData val 0
@@ -40,7 +40,7 @@ def componentsCertificateOfData (G : Q(Graph)) (C : ComponentsData) : Q(Componen
   have nextRoot : Q(forallFin (fun i => $next ($root i) = $root i) = true) := (q(Eq.refl true) : Lean.Expr)
   have nextAdjacent : Q(decide (∀ (v : Graph.vertex $G), 0 < $distToRoot v → Graph.adjacent v ($next v)) = true) := (q(Eq.refl true) : Lean.Expr)
   have distNext : Q(decide (∀ (v : Graph.vertex $G), 0 < $distToRoot v → $distToRoot ($next v) < $distToRoot v)) := (q(Eq.refl true) : Lean.Expr)
-  q(ComponentsCertificate.mk
+  q(ConnectedComponentsCertificate.mk
          $val
          $component
          $componentEdge

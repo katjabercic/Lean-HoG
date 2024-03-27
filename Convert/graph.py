@@ -1,19 +1,18 @@
 import json
-from typing import List, Set, Dict, Any
+from typing import List, Set, Dict, Iterable
 
 class Graph():
     """An object representing a single HoG graph"""
     HoG_id : int
     vertex_size : int
     edges : Set[List[int]]
-    hamiltonianPath : List[int]
+    adjacency : Dict[int, Set[int]]
 
     def __init__(self, id : str, data : json):
         self.HoG_id = int(id)
-        adjacency = Graph._parse_adjacency_list(data['adjacencyList'])
-        self.vertex_size = len(adjacency)
-        self.edges = set(Graph._to_edge(int(u), int(v)) for u in adjacency for v in adjacency[u])
-        self.hamiltonianPath = None
+        self.adjacency = Graph._parse_adjacency_list(data['adjacencyList'])
+        self.vertex_size = len(self.adjacency)
+        self.edges = set(Graph._to_edge(int(u), int(v)) for u in self.adjacency for v in self.adjacency[u])
         
     @staticmethod
     def _to_edge(fst, snd):
@@ -26,10 +25,13 @@ class Graph():
         for (i,nbhd) in enumerate(adjList):
             adjacency[i] = set(nbhd)    
         return adjacency
+    
+    def neighbors(self, v) -> Iterable[int] :
+        """The neighbors of the given vertex."""
+        return self.adjacency[v]
 
     def to_json(self):
         return {
-            "HoGId" : self.HoG_id,
             "vertexSize" : self.vertex_size,
             "edges" : sorted(list(self.edges)),
         }
