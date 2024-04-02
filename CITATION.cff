@@ -1,0 +1,26 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Lean-HoG
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Andrej
+    family-names: Bauer
+    orcid: 'https://orcid.org/0000-0001-5378-0547'
+    affiliation: 'University of Ljubljana, IMFM'
+  - family-names: Berčič
+    given-names: Katja
+    affiliation: 'University of Ljubljana, IMFM'
+    orcid: 'https://orcid.org/0000-0002-6678-8975'
+  - family-names: Devillez
+    given-names: Gauvain
+    orcid: 'https://orcid.org/0000-0002-3931-1610'
+    affiliation: University of Ljubljana
+  - family-names: Taslak
+    given-names: Jure
+    orcid: 'https://orcid.org/0000-0002-6593-6796'
+    affiliation: University of Ljubljana
