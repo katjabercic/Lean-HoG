@@ -122,6 +122,4 @@ unsafe def loadGraphImpl : CommandElab
 
   | _ => throwUnsupportedSyntax
 
-#check loadGraphImpl
-
 end LeanHoG

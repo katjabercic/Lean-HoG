@@ -21,7 +21,7 @@ def connectedComponentsCertificateOfData (G : Q(Graph)) (C : ConnectedComponents
   have componentMap : Q(Std.RBMap (Graph.vertex $G) (Fin $val) Fin.instLinearOrderFin.compare) :=
     build_RBMap (C.component.map convertToPairFinVal) q(Fin.instLinearOrderFin)
   have component : Q(Graph.vertex $G → Fin $val) := q(fun v => Std.RBMap.findD $componentMap v $zeroVal)
-  have componentEdge : Q(Std.RBSet.all (Graph.edgeTree $G) (fun x => $component (Graph.fst x) = $component (Graph.snd x)) = true) := (q(Eq.refl true) : Lean.Expr)
+  have componentEdge : Q(Std.RBSet.all (Graph.edgeSet $G) (fun x => $component (Graph.fst x) = $component (Graph.snd x)) = true) := (q(Eq.refl true) : Lean.Expr)
   have convertToPairValFin : Nat × Nat → Q(Fin $val × Fin $n) := fun (i,j) => q(($(finOfData val i), $(finOfData n j)))
   have rootMap : Q(Std.RBMap (Fin $val) (Graph.vertex $G) Fin.instLinearOrderFin.compare) :=
     build_RBMap (C.root.map convertToPairValFin) q(Fin.instLinearOrderFin)

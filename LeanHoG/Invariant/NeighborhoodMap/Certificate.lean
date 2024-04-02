@@ -23,7 +23,7 @@ def neighborhoodMapOfData (G : Q(Graph)) (M : NeighborhoodMapData) : Q(Neighborh
     build_RBMap (M.neighbors.map convert) q(Fin.instLinearOrderFin)
   have nbhAdj : Q(decide (∀ (u : Graph.vertex $G), ($(nbhMap).find! u).all (@Graph.adjacent $G u)) = true) :=
     (q(Eq.refl true) : Lean.Expr)
-  have adjNbh : Q(Std.RBSet.all (Graph.edgeTree $G) (edgeCorrect $G $nbhMap) = true) := (q(Eq.refl true) : Lean.Expr)
+  have adjNbh : Q(Std.RBSet.all (edgeSet $G) (edgeCorrect $G $nbhMap) = true) := (q(Eq.refl true) : Lean.Expr)
   q(NeighborhoodMap.mk
     $nbhMap
     (of_decide_eq_true $nbhAdj)

@@ -55,7 +55,7 @@ class ConnectedComponentsCertificate (G : Graph) : Type :=
   -- assignment of components to each vertex
   component : G.vertex → Fin val
   -- the endpoints of an edge are in the same component
-  componentEdge : G.edgeTree.all (fun e => component (G.fst e) = component (G.snd e)) = true
+  componentEdge : G.edgeSet.all (fun e => component (G.fst e) = component (G.snd e)) = true
   -- for each component, a chosen representative, called "the component root"
   root : Fin val → G.vertex
   -- each root is in the correct component
@@ -88,7 +88,7 @@ def ConnectedComponentsCertificate.componentEdge' {G : Graph} [C : ConnectedComp
   unfold Std.RBSet.all at compEdge
   rw [Std.RBNode.all_iff] at compEdge
   rw [Std.RBNode.All_def] at compEdge
-  have belongs : e.1 ∈ G.edgeTree.1 := by
+  have belongs : e.1 ∈ G.edgeSet.1 := by
     rw [← edge_in_node]
     rw [← Std.RBSet.contains_iff]
     exact e.property

@@ -514,8 +514,4 @@ def Graph.isEulerian (g : Graph) : Prop :=
 def Cycle.isTriangle {g : Graph} {u : g.vertex} (c : Cycle g u) : Prop :=
   c.length = 3
 
-def Graph.allPaths (g : Graph) := { p : (u v : g.vertex) ×' Path g u v | true }
-
-def Graph.allPathsFromTo (g : Graph) (u v : g.vertex) := { p : Path g u v | true }
-
 end LeanHoG
