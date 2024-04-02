@@ -4,7 +4,7 @@ import json
 import requests
 from graph import Graph
 from pathlib import Path
-from jsonEncoder import GraphEncoder, graph_to_json
+from jsonEncoder import GraphEncoder
 
 def search_hog(data, search_hash):
     url = "https://houseofgraphs.org/api/enquiry"
@@ -25,7 +25,7 @@ def search_hog(data, search_hash):
 
                     Path(f"{buildDir}/{searchResDir}").mkdir(parents=True, exist_ok=True)
                     with open(os.path.join(buildDir, searchResDir, f"{G.HoG_id}.json"), 'w') as fh:
-                        json.dump(graph_to_json(G), fh, cls=GraphEncoder)
+                        json.dump(G, fh, cls=GraphEncoder)
                     
             else:
                 sys.exit(-1)

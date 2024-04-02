@@ -45,11 +45,11 @@ class ConnectedComponents (G : Graph) : Type :=
   componentInhabited : ∀ (i : Fin val), ∃ u, component u = i -- each component is inhabited
   correct : ∀ u v, component u = component v ↔ G.connected u v
 
-def Graph.numberOfComponents (G : Graph) [C : ConnectedComponents G] : Nat := C.val
+def Graph.numberOfConnectedComponents (G : Graph) [C : ConnectedComponents G] : Nat := C.val
 def Graph.component (G : Graph) [C : ConnectedComponents G] (v : G.vertex) : Nat := C.component v
 
 -- A certificate for connected components:
-class ComponentsCertificate (G : Graph) : Type :=
+class ConnectedComponentsCertificate (G : Graph) : Type :=
   -- number of components
   val : Nat
   -- assignment of components to each vertex
@@ -81,7 +81,7 @@ class ComponentsCertificate (G : Graph) : Type :=
   -- distance to root decreases as we travel along the path given by next
   distNext : ∀ v, 0 < distToRoot v → distToRoot (next v) < distToRoot v
 
-def ComponentsCertificate.componentEdge' {G : Graph} [C : ComponentsCertificate G] :
+def ConnectedComponentsCertificate.componentEdge' {G : Graph} [C : ConnectedComponentsCertificate G] :
   ∀ (e : G.edge), component (G.fst e.val) = component (G.snd e.val) := by
   intro e
   have compEdge := C.componentEdge
@@ -97,7 +97,7 @@ def ComponentsCertificate.componentEdge' {G : Graph} [C : ComponentsCertificate 
   apply belongs
 
 -- adjacent vertices are in the same component
-lemma ComponentsCertificate.componentAdjacent {G} [C : ComponentsCertificate G] :
+lemma ConnectedComponentsCertificate.componentAdjacent {G} [C : ConnectedComponentsCertificate G] :
   ∀ u v, G.adjacent u v → component u = component v := by
   intros u v uv
   apply ltByCases u v
@@ -130,10 +130,10 @@ lemma ComponentsCertificate.componentAdjacent {G} [C : ComponentsCertificate G] 
 
 -- the root of the component of a given vertex
 @[simp]
-def ComponentsCertificate.rootOf {G} [C : ComponentsCertificate G] : G.vertex → G.vertex :=
+def ConnectedComponentsCertificate.rootOf {G} [C : ConnectedComponentsCertificate G] : G.vertex → G.vertex :=
   (fun (v : G.vertex) => C.root (C.component v))
 
-def ComponentsCertificate.rootOfNext {G} [C : ComponentsCertificate G] (v : G.vertex) :
+def ConnectedComponentsCertificate.rootOfNext {G} [C : ConnectedComponentsCertificate G] (v : G.vertex) :
   C.rootOf (C.next v) = C.rootOf v := by
   apply congrArg C.root
   cases Nat.eq_zero_or_pos (C.distToRoot v)
@@ -165,7 +165,7 @@ theorem heightInduction {α : Type} (f : α → Nat) (P : α → Prop) :
   exact @WellFounded.fix _ Q Nat.lt (Nat.lt_wfRel.wf) Qstep (f a) a rfl
 
 -- Given a component certificate, each vertex is connected to its root
-lemma connectedToRoot (G : Graph) [C : ComponentsCertificate G] :
+lemma connectedToRoot (G : Graph) [C : ConnectedComponentsCertificate G] :
   ∀ v, G.connected v (C.rootOf v) := by
   apply heightInduction C.distToRoot (fun v => G.connected v (C.rootOf v))
   intros v ih
@@ -181,7 +181,7 @@ lemma connectedToRoot (G : Graph) [C : ComponentsCertificate G] :
       assumption
 
 -- From a components certificate we can derive the connected components
-instance {G : Graph} [C : ComponentsCertificate G] : ConnectedComponents G :=
+instance {G : Graph} [C : ConnectedComponentsCertificate G] : ConnectedComponents G :=
   { val := C.val ,
     component := C.component,
     componentInhabited := by { intro i ; exists (C.root i) ; apply C.rootCorrect },
@@ -192,7 +192,7 @@ instance {G : Graph} [C : ComponentsCertificate G] : ConnectedComponents G :=
         apply G.connected_trans u (C.rootOf u) v
         · apply connectedToRoot
         · apply Graph.connected_symm
-          unfold ComponentsCertificate.rootOf
+          unfold ConnectedComponentsCertificate.rootOf
           rw [eq]
           apply connectedToRoot
       · intro uv

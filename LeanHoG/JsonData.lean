@@ -13,43 +13,6 @@ structure GraphData : Type where
   edges : Array (Nat × Nat)
 deriving Lean.FromJson
 
-/--
-  A structure that corresponds to the JSON description of connectivity certificate.
--/
-structure ConnectivityData : Type where
-  /-- The root of the spanning tree. -/
-  root : Nat
-
-  /--
-  For each vertex that is not a root, the next step of the path leading to the
-  root (and the root maps to itself).
-  -/
-  next : Array (Nat × Nat)
-
-  /--
-  To ensure that next is cycle-free, we witness the fact that "next" takes us closer to the root.
-  the distance of a vertex to its component root
-  -/
-  distToRoot : Array (Nat × Nat)
-
-deriving Lean.FromJson
-
-
-/--
-  A structure that corresponds to the JSON description of disconnectivity certificate.
--/
-structure DisconnectivityData : Type where
-
-  /-- A coloring of vertices by two colors -/
-  color : Array (Nat × Nat)
-
-  /-- A vertex of color 0 -/
-  vertex0 : Nat
-
-  /-- A vertex of color 1-/
-  vertex1 : Nat
-deriving Lean.FromJson
-
 structure PathData : Type where
   vertices : List Nat
 deriving Lean.FromJson
@@ -75,7 +38,7 @@ deriving Lean.FromJson
 /--
   A structure that corresponds to the JSON description of connected components certificate.
 -/
-structure ComponentsData : Type where
+structure ConnectedComponentsData : Type where
   /-- The number of connected components. -/
   val : Nat
 
@@ -112,7 +75,7 @@ structure JSONData : Type where
   /-connectivityData? : Option ConnectivityData
   disconnectivityData? : Option DisconnectivityData
   -/
-  componentsData? : Option ComponentsData
+  connectedComponentsData? : Option ConnectedComponentsData
   pathData? : Option PathData
   bipartitenessData? : Option BipartitenessData
 deriving Lean.FromJson
