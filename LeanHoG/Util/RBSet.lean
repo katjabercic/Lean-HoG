@@ -233,10 +233,9 @@ def build_RBSet {α : Q(Type)} (arr : Array Q($α)) (linOrder : Q(LinearOrder $�
   treeQ
 
 /-
-Builds an RBSet from an array and a LinearOrder in the data type.
+Builds an RBMap from an array and a LinearOrder in the data type.
 LinearOrder is required to have a decidable Ordered property
 -/
--- Reusing build_RBSet seems a bit tricky since it requires a LinearOrder on the type wich is α×β here.
 def build_RBMap {α β : Q(Type)} (arr : Array Q($α × $β)) (linOrder : Q(LinearOrder $α)) : Q(Std.RBMap $α $β $(linOrder).compare) :=
   let height := max_depth arr.size
   have nodeQ : Q(Std.RBNode ($α × $β)) := build_RBNode height arr

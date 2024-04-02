@@ -13,6 +13,8 @@ structure Graph where
 @[reducible]
 def Graph.vertex (G : Graph) := Fin G.vertexSize
 
+def Graph.vertex_compare {G : Graph} (u v : G.vertex) := compare u v
+
 def Graph.vertexSet (G : Graph) : Set G.vertex := { u : G.vertex | u = u }
 
 lemma Graph.vertexSetFinite (G : Graph) : Set.Finite G.vertexSet := by
