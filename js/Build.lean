@@ -1,7 +1,12 @@
+import Init.System.Platform
+
+
 def main : IO Unit := do
+  let npmCmd : String :=
+    if System.Platform.isWindows then "npm.cmd" else "npm"
   let exitCode ← IO.Process.spawn {
     cwd := "js"
-    cmd := "npm"
+    cmd := npmCmd
     args := #["install", "--silent", "--no-progress"]
   } >>= (·.wait)
   if exitCode ≠ 0 then
@@ -9,7 +14,7 @@ def main : IO Unit := do
     return
   let exitCode ← IO.Process.spawn {
     cwd := "js"
-    cmd := "npm"
+    cmd := npmCmd
     args := #["run", "build"]
   } >>= (·.wait)
   if exitCode ≠ 0 then

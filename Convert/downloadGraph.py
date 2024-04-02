@@ -5,7 +5,7 @@ import requests
 from pathlib import Path
 
 from graph import Graph
-from jsonEncoder import GraphEncoder, graph_to_json
+from jsonEncoder import GraphEncoder
 
 def download_graph(graph_id_1 : str, graph_id_2 : str):
     a = int(graph_id_1)
@@ -26,7 +26,7 @@ def download_graph(graph_id_1 : str, graph_id_2 : str):
 
             Path(f"{buildDir}/{graphsDir}").mkdir(parents=True, exist_ok=True)
             with open(os.path.join(buildDir, graphsDir, "{0}.json".format(graph_id)), 'w') as fh:
-                json.dump(graph_to_json(G), fh, cls=GraphEncoder)
+                json.dump(G, fh, cls=GraphEncoder)
         except:
             print(f"Failed to download graph {graph_id}")
 

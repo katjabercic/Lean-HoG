@@ -5,7 +5,7 @@
         "vertex0" : 0,
         "vertex1" : 1
     },
-    "componentsData" : {
+    "connectedComponentsData" : {
         "val" : 2,
         "component" : [[0,0],[1,1]],
         "root" : [[0, 0], [1, 1]],
