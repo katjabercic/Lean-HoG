@@ -1,8 +1,5 @@
 /-
-This file contains help functions and theorems to build the Std red black trees from a sorted array in linear time.
-
-This is my first real Lean code and I am pretty sure the code can be greatly improved. My deepest apologies for any eyesores.
-Gauvain
+Auxiilary functions and theorems to build the Std red-black trees and sets from a sorted array in linear time.
 -/
 import Std.Data.RBMap
 import Mathlib.Init.Data.Nat.Bitwise
@@ -12,7 +9,6 @@ open Qq
 open Std.RBNode
 
 /-
-Adapted from Certificate.lean
 A red-black tree requires every path to a nil to contain the same number of black vertices. The nil nodes are usually considered black.
 With the way we build those, the length of two paths from a node to a leaf can only difer by at most 1.
 So we only need to set the deepest, non nil nodes to be red. We are given this maximum depth as targeted_depth.
@@ -110,7 +106,14 @@ theorem must_be_black_respected {α : Type} (n : Std.RBNode α) (height : Nat) :
 /-
 Shows that if is_balanced returns true, the tree has the Balanced property (isRed returns the color despite its name).
 -/
-theorem is_balanced_impl_balanced {α : Type} (n : Std.RBNode α) : (color : Std.RBColor) → color = (isRed n) → (must_be_black : Bool) → (height : Nat) → is_balanced height must_be_black n = true → Std.RBNode.Balanced n color height := by
+theorem is_balanced_impl_balanced {α : Type} (n : Std.RBNode α) :
+  (color : Std.RBColor) →
+  color = (isRed n) →
+  (must_be_black : Bool) →
+  (height : Nat) →
+  is_balanced height must_be_black n = true →
+  Std.RBNode.Balanced n color height
+:= by
   induction n with
   | nil =>
     intro color
@@ -207,21 +210,15 @@ Simplifies the code by making the color of a node decidable.
 instance decideColor {α : Type} (n : Std.RBNode α) (color : Std.RBColor) : Decidable (color = isRed n) :=
   decidable_of_iff (check_color n color = true) (check_color_iff n color)
 
-
-/-
-Utility function to quote a natural number
--/
-def natOfData (n : Nat) : Q(Nat) := q($n)
-
 /-
 Builds an RBSet from an array and a LinearOrder in the data type.
 LinearOrder is required to have a decidable Ordered property
 -/
 def build_RBSet {α : Q(Type)} (arr : Array Q($α)) (linOrder : Q(LinearOrder $α)) : Q(Std.RBSet $α $(linOrder).compare) :=
-  let height := max_depth arr.size
-  have nodeQ : Q(Std.RBNode $α) := build_RBNode height arr
-  have color : Q(Std.RBColor) := if height = 0 && arr.size > 0 then q(.red) else q(.black)
-  have height : Q(Nat) := natOfData height
+  let h : Nat := max_depth arr.size
+  have nodeQ : Q(Std.RBNode $α) := build_RBNode h arr
+  have color : Q(Std.RBColor) := if h = 0 && arr.size > 0 then q(.red) else q(.black)
+  have height : Q(Nat) := q($h)
   have decideIsOrdered : Q(decide (Std.RBNode.Ordered $(linOrder).compare $nodeQ) = true) := (q(Eq.refl true) : Lean.Expr)
   have isOrdered : Q(Std.RBNode.Ordered $(linOrder).compare $nodeQ) := (q(of_decide_eq_true $decideIsOrdered))
   have decideIsCorrectColor : Q(decide ($color = isRed $nodeQ) = true) := (q(Eq.refl true) : Lean.Expr)
@@ -237,10 +234,10 @@ Builds an RBMap from an array and a LinearOrder in the data type.
 LinearOrder is required to have a decidable Ordered property
 -/
 def build_RBMap {α β : Q(Type)} (arr : Array Q($α × $β)) (linOrder : Q(LinearOrder $α)) : Q(Std.RBMap $α $β $(linOrder).compare) :=
-  let height := max_depth arr.size
-  have nodeQ : Q(Std.RBNode ($α × $β)) := build_RBNode height arr
-  have color : Q(Std.RBColor) := if height = 0 && arr.size > 0 then q(.red) else q(.black)
-  have height : Q(Nat) := natOfData height
+  let h : Nat := max_depth arr.size
+  have nodeQ : Q(Std.RBNode ($α × $β)) := build_RBNode h arr
+  have color : Q(Std.RBColor) := if h = 0 && arr.size > 0 then q(.red) else q(.black)
+  have height : Q(Nat) := q($h)
   have decideIsOrdered : Q(decide (Std.RBNode.Ordered (Ordering.byKey Prod.fst ($linOrder).compare) $nodeQ) = true) := (q(Eq.refl true) : Lean.Expr)
   have isOrdered : Q(Std.RBNode.Ordered (Ordering.byKey Prod.fst ($linOrder).compare) $nodeQ) := (q(of_decide_eq_true $decideIsOrdered))
   have decideIsCorrectColor : Q(decide ($color = isRed $nodeQ) = true) := (q(Eq.refl true) : Lean.Expr)

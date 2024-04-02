@@ -4,7 +4,7 @@ import LeanHoG.Edge
 import LeanHoG.Graph
 import LeanHoG.Invariant.ConnectedComponents.Basic
 import LeanHoG.Util.Quote
-import LeanHoG.Util.RBSet
+import LeanHoG.Util.RB
 import LeanHoG.Certificate
 import Std
 

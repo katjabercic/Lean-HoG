@@ -2,7 +2,7 @@ import Qq
 import LeanHoG.JsonData
 import LeanHoG.Edge
 import LeanHoG.Graph
-import LeanHoG.Util.RBSet
+import LeanHoG.Util.RB
 import LeanHoG.Util.Quote
 
 namespace LeanHoG
