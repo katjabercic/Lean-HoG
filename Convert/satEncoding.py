@@ -160,7 +160,7 @@ def find_hamiltonian_cycle(G : Graph):
     enc = encode_hamiltonian_cycle(G)
     n = G.vertex_size
     with MinisatGH(bootstrap_with=enc, use_timer = True) as solver:
-        timer = Timer(3, interrupt, [solver])
+        timer = Timer(1, interrupt, [solver])
         timer.start()
         if solver.solve_limited(expect_interrupt=True):
             print('formula is satisfiable')
@@ -176,18 +176,31 @@ def find_hamiltonian_cycle(G : Graph):
 
 def find_all_hamiltonian_paths():
     for id in range(52000):
-        graphs = download_graphs(id, id)
-        if len(graphs) < 1:
-            continue
-        G = graphs[0]
-        path = find_hamiltonian_path(G)
-        G.hamiltonianPath = path
-        save_graphs([G])
+        try: 
+            graphs = download_graphs(id, id)
+            if len(graphs) < 1:
+                continue
+            G = graphs[0]
+            path = find_hamiltonian_path(G)
+            G.hamiltonianPath = path
+            save_graphs([G])
+        except KeyboardInterrupt:
+            print("System interrupt")
+            sys.exit()
+
+def find_all_hamiltonian_cycles():
+    for id in range(52000):
+        try: 
+            graphs = download_graphs(id, id)
+            if len(graphs) < 1:
+                continue
+            G = graphs[0]
+            path = find_hamiltonian_cycle(G)
+            G.hamiltonianPath = path
+            save_graphs([G])
+        except KeyboardInterrupt:
+            print("System interrupt")
+            sys.exit()
 
 if __name__ == '__main__':
-    # find_all_hamiltonian_paths()
-    graph_id = sys.argv[1]
-    graphs = download_graphs(graph_id, graph_id)
-    if len(graphs) < 1:
-        raise Exception("couldn't download graph")
-    path = find_hamiltonian_cycle(graphs[0])
+    find_all_hamiltonian_cycles()
