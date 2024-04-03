@@ -53,7 +53,7 @@ def list_of_distinct_vertices_encoding (g : Graph) : VEncCNF (Literal (Var g.ver
 
 def path_encoding (g : Graph) : VEncCNF (Literal (Var g.vertexSize)) Unit (fun τ =>
     (∀ k k', k.val + 1 =  k'.val →
-      ∀ i j, ¬ g.badjacent i j → ¬ (τ (Var.mk i k)) ∨ ¬ (τ (Var.mk j k'))
+      ∀ i j, ¬ g.adjacent i j → ¬ (τ (Var.mk i k)) ∨ ¬ (τ (Var.mk j k'))
     )
   ) :=
   seq[
@@ -62,7 +62,7 @@ def path_encoding (g : Graph) : VEncCNF (Literal (Var g.vertexSize)) Unit (fun �
       guard (k.val + 1 = k'.val) (fun h =>
         for_all (List.toArray <| List.finRange g.vertexSize) fun i =>
         for_all (List.toArray <| List.finRange g.vertexSize) fun j =>
-          guard (¬g.badjacent i j) (fun h' =>
+          guard (¬g.adjacent i j) (fun h' =>
             addClause (#[Var.mk i k, Var.mk j k'].map LitVar.mkNeg)
           )
       )
@@ -103,7 +103,7 @@ def path_encoding (g : Graph) : VEncCNF (Literal (Var g.vertexSize)) Unit (fun �
       simp [neq]
       simp [eq]
       intros i j
-      have moo : g.badjacent i j ∨ ¬ g.badjacent i j := by apply Decidable.em
+      have moo : g.adjacent i j ∨ ¬ g.adjacent i j := by apply Decidable.em
       cases' moo with adj nadj
       simp [adj]
       simp [nadj]

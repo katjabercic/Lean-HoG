@@ -30,7 +30,8 @@ def search_hog(data, search_hash):
             else:
                 sys.exit(-1)
 
-        except:
+        except Exception as e:
+            sys.stderr.write(e)
             sys.exit(1)
 
 if __name__ == '__main__':

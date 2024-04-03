@@ -26,7 +26,8 @@ instance : Solver IO := (Solver.Impl.DimacsCommand "kissat")
 
 syntax (name := loadGraph) "load_graph" ident str (" try_ham ")? : command
 
-unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) (tryHam : Bool) : CommandElabM Unit := do
+unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) (tryHam : Bool) :
+  CommandElabM Q(Graph) := do
   have graphQ := graphOfData jsonData.graph
   -- load the graph
   Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
@@ -72,7 +73,7 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) (tryHam : Bool)
     }
     Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance disconnectivityCertificateName .scoped 42
 
-    match jsonData.pathData? with
+    match jsonData.hamiltonianPathData? with
     | .none =>
       if tryHam then
         let g ← Elab.Command.liftTermElabM (evalExpr Graph q(Graph) graph)
@@ -107,17 +108,19 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) (tryHam : Bool)
       }
       Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance hamiltonianPathName .scoped 42
 
+  return graphQ
+
 @[command_elab loadGraph]
 unsafe def loadGraphImpl : CommandElab
   | `(load_graph $graphName $fileName try_ham ) => do
     let graphName := graphName.getId
     let jsonData ← loadJSONData fileName.getString
-    loadGraphAux graphName jsonData true
+    let _ ← loadGraphAux graphName jsonData true
 
   | `(load_graph $graphName $fileName) => do
     let graphName := graphName.getId
     let jsonData ← loadJSONData fileName.getString
-    loadGraphAux graphName jsonData false
+    let _ ← loadGraphAux graphName jsonData false
 
   | _ => throwUnsupportedSyntax
 

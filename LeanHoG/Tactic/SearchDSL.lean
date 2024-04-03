@@ -26,6 +26,22 @@ inductive BoolInvariant where
   | TwinFree
 deriving Repr, Hashable
 
+instance : ToString BoolInvariant where
+  toString := fun i =>
+    match i with
+    | .Acyclic => "Acyclic"
+    | .Bipartite => "Bipartite"
+    | .Connected => "Connected"
+    | .ClawFree => "ClawFree"
+    | .Eulerian => "Eulerian"
+    | .Hamiltonian => "Hamiltonian"
+    | .Hypohamiltonian => "Hypohamiltonian"
+    | .Hypotraceable => "Hypotraceable"
+    | .Planar => "Planar"
+    | .Regular => "Regular"
+    | .Traceable => "Traceable"
+    | .TwinFree => "TwinFree"
+
 inductive NumericalInvariant where
   | AlgebraicConnectivity
   | AverageDegree
@@ -34,6 +50,16 @@ inductive NumericalInvariant where
   | SecondLargestEigenvalue
   | SmallestEigenvalue
 deriving Repr, Hashable
+
+instance : ToString NumericalInvariant where
+  toString := fun i =>
+    match i with
+    | .AlgebraicConnectivity => "AlgebraicConnectivity"
+    | .AverageDegree => "AverageDegree"
+    | .Index => "Index"
+    | .LaplacianLargestEigenvalue => "LaplacianLargestEigenvalue"
+    | .SecondLargestEigenvalue => "SecondLargestEigenvalue"
+    | .SmallestEigenvalue => "SmallestEigenvalue"
 
 inductive IntegralInvariant
   | ChromaticIndex
@@ -69,11 +95,53 @@ inductive IntegralInvariant
   | VertexCoverNumber
 deriving Repr, Hashable
 
+instance : ToString IntegralInvariant where
+  toString := fun i =>
+    match i with
+    | .ChromaticIndex => "ChromaticIndex"
+    | .ChromaticNumber => "ChromaticNumber"
+    | .Circumference => "Circumference"
+    | .CliqueNumber => "CliqueNumber"
+    | .Degeneracy => "Degeneracy"
+    | .Density => "Density"
+    | .Diameter => "Diameter"
+    | .DominationNumber => "DominationNumber"
+    | .EdgeConnectivity => "EdgeConnectivity"
+    | .FeedbackVertexSetNumber => "FeedbackVertexSetNumber"
+    | .Genus => "Genus"
+    | .Girth => "Girth"
+    | .GroupSize => "GroupSize"
+    | .IndependenceNumber => "IndependenceNumber"
+    | .LengthOfLongestInducedCycle => "LengthOfLongestInducedCycle"
+    | .LengthOfLongestInducedPath => "LengthOfLongestInducedPath"
+    | .LengthOfLongestPath => "LengthOfLongestPath"
+    | .MatchingNumber => "MatchingNumber"
+    | .MaximumDegree => "MaximumDegree"
+    | .MinimumDegree => "MinimumDegree"
+    | .NumberOfComponents => "NumberOfComponents"
+    | .NumberOfEdges => "NumberOfEdges"
+    | .NumberOfSpanningTrees => "NumberOfSpanningTrees"
+    | .NumberOfTriangles => "NumberOfTriangles"
+    | .NumberOfVertexOrbits => "NumberOfVertexOrbits"
+    | .NumberOfVertices => "NumberOfVertices"
+    | .NumberOfZeroEigenvalues => "NumberOfZeroEigenvalues"
+    | .Radius => "Radius"
+    | .Treewidth => "Treewidth"
+    | .VertexConnectivity => "VertexConnectivity"
+    | .VertexCoverNumber => "VertexCoverNumber"
+
 inductive Invariant where
   | BoolInvariant : BoolInvariant → Invariant
   | NumericalInvariant : NumericalInvariant → Invariant
   | IntegralInvariant : IntegralInvariant → Invariant
 deriving Repr, Hashable
+
+instance : ToString Invariant where
+  toString := fun i =>
+    match i with
+    | .BoolInvariant b => toString b
+    | .NumericalInvariant n => toString n
+    | .IntegralInvariant i => toString i
 
 def boolInvariantToId : BoolInvariant → Nat
   | .Acyclic => 1
@@ -153,19 +221,22 @@ inductive ComparisonOp where
 deriving Repr, Hashable
 
 instance : ToString ComparisonOp where
-  toString op :=
-  match op with
-  | .Eq => "EQ"
-  | .Ne => "NE"
-  | .Lt => "LT"
-  | .Le => "LE"
-  | .Gt => "GT"
-  | .Ge => "GE"
+  toString := fun cmp =>
+    match cmp with
+    | .Eq => "EQ"
+    | .Ne => "NE"
+    | .Lt => "LT"
+    | .Le => "LE"
+    | .Gt => "GT"
+    | .Ge => "GE"
 
 structure BoolEnquiry where
   inv : BoolInvariant
   val : Bool
 deriving Repr, Hashable
+
+instance : ToString BoolEnquiry where
+  toString := fun b => s!"{b.inv} = {b.val}"
 
 structure NumericalEnquiry where
   inv : NumericalInvariant
@@ -173,17 +244,30 @@ structure NumericalEnquiry where
   val : Float
 deriving Repr, Hashable
 
+instance : ToString NumericalEnquiry where
+  toString := fun n => s!"{n.inv} {n.op} {n.val}"
+
 structure IntegralEnquiry where
   inv : IntegralInvariant
   op : ComparisonOp
   val : Int
 deriving Repr, Hashable
 
+instance : ToString IntegralEnquiry where
+  toString := fun i => s!"{i.inv} {i.op} {i.val}"
+
 inductive HoGEnquiry where
   | BoolEnquiry : BoolEnquiry → HoGEnquiry
   | NumericalEnquiry : NumericalEnquiry → HoGEnquiry
   | IntegralEnquiry : IntegralEnquiry → HoGEnquiry
 deriving Repr, Hashable
+
+instance : ToString HoGEnquiry where
+  toString := fun enq =>
+    match enq with
+    | .BoolEnquiry b => toString b
+    | .NumericalEnquiry n => toString n
+    | .IntegralEnquiry i => toString i
 
 structure InvariantQuery where
   invariantId : Nat
@@ -491,6 +575,37 @@ open ProofWidgets in
 def putInDiv : List DivWithLink → Html := fun hs =>
   .element "div" #[] (hs.toArray.map DivWithLink.toHtml)
 
+unsafe def queryDatabaseForExamples (queries : List ConstructedQuery) (queryHash : UInt64) :
+  CommandElabM (List Q(Graph)) := do
+  let mut c : Nat := 0
+  for q in queries do
+    let exitCode ← IO.Process.spawn {
+      cmd := "python"
+      args := #["Convert/searchHoG.py", s!"{q.query}", s!"{queryHash}"]
+    } >>= (·.wait)
+    if exitCode ≠ 0 then
+      c := c + 1
+      continue
+
+  if c == queries.length then
+    throwError "failed to download graphs"
+
+  let path : System.FilePath := System.mkFilePath ["build", s!"search_results_{queryHash}"]
+  let contents ← path.readDir
+  let resultsList := contents.toList
+  let mut graphId := ""
+  let mut graphs := []
+  for result in resultsList do
+    let path := result.path
+    let jsonData ← loadJSONData path
+    match jsonData.hogId with
+    | none => continue
+    | some id => graphId := s!"hog_{id}"
+    let graphName := mkIdent (Name.mkSimple graphId)
+    let graph ← loadGraphAux graphName.getId jsonData false
+    graphs := graph :: graphs
+  return graphs
+
 syntax (name := searchForExample) "#search_hog " term : command
 
 open ProofWidgets in
@@ -503,17 +618,16 @@ unsafe def searchForExampleImpl : CommandElab
       let qs : Queries ← evalExpr' Queries ``Queries query
       return qs
 
-    let queryHash := qs.hash
     for q in qs.queries do
-      let exitCode ← IO.Process.spawn {
+      let output ← IO.Process.output {
         cmd := "python"
-        args := #["Convert/searchHoG.py", s!"{q.query}", s!"{queryHash}"]
-      } >>= (·.wait)
-      if exitCode ≠ 0 then
-        IO.eprintln s!"failed to download graphs"
+        args := #["Convert/searchHoG.py", s!"{q.query}", s!"{qs.hash}"]
+      }
+      if output.exitCode ≠ 0 then
+        IO.eprintln f!"failed to download graphs: {output.stderr}"
         return
 
-    let path : System.FilePath := System.mkFilePath ["build", s!"search_results_{queryHash}"]
+    let path : System.FilePath := System.mkFilePath ["build", s!"search_results_{qs.hash}"]
     let contents ← path.readDir
     let resultsList := contents.toList
     let mut i := 1
@@ -536,9 +650,9 @@ unsafe def searchForExampleImpl : CommandElab
         let graphWLink : DivWithLink := ⟨"Found solution ", houseofgraphsLink, graphId⟩
         links := graphWLink :: links
       let graphName := mkIdent (Name.mkSimple graphId)
-      loadGraphAux graphName.getId jsonData false
+      let _ ← loadGraphAux graphName.getId jsonData false
 
-    let text : DivWithLink := ⟨s!"Found {resultsList.length} graphs satisfying given query", "", ""⟩
+    let text : DivWithLink := ⟨s!"Found {links.length} graphs satisfying given query", "", ""⟩
     links := text :: links
     Widget.savePanelWidgetInfo (hash HtmlDisplayPanel.javascript)
       (return json% { html: $(← Server.RpcEncodable.rpcEncode (putInDiv links)) }) stx

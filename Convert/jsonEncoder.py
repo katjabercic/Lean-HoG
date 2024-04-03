@@ -7,7 +7,7 @@ def graph_to_json(graph : Graph) -> dict:
         return {
             "hogId" : graph.HoG_id,
             "graph" : graph,
-            "pathData" : {
+            "hamiltonianPathData" : {
                 "vertices": graph.hamiltonianPath
             }
         }
