@@ -16,10 +16,7 @@ def y(n,i,j):
 def var_x(n,k):
     s = abs(k)
     j = (s - 1) % n
-    if k > 0:
-        return f"x_{(s-1) // n},{j}"
-    else:
-        return f"-x_{(s-1) // n},{j}"
+    return (1 if k > 0 else -1, (s-1) // n,j)
 
 def var_y(n,k):
     s = abs(k)
@@ -36,11 +33,11 @@ def to_vars_y(n, fmla):
     return [[var_y(n,k) for k in cl] for cl in fmla]
 
 def sol_to_path(n, sol):
-    path = []
+    path = [None] * n
     for k in sol:
-        if k > 0:
-            i = (k-1) // n
-            path.append(i)
+        (v, i, j) = var_x(n, k)
+        if v > 0:
+            path[j] = i
     return path
 
 def sol_to_cycle(n, sol):
@@ -160,7 +157,7 @@ def find_hamiltonian_cycle(G : Graph):
     enc = encode_hamiltonian_cycle(G)
     n = G.vertex_size
     with MinisatGH(bootstrap_with=enc, use_timer = True) as solver:
-        timer = Timer(1, interrupt, [solver])
+        timer = Timer(5, interrupt, [solver])
         timer.start()
         if solver.solve_limited(expect_interrupt=True):
             print('formula is satisfiable')
@@ -170,7 +167,7 @@ def find_hamiltonian_cycle(G : Graph):
             print(f'sol: {cycle}')
             return cycle
         else:
-            print('formula is unsatisfiable')
+            print('formula is unsatisfiable or timeout')
             print('Time: {0:.2f}s'.format(solver.time()))
             return None
 
@@ -189,7 +186,7 @@ def find_all_hamiltonian_paths():
             sys.exit()
 
 def find_all_hamiltonian_cycles():
-    for id in range(52000):
+    for id in range(1100, 52000):
         try: 
             graphs = download_graphs(id, id)
             if len(graphs) < 1:
@@ -203,4 +200,12 @@ def find_all_hamiltonian_cycles():
             sys.exit()
 
 if __name__ == '__main__':
-    find_all_hamiltonian_cycles()
+    # find_all_hamiltonian_cycles()
+    id = sys.argv[1]
+    graphs = download_graphs(id, id)
+    G = graphs[0]
+    p = find_hamiltonian_path(G)
+    G.hamiltonianPath = p
+    save_graphs([G])
+    print(p)
+
