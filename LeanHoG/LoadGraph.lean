@@ -27,10 +27,10 @@ instance : Solver IO := (Solver.Impl.DimacsCommand "kissat")
 syntax (name := loadGraph) "load_graph" ident str (" try_ham ")? : command
 
 unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) (tryHam : Bool) :
-  CommandElabM Q(Graph) := do
+  CommandElabM Unit := do
   have graphQ := graphOfData jsonData.graph
   -- load the graph
-  Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
+  let graphDecl := .defnDecl {
     name := graphName
     levelParams := []
     type := q(Graph)
@@ -38,6 +38,7 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) (tryHam : Bool)
     hints := .regular 0
     safety := .safe
   }
+  Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| graphDecl
   Lean.setReducibleAttribute graphName
   have graph : Q(Graph) := Lean.mkConst graphName []
 
@@ -73,42 +74,40 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) (tryHam : Bool)
     }
     Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance disconnectivityCertificateName .scoped 42
 
-    match jsonData.hamiltonianPathData? with
-    | .none =>
-      if tryHam then
-        let g ← Elab.Command.liftTermElabM (evalExpr Graph q(Graph) graph)
-        let mbHp ← tryFindHamiltonianPath g
-        match mbHp with
-        | .none => pure ()
-        | .some hp =>
-          let data : PathData := { vertices := hp.vertices }
-          let hamiltonianPathName := certificateName graphName "hamiltonianPath"
-          let hpQ := hamiltonianPathOfData graph data
-          Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
-            name := hamiltonianPathName
-            levelParams := []
-            type := q(HamiltonianPath $graph)
-            value := hpQ
-            hints := .regular 0
-            safety := .safe
-          }
-          Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance hamiltonianPathName .scoped 42
-      else
-        pure ()
-    | .some data =>
-      let hamiltonianPathName := certificateName graphName "hamiltonianPath"
-      let hpQ := hamiltonianPathOfData graph data
-      Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
-        name := hamiltonianPathName
-        levelParams := []
-        type := q(HamiltonianPath $graph)
-        value := hpQ
-        hints := .regular 0
-        safety := .safe
-      }
-      Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance hamiltonianPathName .scoped 42
-
-  return graphQ
+  match jsonData.hamiltonianPathData? with
+  | .none =>
+    if tryHam then
+      let g ← Elab.Command.liftTermElabM (evalExpr Graph q(Graph) graph)
+      let mbHp ← tryFindHamiltonianPath g
+      match mbHp with
+      | .none => pure ()
+      | .some hp =>
+        let data : PathData := { vertices := hp.vertices }
+        let hamiltonianPathName := certificateName graphName "hamiltonianPath"
+        let hpQ := hamiltonianPathOfData graph data
+        Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
+          name := hamiltonianPathName
+          levelParams := []
+          type := q(HamiltonianPath $graph)
+          value := hpQ
+          hints := .regular 0
+          safety := .safe
+        }
+        Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance hamiltonianPathName .global 42
+    else
+      pure ()
+  | .some data =>
+    let hamiltonianPathName := certificateName graphName "hamiltonianPath"
+    let hpQ := hamiltonianPathOfData graph data
+    Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
+      name := hamiltonianPathName
+      levelParams := []
+      type := q(HamiltonianPath $graph)
+      value := hpQ
+      hints := .regular 0
+      safety := .safe
+    }
+    Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance hamiltonianPathName .global 42
 
 @[command_elab loadGraph]
 unsafe def loadGraphImpl : CommandElab
@@ -123,7 +122,5 @@ unsafe def loadGraphImpl : CommandElab
     let _ ← loadGraphAux graphName jsonData false
 
   | _ => throwUnsupportedSyntax
-
-#check loadGraphImpl
 
 end LeanHoG

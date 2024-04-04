@@ -13,6 +13,9 @@ instance {g : Graph} {u v : g.vertex} {p : Path g u v} :
   simp
   infer_instance
 
+def Graph.isTraceable (g : Graph) : Prop :=
+  ∃ (u v : g.vertex) (p : Path g u v), p.isHamiltonian
+
 /-- The class representing a Hamiltonian path of a graph `g`
     going from vertex `u` to vertex `v`.
  -/
@@ -28,6 +31,14 @@ instance {g : Graph} : Repr (HamiltonianPath g) where
 
 instance {g : Graph} : ToString (HamiltonianPath g) where
   toString p := toString p.path
+
+@[simp] theorem certificate_to_hamiltonian_path {g : Graph} [hp : HamiltonianPath g] : g.isTraceable := by
+  let ⟨u, v, p, cond⟩ := hp
+  simp [Graph.isTraceable]
+  apply Exists.intro u
+  apply Exists.intro v
+  apply Exists.intro p
+  apply cond
 
 @[simp] def vertices {g : Graph} : HamiltonianPath g → List g.vertex :=
   fun p => p.path.vertices

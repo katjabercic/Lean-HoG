@@ -3,6 +3,7 @@ import Qq
 import Lean.Data.Json.Basic
 import LeanHoG.LoadGraph
 import LeanHoG.Widgets
+import LeanHoG.Tactic.Options
 
 import ProofWidgets.Component.HtmlDisplay
 
@@ -575,36 +576,36 @@ open ProofWidgets in
 def putInDiv : List DivWithLink → Html := fun hs =>
   .element "div" #[] (hs.toArray.map DivWithLink.toHtml)
 
+structure QueryResult where
+  graphId : Ident
+
 unsafe def queryDatabaseForExamples (queries : List ConstructedQuery) (queryHash : UInt64) :
-  CommandElabM (List Q(Graph)) := do
-  let mut c : Nat := 0
+  CommandElabM (List QueryResult) := do
+  let opts ← getOptions
+  let pythonExe := opts.get leanHoG.pythonExecutable.name leanHoG.pythonExecutable.defValue
   for q in queries do
-    let exitCode ← IO.Process.spawn {
-      cmd := "python"
+    let output ← IO.Process.output {
+      cmd := pythonExe
       args := #["Convert/searchHoG.py", s!"{q.query}", s!"{queryHash}"]
-    } >>= (·.wait)
-    if exitCode ≠ 0 then
-      c := c + 1
-      continue
+    }
+    if output.exitCode ≠ 0 then
+      throwError f!"failed to download graphs: {output.stderr}"
 
-  if c == queries.length then
-    throwError "failed to download graphs"
-
-  let path : System.FilePath := System.mkFilePath ["build", s!"search_results_{queryHash}"]
+  let path : System.FilePath := System.mkFilePath ["build", "search_results", s!"{queryHash}"]
   let contents ← path.readDir
   let resultsList := contents.toList
   let mut graphId := ""
-  let mut graphs := []
+  let mut results := []
   for result in resultsList do
     let path := result.path
     let jsonData ← loadJSONData path
     match jsonData.hogId with
-    | none => continue
+    | none => throwError m!"Result did not have HoG ID"
     | some id => graphId := s!"hog_{id}"
-    let graphName := mkIdent (Name.mkSimple graphId)
-    let graph ← loadGraphAux graphName.getId jsonData false
-    graphs := graph :: graphs
-  return graphs
+      let graphName := mkIdent (Name.mkSimple graphId)
+      let _ ← loadGraphAux graphName.getId jsonData false
+      results := ⟨graphName⟩ :: results
+  return results
 
 syntax (name := searchForExample) "#search_hog " term : command
 
@@ -618,16 +619,19 @@ unsafe def searchForExampleImpl : CommandElab
       let qs : Queries ← evalExpr' Queries ``Queries query
       return qs
 
+    let opts ← getOptions
+    let pythonExe := opts.get leanHoG.pythonExecutable.name leanHoG.pythonExecutable.defValue
     for q in qs.queries do
       let output ← IO.Process.output {
-        cmd := "python"
+        cmd := pythonExe
         args := #["Convert/searchHoG.py", s!"{q.query}", s!"{qs.hash}"]
       }
       if output.exitCode ≠ 0 then
         IO.eprintln f!"failed to download graphs: {output.stderr}"
         return
+    -- IO.println s!"{qs.hash}"
 
-    let path : System.FilePath := System.mkFilePath ["build", s!"search_results_{qs.hash}"]
+    let path : System.FilePath := System.mkFilePath ["build", "search_results", s!"{qs.hash}"]
     let contents ← path.readDir
     let resultsList := contents.toList
     let mut i := 1
