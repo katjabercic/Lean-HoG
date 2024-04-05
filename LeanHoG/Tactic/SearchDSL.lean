@@ -4,6 +4,7 @@ import Lean.Data.Json.Basic
 import LeanHoG.LoadGraph
 import LeanHoG.Widgets
 import LeanHoG.Tactic.Options
+import LeanHoG.Util.IO
 
 import ProofWidgets.Component.HtmlDisplay
 
@@ -727,7 +728,7 @@ unsafe def queryDatabaseForExamples (queries : List ConstructedQuery) (queryHash
   for q in queries do
     let output ← IO.Process.output {
       cmd := pythonExe
-      args := #["Convert/searchHoG.py", s!"{q.query}", s!"{queryHash}"]
+      args := #["Download/searchHoG.py", s!"{q.query}", s!"{queryHash}"]
     }
     if output.exitCode ≠ 0 then
       throwError f!"failed to download graphs: {output.stderr}"
@@ -744,7 +745,7 @@ unsafe def queryDatabaseForExamples (queries : List ConstructedQuery) (queryHash
     | none => throwError m!"Result did not have HoG ID"
     | some id => graphId := s!"hog_{id}"
       let graphName := mkIdent (Name.mkSimple graphId)
-      let _ ← loadGraphAux graphName.getId jsonData false
+      let _ ← loadGraphAux graphName.getId jsonData
       results := ⟨graphName⟩ :: results
   return results
 
@@ -759,13 +760,12 @@ unsafe def searchForExampleImpl : CommandElab
       let query ← mkAppM ``Queries.mk #[(← mkAppM ``List.map #[(← mkAppM ``HoGQuery.build #[]), qe])]
       let qs : Queries ← evalExpr' Queries ``Queries query
       return qs
-
     let opts ← getOptions
     let pythonExe := opts.get leanHoG.pythonExecutable.name leanHoG.pythonExecutable.defValue
     for q in qs.queries do
       let output ← IO.Process.output {
         cmd := pythonExe
-        args := #["Convert/searchHoG.py", s!"{q.query}", s!"{qs.hash}"]
+        args := #["Download/searchHoG.py", s!"{q.query}", s!"{qs.hash}"]
       }
       if output.exitCode ≠ 0 then
         IO.eprintln f!"failed to download graphs: {output.stderr}"
@@ -795,7 +795,7 @@ unsafe def searchForExampleImpl : CommandElab
         let graphWLink : DivWithLink := ⟨"Found solution ", houseofgraphsLink, graphId⟩
         links := graphWLink :: links
       let graphName := mkIdent (Name.mkSimple graphId)
-      let _ ← loadGraphAux graphName.getId jsonData false
+      let _ ← loadGraphAux graphName.getId jsonData
 
     let text : DivWithLink := ⟨s!"Found {links.length} graphs satisfying given query", "", ""⟩
     links := text :: links
@@ -803,3 +803,5 @@ unsafe def searchForExampleImpl : CommandElab
       (return json% { html: $(← Server.RpcEncodable.rpcEncode (putInDiv links)) }) stx
 
   | _ => throwUnsupportedSyntax
+
+-- #search_hog hog{ bipartite = true ∧ (numberOfEdges = 1 ∨ numberOfVertices < 6) }

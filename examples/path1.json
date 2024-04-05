@@ -1,0 +1,11 @@
+{
+    "graph" : { "vertexSize" : 2, "edges" : [[0, 1]] },
+    "bipartite" : {
+        "color" : [[0,0],[1,1]],
+        "vertex0" : 0,
+        "vertex1" : 1
+    },
+    "neighborhoodMap" : {
+        "neighbors" : [[0, [1]], [1, [0]]]
+    }
+}

@@ -4,8 +4,7 @@ import json
 import requests
 from graph import Graph
 from pathlib import Path
-from jsonEncoder import GraphEncoder, graph_to_json
-from satEncoding import find_hamiltonian_path
+from jsonEncoder import GraphEncoder
 
 def search_hog(data, search_hash):
     url = "https://houseofgraphs.org/api/enquiry"
@@ -24,12 +23,9 @@ def search_hog(data, search_hash):
             if int(response_json['page']['totalElements']) > 0:
                 for res in response_json['_embedded']['graphSearchModelList']:
                     G = Graph(res['graphId'], res)
-                    p = find_hamiltonian_path(G)
-                    G.hamiltonianPath = p
-
                     Path(final_path).mkdir(parents=True, exist_ok=True)
                     with open(os.path.join(buildDir, searchResDir, search_hash, f"{G.HoG_id}.json"), 'w') as fh:
-                        json.dump(graph_to_json(G), fh, cls=GraphEncoder)
+                        json.dump(G, fh, cls=GraphEncoder)
                     
             else:
                 sys.exit(-1)

@@ -1,36 +1,39 @@
 import Lean
 import Qq
+
 import LeanHoG.Graph
-import LeanHoG.Invariant.Connectivity.Certificate
+import LeanHoG.Invariant.Bipartite.Certificate
+import LeanHoG.Invariant.ConnectedComponents.Certificate
+import LeanHoG.Invariant.NeighborhoodMap.Certificate
+
 import LeanHoG.Certificate
 import LeanHoG.JsonData
 
 import LeanSAT
-import LeanHoG.Invariant.Hamiltonicity.SatEncoding
-import LeanHoG.Invariant.Hamiltonicity.Certificate
+import LeanHoG.Invariant.HamiltonianPath.SatEncoding
+import LeanHoG.Invariant.HamiltonianPath.Certificate
 
 namespace LeanHoG
 
-open Qq LeanSAT Lean Meta Elab Command
+open Qq Lean
 
 /-- Lifting from exception monad to the Elab.Command monad -/
-def liftExcept {α : Type} {m} [Monad m] [Lean.MonadError m] : Except String α → m α
+def liftExcept {α : Type} {m} [Monad m] [MonadError m] : Except String α → m α
   | .ok res => pure res
   | .error msg => throwError msg
 
 /-- A Lean name for a certicicate -/
-def certificateName (graphName: Lean.Name) (certName: String) : Lean.Name :=
+def certificateName (graphName: Name) (certName: String) : Name :=
   (.str graphName certName)
 
-instance : Solver IO := (Solver.Impl.DimacsCommand "kissat")
+instance : LeanSAT.Solver IO := (LeanSAT.Solver.Impl.DimacsCommand "kissat")
 
 syntax (name := loadGraph) "load_graph" ident str (" try_ham ")? : command
 
-unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) (tryHam : Bool) :
-  CommandElabM Unit := do
+unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.CommandElabM Unit := do
   have graphQ := graphOfData jsonData.graph
   -- load the graph
-  Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
+  Elab.Command.liftCoreM <| addAndCompile <| .defnDecl {
     name := graphName
     levelParams := []
     type := q(Graph)
@@ -38,65 +41,28 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) (tryHam : Bool)
     hints := .regular 0
     safety := .safe
   }
-  Lean.setReducibleAttribute graphName
-  have graph : Q(Graph) := Lean.mkConst graphName []
+  setReducibleAttribute graphName
+  have graph : Q(Graph) := mkConst graphName []
 
-  -- load the connectivity certificate, if present
-  match jsonData.connectivityData? with
+  match jsonData.connectedComponents? with
   | .none => pure ()
   | .some data =>
-    let connectivityCertificateName := certificateName graphName "connectivityCertificateI"
-    let connectivityCertificateQ : Q(ConnectivityCertificate $graph) := connectivityCertificateOfData graph data
-    Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
-      name := connectivityCertificateName
+    let componentsCertificateName := certificateName graphName "CertificateI"
+    let componentsCertificateQ : Q(ConnectedComponentsCertificate $graph) := connectedComponentsCertificateOfData graph data
+    Elab.Command.liftCoreM <| addAndCompile <| .defnDecl {
+      name := componentsCertificateName
       levelParams := []
-      type := q(ConnectivityCertificate $graph)
-      value := connectivityCertificateQ
+      type := q(ConnectedComponentsCertificate $graph)
+      value := componentsCertificateQ
       hints := .regular 0
       safety := .safe
     }
-    Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance connectivityCertificateName .scoped 42
+    Elab.Command.liftTermElabM <| Meta.addInstance componentsCertificateName .scoped 42
 
-  -- load the disconnectivity certificate, if present
-  match jsonData.disconnectivityData? with
+  match jsonData.hamiltonianPath? with
   | .none => pure ()
   | .some data =>
-    let disconnectivityCertificateName := certificateName graphName "disconnectivityCertificateI"
-    let disconnectivityCertificateQ : Q(DisconnectivityCertificate $graph) := disconnectivityCertificateOfData graph data
-    Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
-      name := disconnectivityCertificateName
-      levelParams := []
-      type := q(DisconnectivityCertificate $graph)
-      value := disconnectivityCertificateQ
-      hints := .regular 0
-      safety := .safe
-    }
-    Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance disconnectivityCertificateName .scoped 42
-
-  match jsonData.hamiltonianPathData? with
-  | .none =>
-    if tryHam then
-      let g ← Elab.Command.liftTermElabM (evalExpr Graph q(Graph) graph)
-      let mbHp ← tryFindHamiltonianPath g
-      match mbHp with
-      | .none => pure ()
-      | .some hp =>
-        let data : PathData := { vertices := hp.vertices }
-        let hamiltonianPathName := certificateName graphName "hamiltonianPath"
-        let hpQ := hamiltonianPathOfData graph data
-        Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
-          name := hamiltonianPathName
-          levelParams := []
-          type := q(HamiltonianPath $graph)
-          value := hpQ
-          hints := .regular 0
-          safety := .safe
-        }
-        Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance hamiltonianPathName .global 42
-    else
-      pure ()
-  | .some data =>
-    let hamiltonianPathName := certificateName graphName "hamiltonianPath"
+    let hamiltonianPathName := certificateName graphName "HamiltonianPathI"
     let hpQ := hamiltonianPathOfData graph data
     Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
       name := hamiltonianPathName
@@ -107,19 +73,60 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) (tryHam : Bool)
       safety := .safe
     }
     Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance hamiltonianPathName .global 42
+  match jsonData.bipartite? with
+  | .none => pure ()
+  | .some data =>
+    let BipartiteCertificateName := certificateName graphName "BipartiteCertificateI"
+    let BipartiteCertificateQ : Q(BipartiteCertificate $graph) := BipartiteCertificateOfData graph data
+    Elab.Command.liftCoreM <| addAndCompile <| .defnDecl {
+      name := BipartiteCertificateName
+      levelParams := []
+      type := q(BipartiteCertificate $graph)
+      value := BipartiteCertificateQ
+      hints := .regular 0
+      safety := .safe
+    }
+    Elab.Command.liftTermElabM <| Meta.addInstance BipartiteCertificateName .scoped 42
 
+  match jsonData.oddClosedWalk? with
+  | .none => pure ()
+  | .some data =>
+    let OddClosedWalkName := certificateName graphName "OddClosedWalkI"
+    let OddClosedWalkQ : Q(OddClosedWalk $graph) := OddClosedWalkOfData graph data
+    Elab.Command.liftCoreM <| addAndCompile <| .defnDecl {
+      name := OddClosedWalkName
+      levelParams := []
+      type := q(OddClosedWalk $graph)
+      value := OddClosedWalkQ
+      hints := .regular 0
+      safety := .safe
+    }
+    Elab.Command.liftTermElabM <| Meta.addInstance OddClosedWalkName .scoped 42
+
+  match jsonData.neighborhoodMap? with
+  | .none => pure ()
+  | .some data =>
+    let neighborhoodMapName := certificateName graphName "neighborhoodMapI"
+    let neighborhoodMapQ : Q(NeighborhoodMap $graph) := neighborhoodMapOfData graph data
+    Elab.Command.liftCoreM <| addAndCompile <| .defnDecl {
+      name := neighborhoodMapName
+      levelParams := []
+      type := q(NeighborhoodMap $graph)
+      value := neighborhoodMapQ
+      hints := .regular 0
+      safety := .safe
+    }
+    Elab.Command.liftTermElabM <| Meta.addInstance neighborhoodMapName .scoped 42
+
+
+/-- Load a graph with the given Lean identifier from the given file. -/
 @[command_elab loadGraph]
-unsafe def loadGraphImpl : CommandElab
-  | `(load_graph $graphName $fileName try_ham ) => do
-    let graphName := graphName.getId
-    let jsonData ← loadJSONData fileName.getString
-    let _ ← loadGraphAux graphName jsonData true
-
+unsafe def loadGraphImpl : Elab.Command.CommandElab
   | `(load_graph $graphName $fileName) => do
     let graphName := graphName.getId
     let jsonData ← loadJSONData fileName.getString
-    let _ ← loadGraphAux graphName jsonData false
+    loadGraphAux graphName jsonData
 
-  | _ => throwUnsupportedSyntax
+  | _ => Elab.throwUnsupportedSyntax
 
 end LeanHoG

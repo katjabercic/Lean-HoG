@@ -1,16 +1,20 @@
 import LeanHoG.Edge
 import Std
 import Std.Data.RBMap.Basic
+import Mathlib.Data.Set.Finite
 
 namespace LeanHoG
 
 structure Graph where
   vertexSize : Nat
-  edgeTree : Std.RBSet (Edge vertexSize) Edge.linearOrder.compare
+  edgeSet : Std.RBSet (Edge vertexSize) Edge.linearOrder.compare
 
 /-- The type of graph vertices -/
 @[reducible]
 def Graph.vertex (G : Graph) := Fin G.vertexSize
+
+@[reducible]
+def Graph.vertex_compare {G : Graph} (u v : G.vertex) := compare u v
 
 def Graph.vertexSet (G : Graph) : Set G.vertex := { u : G.vertex | u = u }
 
@@ -24,7 +28,7 @@ def Graph.edgeType (G : Graph) := Edge G.vertexSize
 
 /-- The type of edges -/
 @[reducible]
-def Graph.edge (G : Graph) := { e : G.edgeType // G.edgeTree.contains e }
+def Graph.edge (G : Graph) := { e : G.edgeType // G.edgeSet.contains e }
 
 @[reducible]
 def Graph.fst {G : Graph} (e : G.edgeType) : G.vertex := e.fst
@@ -40,9 +44,9 @@ def Graph.edgeSize (G : Graph) := Fintype.card G.edge
 def Graph.badjacent {G : Graph} : G.vertex → G.vertex → Bool :=
   fun u v =>
     ltByCases u v
-      (fun u_lt_v => G.edgeTree.contains (Edge.mk u v u_lt_v))
+      (fun u_lt_v => G.edgeSet.contains (Edge.mk u v u_lt_v))
       (fun _ => false)
-      (fun v_lt_u => G.edgeTree.contains (Edge.mk v u v_lt_u))
+      (fun v_lt_u => G.edgeSet.contains (Edge.mk v u v_lt_u))
 
 /-- The vertex adjacency relations -/
 def Graph.adjacent {G : Graph} : G.vertex → G.vertex → Prop :=
@@ -79,57 +83,77 @@ lemma Graph.symmetricAdjacent (G : Graph) :
     intros u v
     apply ltByCases u v <;> (intro h ; simp [ltByCases, not_lt_of_lt, h, adjacent, badjacent])
 
-lemma edge_cmp_eq_impl_eq (G: Graph) (e1 e2 : G.edgeType) : Edge.linearOrder.compare e1 e2 = Ordering.eq → e1 = e2 := by
-  intro H
-  rw [compare_eq_iff_eq] at H
-  assumption
+lemma edge_cmp_eq_impl_eq (G: Graph) (e1 e2 : G.edgeType) : Edge.linearOrder.compare e1 e2 = Ordering.eq ↔ e1 = e2 := by
+  exact compare_eq_iff_eq
 
-lemma member_rbset (G: Graph) (e : G.edgeType) : e ∈ G.edgeTree ↔ G.edgeTree.Mem e := by
+lemma member_rbset (G: Graph) (e : G.edgeType) : e ∈ G.edgeSet ↔ G.edgeSet.Mem e := by
   constructor
   · intro H
     exact H
   · intro H
     exact H
 
-lemma member_rbnode (G: Graph) (e : G.edgeType) : e ∈ G.edgeTree.1 ↔ G.edgeTree.1.EMem e := by
+lemma member_rbnode (G: Graph) (e : G.edgeType) : e ∈ G.edgeSet.1 ↔ G.edgeSet.1.EMem e := by
   constructor
   · intro H
     exact H
   · intro H
     exact H
 
-lemma edge_in_node (G : Graph) (e : G.edgeType) : e ∈ G.edgeTree → e ∈ G.edgeTree.1 := by
-  rw [member_rbset, member_rbnode]
-  unfold Std.RBSet.Mem
-  unfold Std.RBNode.EMem
-  unfold Std.RBSet.MemP
-  unfold Std.RBNode.MemP
-  rw [Std.RBNode.Any_def]
-  rw [Std.RBNode.Any_def]
-  intro H
-  apply Exists.elim H
-  intro a H'
-  obtain ⟨belongs, compare⟩ := H'
-  apply edge_cmp_eq_impl_eq at compare
-  use a
+lemma edge_in_node (G : Graph) (e : G.edgeType) : e ∈ G.edgeSet ↔ e ∈ G.edgeSet.1 := by
+  apply Iff.intro
+  · rw [member_rbset, member_rbnode]
+    unfold Std.RBSet.Mem
+    unfold Std.RBNode.EMem
+    unfold Std.RBSet.MemP
+    unfold Std.RBNode.MemP
+    rw [Std.RBNode.Any_def]
+    rw [Std.RBNode.Any_def]
+    intro H
+    apply Exists.elim H
+    intro a H'
+    obtain ⟨belongs, compare⟩ := H'
+    rw [edge_cmp_eq_impl_eq] at compare
+    use a
+  · rw [member_rbset, member_rbnode]
+    unfold Std.RBSet.Mem
+    unfold Std.RBNode.EMem
+    unfold Std.RBSet.MemP
+    unfold Std.RBNode.MemP
+    rw [Std.RBNode.Any_def]
+    rw [Std.RBNode.Any_def]
+    intro H
+    apply Exists.elim H
+    intro a H'
+    obtain ⟨belongs, compare⟩ := H'
+    rw [← edge_cmp_eq_impl_eq] at compare
+    use a
 
+
+lemma Graph.adj_impl_ex_edge (G: Graph) (u v : G.vertex) (e : G.edge) : (adj : G.adjacent u v) → u < v → G.adjacentEdge adj = e → G.fst e = u ∧ G.snd e = v := by
+  intro adj comp
+  unfold adjacentEdge
+  simp [comp]
+  intro v
+  subst v
+  simp
 
 /-
 The problem here is that the RBSet checks for membership using the cmp function while the RBNode checks if we have this exact element
 -/
 /-- An efficient way of checking that a statement holds for all edges. -/
 lemma Graph.all_edges (G : Graph) (p : G.edgeType → Prop) [DecidablePred p] :
-    G.edgeTree.all p = true → ∀ (e : G.edge), p e.val
+    G.edgeSet.all p = true → ∀ (e : G.edge), p e.val
   := by
     unfold Std.RBSet.all
     rw [Std.RBNode.all_iff]
     rw [Std.RBNode.All_def]
     intro H e
     specialize H e
-    have member : e.1 ∈ G.edgeTree := by
+    have member : e.1 ∈ G.edgeSet := by
       rw [← Std.RBSet.contains_iff]
       exact e.2
-    apply edge_in_node at member
+    rw [edge_in_node] at member
     apply H at member
     apply of_decide_eq_true at member
     exact member

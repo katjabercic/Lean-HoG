@@ -2,7 +2,7 @@ import Lean
 import LeanHoG.Graph
 import LeanHoG.Tactic.SearchDSL
 import LeanHoG.Tactic.Options
-import LeanHoG.Invariant.Hamiltonicity.Basic
+import LeanHoG.Invariant.HamiltonianPath.Basic
 import Qq
 
 import Aesop.Util.Basic
@@ -402,7 +402,7 @@ unsafe def fooImpl : Tactic
       let _ ← decomposeExistsQ goalType
   | _ => throwUnsupportedSyntax
 
--- example : ∃ (G : Graph), G.isTraceable ∧ G.vertexSize > 3 ∧ (G.minimumDegree < G.vertexSize / 2) := by
---   search_for_example
+example : ∃ (G : Graph), G.vertexSize > 3 ∧ (G.minimumDegree < G.vertexSize / 2) := by
+  search_for_example
 
 end LeanHoG

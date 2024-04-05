@@ -1,5 +1,5 @@
-import LeanHoG.Invariant.Hamiltonicity.Basic
-import LeanHoG.Invariant.Hamiltonicity.SatEncoding
+import LeanHoG.Invariant.HamiltonianPath.Basic
+import LeanHoG.Invariant.HamiltonianPath.SatEncoding
 import Lean
 import LeanSAT
 import Qq
@@ -14,14 +14,14 @@ def visualize : Widget.Module where
 def Graph.toVisualizationFormat : Graph → Json := fun G =>
   Json.mkObj [
     ("vertexSize", G.vertexSize),
-    ("edgeList", Lean.toJson G.edgeTree.toList)
+    ("edgeList", Lean.toJson G.edgeSet.toList)
   ]
 
 def HamiltonianPath.toVisualizationFormat (G : Graph) :
   HamiltonianPath G → Json := fun hp =>
   Json.mkObj [
     ("vertexSize", G.vertexSize),
-    ("edgeList", Lean.toJson G.edgeTree.toList),
+    ("edgeList", Lean.toJson G.edgeSet.toList),
     ("hamiltonianPath", Lean.toJson hp.path.vertices)
   ]
 
@@ -37,7 +37,7 @@ def HamiltonianPath.toVisualizationFormat? (G : Graph) : IO Json := do
   | some hp =>
     return Json.mkObj [
       ("vertexSize", G.vertexSize),
-      ("edgeList", Lean.toJson G.edgeTree.toList),
+      ("edgeList", Lean.toJson G.edgeSet.toList),
       ("hamiltonianPath", Lean.toJson hp.path)
     ]
   | none => return Json.null

@@ -1,8 +1,10 @@
 {
     "graph" : { "vertexSize" : 2, "edges" : [] },
-    "disconnectivityData" : {
-        "color" : [[0,0],[1,1]],
-        "vertex0" : 0,
-        "vertex1" : 1
+    "connectedComponents" : {
+        "val" : 2,
+        "component" : [[0,0],[1,1]],
+        "root" : [[0, 0], [1, 1]],
+        "next" : [[0, 0], [1, 1]],
+        "distToRoot" : [[0, 0], [1, 0]]
     }
 }

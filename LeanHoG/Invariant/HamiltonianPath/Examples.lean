@@ -1,7 +1,9 @@
 import LeanHoG.Graph
 import LeanHoG.Widgets
-import LeanHoG.Invariant.Hamiltonicity.SatEncoding
+import LeanHoG.Invariant.HamiltonianPath.SatEncoding
 import LeanSAT
+
+import Std.Data.RBMap.Basic
 
 namespace LeanHoG
 
@@ -10,11 +12,7 @@ open LeanSAT
 def no_ham : Graph :=
   {
     vertexSize := 3,
-    edgeTree :=
-      .node (Edge.mk 1 ⟨2, by norm_num⟩ (by norm_num))
-        (.leaf (Edge.mk 0 ⟨1, by norm_num⟩ (by norm_num)))
-        .empty
-    edgeCorrect := by rfl
+    edgeTree := Std.RBSet.ofList [(Edge.mk 1 ⟨2, by norm_num⟩ (by norm_num)), (Edge.mk 0 ⟨1, by norm_num⟩ (by norm_num))] Edge.linearOrder.compare
   }
 
 instance : Solver IO := Solver.Impl.DimacsCommand "kissat"
@@ -51,11 +49,7 @@ instance : Solver IO := Solver.Impl.DimacsCommand "kissat"
 abbrev g1 : Graph :=
   {
     vertexSize := 2,
-    edgeTree :=
-      .node (Edge.mk 0 ⟨1, by norm_num⟩ (by norm_num))
-        (.empty)
-        (.empty)
-    edgeCorrect := by rfl
+    edgeTree := Std.RBSet.ofList [Edge.mk 0 ⟨1, by norm_num⟩ (by norm_num)] Edge.linearOrder.compare
   }
 
 #widget visualize with g1.toVisualizationFormat
