@@ -765,13 +765,11 @@ unsafe def searchForExampleImpl : CommandElab
     let opts ← getOptions
     let pythonExe := opts.get leanHoG.pythonExecutable.name leanHoG.pythonExecutable.defValue
     for q in qs.queries do
-      IO.println s!"{q.query}"
       let output ← IO.Process.output {
         cmd := pythonExe
         args := #["Convert/searchHoG.py", s!"{q.query}", s!"{qs.hash}"]
       }
       if output.exitCode ≠ 0 then
-        IO.println output.stdout
         IO.eprintln f!"failed to download graphs: {output.stderr}"
         return
     -- IO.println s!"{qs.hash}"
@@ -807,3 +805,5 @@ unsafe def searchForExampleImpl : CommandElab
       (return json% { html: $(← Server.RpcEncodable.rpcEncode (putInDiv links)) }) stx
 
   | _ => throwUnsupportedSyntax
+
+#search_hog hog{(minimumDegree < numberOfVertices / 3)}
