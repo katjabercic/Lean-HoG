@@ -10,7 +10,7 @@ class GraphEncoder(json.JSONEncoder):
             g = {
                 "hogId": graph.HoG_id,
                 "graph": graph.to_json(),
-                "connectedComponentsData": ConnectedComponentsCertificate(graph).to_json()
+                "connectedComponents": ConnectedComponentsCertificate(graph).to_json()
             }
             return g
         else:
