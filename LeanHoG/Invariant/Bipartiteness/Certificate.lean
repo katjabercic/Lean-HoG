@@ -4,7 +4,7 @@ import LeanHoG.Edge
 import LeanHoG.Graph
 import LeanHoG.Invariant.Bipartiteness.Basic
 import LeanHoG.Util.Quote
-import LeanHoG.Util.RBSet
+import LeanHoG.Util.RB
 
 namespace LeanHoG
 
@@ -19,7 +19,7 @@ def bipartitenessCertificateOfData (G : Q(Graph)) (B : BipartitenessData) : Q(Bi
   have color : Q(Graph.vertex $G → Fin 2) := q(fun v => Std.RBMap.findD $colorMap v 0)
   have vertex0 : Q(Graph.vertex $G) := finOfData n B.vertex0
   have vertex1 : Q(Graph.vertex $G) := finOfData n B.vertex1
-  have edgeColor : Q(Std.RBSet.all (Graph.edgeTree $G) (fun e => $color e.fst ≠ $color e.snd) = true) := (q(Eq.refl true) : Lean.Expr)
+  have edgeColor : Q(Std.RBSet.all (Graph.edgeSet $G) (fun e => $color e.fst ≠ $color e.snd) = true) := (q(Eq.refl true) : Lean.Expr)
   have vertex0Color : Q($color $vertex0 = 0) := (q(Eq.refl (0 : Fin 2)) : Lean.Expr)
   have vertex1Color : Q($color $vertex1 = 1) := (q(Eq.refl (1 : Fin 2)) : Lean.Expr)
   q(BipartitenessCertificate.mk

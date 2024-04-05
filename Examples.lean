@@ -1,7 +1,7 @@
 import LeanHoG.LoadGraph
 import LeanHoG.Invariant.ConnectedComponents.Basic
-import LeanHoG.Widgets
-import LeanHoG.Tactic.SearchDSL
+-- import LeanHoG.Widgets
+-- import LeanHoG.Tactic.SearchDSL
 
 namespace LeanHoG
 
