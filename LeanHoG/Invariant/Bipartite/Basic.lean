@@ -25,8 +25,12 @@ class BipartiteCertificate (G : Graph) where
 
 /-- A graph is bipartite if there is a 2-coloring of vertices which assigns
     different colors to adjacent vertices. -/
-def Graph.bipartite (G : Graph) : Prop :=
+@[simp] def Graph.bipartite (G : Graph) : Prop :=
   ∃ (c : G.vertex → Fin 2), ∃ (v0 v1 : G.vertex), c v0 ≠ c v1 ∧ ∀ (e : G.edge), c e.val.fst ≠ c e.val.snd
+
+instance (G : Graph): Decidable (Graph.bipartite G) := by
+  simp
+  infer_instance
 
 /-- A graph is bipartite if it has a bipartite certificate.  -/
 @[default_instance]
@@ -44,7 +48,7 @@ theorem OddClosedWalkNotBipartite
   {G : Graph}
   (v : G.vertex)
   (w : ClosedWalk G v) :
-  Odd w.length → ¬ Graph.isBipartite G := by
+  Odd w.length → ¬ Graph.bipartite G := by
   intros isOdd p
   cases p with
   | intro c H =>
@@ -61,5 +65,15 @@ theorem OddClosedWalkNotBipartite
     }
     let _ := (VertexColoring.EvenOddWalkEndpointEquality w coloring).left isOdd
     contradiction
+
+class OddClosedWalk (G : Graph) where
+  vertex : G.vertex
+  walk : ClosedWalk G vertex
+  oddLength : Odd walk.length
+
+/-- A graph is not bipartite if it contains an odd closed walk.  -/
+@[default_instance]
+instance Graph.nonBipartiteFromOddClosedWalk (G : Graph) [W : OddClosedWalk G] : Decidable G.bipartite :=
+  .isFalse (OddClosedWalkNotBipartite W.vertex W.walk W.oddLength)
 
 end LeanHoG

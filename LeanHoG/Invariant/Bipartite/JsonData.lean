@@ -18,5 +18,10 @@ structure BipartiteData : Type where
   vertex1 : Nat
 deriving Lean.FromJson
 
+structure OddClosedWalkData : Type where
+
+  closedWalk : List Nat
+
+deriving Lean.FromJson
 
 end LeanHoG

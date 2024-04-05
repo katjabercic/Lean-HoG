@@ -109,6 +109,21 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) (tryHam : Bool)
     }
     Elab.Command.liftTermElabM <| Meta.addInstance BipartiteCertificateName .scoped 42
 
+  match jsonData.oddClosedWalk? with
+  | .none => pure ()
+  | .some data =>
+    let OddClosedWalkName := certificateName graphName "OddClosedWalkI"
+    let OddClosedWalkQ : Q(OddClosedWalk $graph) := OddClosedWalkOfData graph data
+    Elab.Command.liftCoreM <| addAndCompile <| .defnDecl {
+      name := OddClosedWalkName
+      levelParams := []
+      type := q(OddClosedWalk $graph)
+      value := OddClosedWalkQ
+      hints := .regular 0
+      safety := .safe
+    }
+    Elab.Command.liftTermElabM <| Meta.addInstance OddClosedWalkName .scoped 42
+
   match jsonData.neighborhoodMap? with
   | .none => pure ()
   | .some data =>
