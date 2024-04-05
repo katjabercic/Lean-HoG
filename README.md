@@ -4,7 +4,7 @@ A library for computational graph theory in [Lean 4](https://leanprover.github.i
 
 ## Installation
 
-Install Lean 4 by following [these instructions](https://leanprover-community.github.io/get_started.html). 
+Install Lean 4 by following [these instructions](https://leanprover-community.github.io/get_started.html).
 When successful, you should have the exectables `elan` (for installing and updating versions of Lean), `lean` itself, and `lake` (the Lean build system).
 
 ## Usage
@@ -26,25 +26,25 @@ Alternatively, build the project from the command line:
 
 To download graphs from the [House of Graphs](https://houseofgraphs.org/) (HoG) website and import them into Lean
 you're going to need:
-* [Pyhton](https://www.python.org/).
-* The [requests](https://pypi.org/project/requests/) pyhton library.
-    Once you have python installed you can get it with the command `pip install requests`.
+* [Pyhton](https://www.python.org/) version 3 or higher.
+* The [requests](https://pypi.org/project/requests/) library.
 
-The graphs in the HoG database are stored with corresponding ids.
+To download the graph with ID `<id>`, run
+```
+lake exe download <id>`
+```
+To download graphs whose IDs are in the range from `<min-id>` to `<max-id>`, run
+```
+lake exe download <min-id> <max-id>
+```
+The JSON files containing the graps are stored in `build/graphs`.
 
-To download a single graphs you can run:
-* `lake exe get_graphs <ID>`
-
-To download multiple graphs you can run:
-* `lake exe get_graphs <ID1> <ID2>`
-which will download all the graphs with ids in the range between `ID1` and `ID2`.
-
-To load the downloaded graphs in a Lean file, use the command
-* `load_graph <graphName> "build/graphs/<ID>"`.
-
-This will load the graph into the variable `graphName`.
-You can check that it loaded it with
-* `#check graphName`.
+To use a downloaded graph with ID `<id>` in Lean, use the command
+```
+load_graph <graphName> "build/graphs/<ID>"
+```
+This will load the graph into the variable `<graphName>`.
+You can check that it loaded it with `#check <graphName>`.
 
 ### Visualization widget
 
@@ -74,7 +74,7 @@ command. To use it you have to construct a valid `hog_query` and enclose it into
 ```
 hog_query q ::= boolean_invariant = b | numerical_invariant op x | ( q ) | q ∧ q | q ∨ q
 ```
-where `b` is a boolean value, `x` is a numerical value 
+where `b` is a boolean value, `x` is a numerical value
 (`Int` for invariants with integral values, `Float` for invariants with continous values)
 and
 ```
