@@ -74,7 +74,7 @@ lemma EvenOddWalkEndpointEquality
   (Even w.length → p.color vₛ = p.color vₜ)
   := by
   induction w with
-  | trivial s =>
+  | here s =>
     apply And.intro
     · intro H
       cases H with
@@ -83,7 +83,7 @@ lemma EvenOddWalkEndpointEquality
         contradiction
     · intro
       rfl
-  | @left vₛ vᵤ vₜ adj_vₛ_vᵤ walk_vᵤ_vₜ ih =>
+  | @step vₛ vᵤ vₜ adj_vₛ_vᵤ walk_vᵤ_vₜ ih =>
     apply And.intro
     · intro H
       cases H with
