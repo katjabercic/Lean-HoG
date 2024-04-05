@@ -144,7 +144,7 @@ instance : ToString Invariant where
     | .NumericalInvariant n => toString n
     | .IntegralInvariant i => toString i
 
-def boolInvariantToId : BoolInvariant → Nat
+def BoolInvariant.toId : BoolInvariant → Nat
   | .Acyclic => 1
   | .Bipartite => 3
   | .Connected => 6
@@ -158,7 +158,7 @@ def boolInvariantToId : BoolInvariant → Nat
   | .Traceable => 40
   | .TwinFree => 46
 
-def numericalInvariantToId : NumericalInvariant → Nat
+def NumericalInvariant.toId : NumericalInvariant → Nat
   | .AlgebraicConnectivity => 19
   | .AverageDegree => 2
   | .Index => 21
@@ -166,7 +166,7 @@ def numericalInvariantToId : NumericalInvariant → Nat
   | .SecondLargestEigenvalue => 23
   | .SmallestEigenvalue => 24
 
-def integralInvariantToId : IntegralInvariant → Nat
+def IntegralInvariant.toId : IntegralInvariant → Nat
   | .ChromaticIndex => 20
   | .ChromaticNumber => 4
   | .Circumference => 35
@@ -200,9 +200,9 @@ def integralInvariantToId : IntegralInvariant → Nat
   | .VertexCoverNumber => 45
 
 def Invariant.toId : Invariant → Nat
-  | .BoolInvariant inv => boolInvariantToId inv
-  | .NumericalInvariant inv => numericalInvariantToId inv
-  | .IntegralInvariant inv => integralInvariantToId inv
+  | .BoolInvariant inv => BoolInvariant.toId inv
+  | .NumericalInvariant inv => NumericalInvariant.toId inv
+  | .IntegralInvariant inv => IntegralInvariant.toId inv
 
 instance : Hashable Float where
   hash x := hash (Float.toString x)
@@ -231,6 +231,58 @@ instance : ToString ComparisonOp where
     | .Gt => "GT"
     | .Ge => "GE"
 
+def ComparisonOp.toAPIRepr : ComparisonOp → String
+  | .Eq => "="
+  | .Ne => "!="
+  | .Lt => "<"
+  | .Le => "<="
+  | .Gt => ">"
+  | .Ge => ">="
+
+inductive Arith where
+  | plus
+  | minus
+  | times
+  | div
+deriving Repr, Hashable
+
+instance : ToString Arith where
+  toString := fun a => match a with
+  | .plus => "+"
+  | .minus => "-"
+  | .times => "*"
+  | .div => "/"
+
+inductive ArithExpr where
+  | nat : Nat -> ArithExpr
+  | float : Float -> ArithExpr
+  | integralInv : IntegralInvariant -> ArithExpr
+  | numeralInv : NumericalInvariant -> ArithExpr
+  | comp : Arith -> ArithExpr -> ArithExpr -> ArithExpr
+deriving Repr, Hashable
+
+def ArithExpr.toString : ArithExpr → String
+  | .nat n => s!"{n}"
+  | .float x => s!"{x}"
+  | .integralInv inv => s!"{inv}"
+  | .numeralInv inv => s!"{inv}"
+  | .comp op lhs rhs => s!"({lhs.toString}){op}({rhs.toString})"
+
+instance : ToString ArithExpr where
+  toString := ArithExpr.toString
+
+/-- Used for making API calls to HoG for formulas. -/
+def ArithExpr.toAPIRepr : ArithExpr → String
+  | .nat n => s!"{n}"
+  | .float x => s!"{x}"
+  | .integralInv inv => s!"${inv.toId}$"
+  | .numeralInv inv => s!"${inv.toId}$"
+  | .comp op lhs rhs => s!"{lhs.toAPIRepr}{op}{rhs.toAPIRepr}"
+
+/-- TODO: Maybe this is a big strange -/
+instance : ToJson ArithExpr where
+  toJson := fun ae => Json.str ae.toAPIRepr
+
 structure BoolEnquiry where
   inv : BoolInvariant
   val : Bool
@@ -257,10 +309,20 @@ deriving Repr, Hashable
 instance : ToString IntegralEnquiry where
   toString := fun i => s!"{i.inv} {i.op} {i.val}"
 
+structure FormulaEnquiry where
+  lhs : ArithExpr
+  rhs : ArithExpr
+  cmp : ComparisonOp
+deriving Repr, Hashable
+
+instance : ToString FormulaEnquiry where
+  toString := fun f => s!"{f.lhs.toAPIRepr}{f.cmp.toAPIRepr}{f.rhs.toAPIRepr}"
+
 inductive HoGEnquiry where
   | BoolEnquiry : BoolEnquiry → HoGEnquiry
   | NumericalEnquiry : NumericalEnquiry → HoGEnquiry
   | IntegralEnquiry : IntegralEnquiry → HoGEnquiry
+  | FormulaEnquiry : FormulaEnquiry → HoGEnquiry
 deriving Repr, Hashable
 
 instance : ToString HoGEnquiry where
@@ -269,6 +331,7 @@ instance : ToString HoGEnquiry where
     | .BoolEnquiry b => toString b
     | .NumericalEnquiry n => toString n
     | .IntegralEnquiry i => toString i
+    | .FormulaEnquiry f => toString f
 
 structure InvariantQuery where
   invariantId : Nat
@@ -281,6 +344,10 @@ structure GraphClassQuery where
   hasClass : Bool
 deriving Lean.ToJson, Hashable
 
+structure FormulaQuery where
+  strFormula : String
+deriving Lean.ToJson, Hashable
+
 structure HoGQuery where
   invariantEnquiries : List InvariantQuery
   invariantRangeEnquiries : List Int := []
@@ -288,7 +355,7 @@ structure HoGQuery where
   graphClassEnquiries : List GraphClassQuery
   invariantParityEnquiries : List Int := []
   textEnquiries : List String := []
-  formulaEnquiries : List String := []
+  formulaEnquiries : List FormulaQuery
   mostRecent : Int := -1
   mostPopular : Int := -1
   subgraphEnquiries : List Int := []
@@ -349,7 +416,7 @@ def integralInvariantToQuery : IntegralInvariant → ComparisonOp → Int → In
   | .VertexConnectivity, op, n => ⟨(Invariant.IntegralInvariant .VertexConnectivity).toId, toString op, .ofInt n⟩
   | .VertexCoverNumber, op, n => ⟨(Invariant.IntegralInvariant .VertexCoverNumber).toId, toString op, .ofInt n⟩
 
-abbrev QueryState := List InvariantQuery × List GraphClassQuery
+abbrev QueryState := List InvariantQuery × List GraphClassQuery × List FormulaQuery
 
 structure ConstructedQuery where
   query : Json
@@ -368,26 +435,30 @@ open Lean in
 def HoGQuery.build : List HoGEnquiry → ConstructedQuery := fun q =>
   let rec helper : List HoGEnquiry → StateM QueryState HoGQuery
   | [] => do
-    let (invq,gcq) ← get
-    return { invariantEnquiries := invq, graphClassEnquiries := gcq }
+    let (invq,gcq,fmlq) ← get
+    return { invariantEnquiries := invq, graphClassEnquiries := gcq, formulaEnquiries := fmlq }
   | .BoolEnquiry ⟨.Bipartite, b⟩ :: es => do
-    let (invq,gcq) ← get
-    set (invq, ⟨(Invariant.BoolInvariant .Bipartite).toId, b⟩ :: gcq)
+    let (invq,gcq,fmlq) ← get
+    set (invq, ⟨(Invariant.BoolInvariant .Bipartite).toId, b⟩ :: gcq, fmlq)
     helper es
   | .BoolEnquiry ⟨inv, b⟩ :: es => do
-    let (invq,gcq) ← get
-    set (invq, boolInvariantToQuery inv b :: gcq)
+    let (invq,gcq,fmlq) ← get
+    set (invq, boolInvariantToQuery inv b :: gcq, fmlq)
     helper es
   | .NumericalEnquiry ⟨inv, op, x⟩ :: es => do
-    let (invq,gcq) ← get
-    set (numericalInvariantToQuery inv op x :: invq, gcq)
+    let (invq,gcq,fmlq) ← get
+    set (numericalInvariantToQuery inv op x :: invq, gcq, fmlq)
     helper es
   | .IntegralEnquiry ⟨inv, op, n⟩ :: es => do
-    let (invq,gcq) ← get
-    set (integralInvariantToQuery inv op n :: invq, gcq)
+    let (invq,gcq,fmlq) ← get
+    set (integralInvariantToQuery inv op n :: invq, gcq, fmlq)
+    helper es
+  | .FormulaEnquiry f :: es => do
+    let (invq,gcq,fmlq) ← get
+    set (invq, gcq, ⟨s!"{f}"⟩ :: fmlq)
     helper es
 
-  let (j, _) := helper q ([],[])
+  let (j, _) := helper q ([],[],[])
   ⟨toJson j, hash j⟩
 
 def distributeLeft {α : Type} : List α → List (List α) → List (List α)
@@ -464,14 +535,14 @@ declare_syntax_cat comparison_invariant
 syntax numerical_invariant : comparison_invariant
 syntax integral_invariant : comparison_invariant
 
-declare_syntax_cat operation
-syntax " = " : operation
-syntax " < " : operation
-syntax " != ": operation
-syntax " > " : operation
-syntax " <= " : operation
-syntax " >= " : operation
-syntax "op!{" operation "}" : term
+declare_syntax_cat comparison
+syntax " = " : comparison
+syntax " < " : comparison
+syntax " != ": comparison
+syntax " > " : comparison
+syntax " <= " : comparison
+syntax " >= " : comparison
+syntax "op!{"  comparison "}" : term
 
 macro_rules
   | `(op!{=}) => `(ComparisonOp.Eq)
@@ -481,10 +552,79 @@ macro_rules
   | `(op!{<=}) => `(ComparisonOp.Le)
   | `(op!{>=}) => `(ComparisonOp.Ge)
 
+declare_syntax_cat comparison_formula
+declare_syntax_cat arith_op
+
+syntax "+" : arith_op
+syntax "-" : arith_op
+syntax "*" : arith_op
+syntax "/" : arith_op
+syntax "arith_op{" arith_op "}" : term
+
+macro_rules
+  | `(arith_op{ + }) => `(Arith.plus)
+  | `(arith_op{ - }) => `(Arith.minus)
+  | `(arith_op{ * }) => `(Arith.times)
+  | `(arith_op{ / }) => `(Arith.div)
+
+syntax comparison_invariant : comparison_formula
+syntax:50 comparison_formula:51 arith_op comparison_formula:50 : comparison_formula
+syntax:52 num arith_op comparison_formula:52 : comparison_formula
+syntax:50 comparison_formula:51 arith_op num : comparison_formula
+syntax "(" comparison_formula ")" : comparison_formula
+syntax "fmla!{" comparison_formula "}" : term
+
+macro_rules
+  | `(fmla!{($fmla)}) => `(fmla!{$fmla})
+  | `(fmla!{chromaticIndex}) => `(ArithExpr.integralInv .ChromaticIndex)
+  | `(fmla!{chromaticNumber}) => `(ArithExpr.integralInv .ChromaticNumber)
+  | `(fmla!{circumference}) => `(ArithExpr.integralInv .Circumference)
+  | `(fmla!{cliqueNumber}) => `(ArithExpr.integralInv .CliqueNumber)
+  | `(fmla!{degeneracy}) => `(ArithExpr.integralInv .Degeneracy)
+  | `(fmla!{density}) => `(ArithExpr.integralInv .Density)
+  | `(fmla!{diameter}) => `(ArithExpr.integralInv .Diameter)
+  | `(fmla!{dominationNumber}) => `(ArithExpr.integralInv .DominationNumber)
+  | `(fmla!{edgeConnectivity}) => `(ArithExpr.integralInv .EdgeConnectivity)
+  | `(fmla!{feedbackVertexSetNumber}) => `(ArithExpr.integralInv .FeedbackVertexSetNumber)
+  | `(fmla!{genus}) => `(ArithExpr.integralInv .Genus)
+  | `(fmla!{girth}) => `(ArithExpr.integralInv .Girth)
+  | `(fmla!{groupSize}) => `(ArithExpr.integralInv .GroupSize)
+  | `(fmla!{independenceNumber}) => `(ArithExpr.integralInv .IndependenceNumber)
+  | `(fmla!{lengthOfLongestInducedCycle}) => `(ArithExpr.integralInv .LengthOfLongestInducedCycle)
+  | `(fmla!{lengthOfLongestInducedPath}) => `(ArithExpr.integralInv .LengthOfLongestInducedPath)
+  | `(fmla!{lengthOfLongestPath}) => `(ArithExpr.integralInv .LengthOfLongestPath)
+  | `(fmla!{matchingNumber}) => `(ArithExpr.integralInv .MatchingNumber)
+  | `(fmla!{maximumDegree}) => `(ArithExpr.integralInv .MaximumDegree)
+  | `(fmla!{minimumDegree}) => `(ArithExpr.integralInv .MinimumDegree)
+  | `(fmla!{numberOfComponents}) => `(ArithExpr.integralInv .NumberOfComponents)
+  | `(fmla!{numberOfEdges}) => `(ArithExpr.integralInv .NumberOfEdges)
+  | `(fmla!{numberOfSpanningTrees}) => `(ArithExpr.integralInv .NumberOfSpanningTrees)
+  | `(fmla!{numberOfTriangles}) => `(ArithExpr.integralInv .NumberOfTriangles)
+  | `(fmla!{numberOfVertexOrbits}) => `(ArithExpr.integralInv .NumberOfVertexOrbits)
+  | `(fmla!{numberOfVertices}) => `(ArithExpr.integralInv .NumberOfVertices)
+  | `(fmla!{numberOfZeroEigenvalues}) => `(ArithExpr.integralInv .NumberOfZeroEigenvalues)
+  | `(fmla!{radius}) => `(ArithExpr.integralInv .Radius)
+  | `(fmla!{treewidth}) => `(ArithExpr.integralInv .Treewidth)
+  | `(fmla!{vertexConnectivity}) => `(ArithExpr.integralInv .VertexConnectivity)
+  | `(fmla!{vertexCoverNumber}) => `(ArithExpr.integralInv .VertexCoverNumber)
+  | `(fmla!{algebraicConnectivity}) => `(ArithExpr.numericalInv .AlgebraicConnectivity)
+  | `(fmla!{averageDegree}) => `(ArithExpr.numericalInv .AverageDegree)
+  | `(fmla!{index}) => `(ArithExpr.numericalInv .Index)
+  | `(fmla!{laplacianLargestEigenvalue}) => `(ArithExpr.numericalInv .LaplacianLargestEigenvalue)
+  | `(fmla!{secondLargestEigenvalue}) => `(ArithExpr.numericalInv .SecondLargestEigenvalue)
+  | `(fmla!{smallestEigenvalue}) => `(ArithExpr.numericalInv .SmallestEigenvalue)
+
+  | `(fmla!{$n:num $op:arith_op $fmla:comparison_formula}) => `(ArithExpr.comp arith_op{$op} (ArithExpr.nat $n) fmla!{$fmla})
+  | `(fmla!{$f₁:comparison_formula $op:arith_op $f₂:comparison_formula}) => `(ArithExpr.comp arith_op{$op} fmla!{$f₁} fmla!{$f₂})
+  | `(fmla!{$fmla:comparison_formula $op:arith_op $n:num}) => `(ArithExpr.comp arith_op{$op} fmla!{$fmla} (ArithExpr.nat $n))
+
 declare_syntax_cat hog_query
 syntax (name := hog) "hog{ " hog_query " }" : term
 syntax:40 boolean_invariant:41 " = " term:40 : hog_query
-syntax:40 comparison_invariant:41 operation term:40 : hog_query
+syntax:40 comparison_invariant:41 comparison term:40 : hog_query
+
+syntax:41 comparison_formula:42 comparison comparison_formula:41 : hog_query
+
 syntax:35 hog_query:36 " ∧ " hog_query:35 : hog_query
 syntax:30 hog_query:31 " ∨ " hog_query:30 : hog_query
 syntax:max "(" hog_query ")" : hog_query
@@ -544,6 +684,9 @@ syntax:max "(" hog_query ")" : hog_query
   | `(hog{treewidth $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.Treewidth, op!{$op}, $n⟩]])
   | `(hog{vertexConnectivity $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.VertexConnectivity, op!{$op}, $n⟩]])
   | `(hog{vertexCoverNumber $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.VertexCoverNumber, op!{$op}, $n⟩]])
+
+  | `(hog{$fmla1:comparison_formula $cmp:comparison $fmla2:comparison_formula}) => do
+    `([[HoGEnquiry.FormulaEnquiry ⟨fmla!{$fmla1}, fmla!{$fmla2}, op!{$cmp}⟩]])
 
   | `(hog{( $q )}) =>
     `(hog{$q})
@@ -622,11 +765,13 @@ unsafe def searchForExampleImpl : CommandElab
     let opts ← getOptions
     let pythonExe := opts.get leanHoG.pythonExecutable.name leanHoG.pythonExecutable.defValue
     for q in qs.queries do
+      IO.println s!"{q.query}"
       let output ← IO.Process.output {
         cmd := pythonExe
         args := #["Convert/searchHoG.py", s!"{q.query}", s!"{qs.hash}"]
       }
       if output.exitCode ≠ 0 then
+        IO.println output.stdout
         IO.eprintln f!"failed to download graphs: {output.stderr}"
         return
     -- IO.println s!"{qs.hash}"
