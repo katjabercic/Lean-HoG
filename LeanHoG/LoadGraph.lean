@@ -30,7 +30,7 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) (tryHam : Bool)
   CommandElabM Unit := do
   have graphQ := graphOfData jsonData.graph
   -- load the graph
-  let graphDecl := .defnDecl {
+  Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
     name := graphName
     levelParams := []
     type := q(Graph)
@@ -38,7 +38,6 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) (tryHam : Bool)
     hints := .regular 0
     safety := .safe
   }
-  Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| graphDecl
   Lean.setReducibleAttribute graphName
   have graph : Q(Graph) := Lean.mkConst graphName []
 

@@ -8,123 +8,155 @@ import LeanSAT
 
 namespace LeanHoG
 
-open Lean LeanSAT Encode VEncCNF Meta
+open Lean LeanSAT Encode VEncCNF Meta Model PropFun
 
 /-- `Var i j = true` means: "at position j on the path is vertex i". -/
 structure Var (n : Nat) where
   vertex : Fin n
   pos : Fin n
-deriving DecidableEq
+deriving DecidableEq, LeanColls.IndexType
 
-instance {g : Graph} :  MyFinEnum.FinEnum (Var g.vertexSize) := .ofEquiv {
-  toFun := fun {vertex,pos} => (vertex,pos)
-  invFun := fun (vertex,pos) => {vertex,pos}
-  left_inv := by intro; simp
-  right_inv := by intro; simp
-}
+@[simp] def vertexAtPos {n : Nat} (i j : Fin n) : PropFun (Var n) :=
+  Var.mk i j
 
-def verticesAtPosition {n : Nat} (j : Fin n) : List (Literal <| Var n) :=
-  List.finRange n |>.map (Literal.pos <| Var.mk · j)
+@[simp] def positionHasAVertex {n : Nat} (j : Fin n) : PropPred (Var n) := fun τ =>
+  ∃ (i : Fin n), τ ⊨ vertexAtPos i j
 
-def vertexAtPositions {n : Nat} (i : Fin n) : List (Literal <| Var n) :=
-  List.finRange n |>.map (Literal.pos <| Var.mk i ·)
+@[simp] def eachPositionHasAVertex {n : Nat} : PropPred (Var n) := fun τ =>
+  ∀ (j : Fin n), positionHasAVertex j τ
 
-def list_of_distinct_vertices_encoding (g : Graph) : VEncCNF (Literal (Var g.vertexSize)) Unit (fun τ =>
-    (∀ i, ∃ j, τ (Var.mk i j)) ∧
-    (∀ i, atMost 1 (Multiset.ofList <| vertexAtPositions i) τ) ∧
-    (∀ j, ∃ i, τ (Var.mk i j)) ∧
-    (∀ j, atMost 1 (Multiset.ofList <| verticesAtPosition j) τ)
-  ) :=
+@[simp] def vertexIsAtSomePosition {n : Nat} (i : Fin n) : PropPred (Var n) := fun τ =>
+  ∃ (j : Fin n), τ ⊨ vertexAtPos i j
+
+@[simp] def eachVertexIsAtSomePosition {n : Nat} : PropPred (Var n) := fun τ =>
+  ∀ (i : Fin n), vertexIsAtSomePosition i τ
+
+@[simp] def vertexInAtMostOnePosition {n : Nat} (i : Fin n) : PropPred (Var n) := fun τ =>
+  ∀ (j k : Fin n), j ≠ k → τ ⊨ (vertexAtPos i j)ᶜ ⊔ (vertexAtPos i k)ᶜ
+
+@[simp] def eachVertexInAtMostOnePosition {n : Nat} : PropPred (Var n) := fun τ =>
+  ∀ (i : Fin n), vertexInAtMostOnePosition i τ
+
+@[simp] def atMostOneVertexAtPosition {n : Nat} (j : Fin n) : PropPred (Var n) := fun τ =>
+  ∀ (i k : Fin n), i ≠ k → τ ⊨ (vertexAtPos i j)ᶜ ⊔ (vertexAtPos k j)ᶜ
+
+@[simp] def atMostOneVertexInEachPosition {n : Nat} : PropPred (Var n) := fun τ =>
+  ∀ (i : Fin n), atMostOneVertexAtPosition i τ
+
+/-- Encode that if two vertices are consecutive on the path, they are adjacent. -/
+@[simp] def nonAdjacentVerticesNotConsecutive {G : Graph} : PropPred (Var G.vertexSize) := fun τ =>
+  ∀ (k k': Fin G.vertexSize), k.val + 1 = k'.val →
+    ∀ (i j : Fin G.vertexSize), ¬G.adjacent i j →
+      (τ ⊨ ((vertexAtPos i k)ᶜ ⊔ (vertexAtPos j k')ᶜ))
+
+@[simp] def vertexConstraints (G : Graph) : PropPred (Var G.vertexSize) := fun τ =>
+  (τ |> eachVertexIsAtSomePosition) ∧
+  (τ |> eachVertexInAtMostOnePosition)
+
+@[simp] def positionConstraints (G : Graph) : PropPred (Var G.vertexSize) := fun τ =>
+  (τ |> eachPositionHasAVertex) ∧
+  (τ |> atMostOneVertexInEachPosition)
+
+@[simp] def edgeConstraints (G : Graph) : PropPred (Var G.vertexSize) := fun τ =>
+  (τ |> nonAdjacentVerticesNotConsecutive)
+
+@[simp] def hamiltonianPathConstraints (G : Graph) : PropPred (Var G.vertexSize) := fun τ =>
+  (τ |> vertexConstraints G) ∧ (τ |> positionConstraints G) ∧ (τ |> edgeConstraints G)
+
+----------------------------------------------------------------------------------------
+-- Express the problem as a CNF
+
+open Encode VEncCNF LitVar
+
+abbrev VCnf (n : Nat) := VEncCNF (Var n) Unit
+
+@[simp] def verticesAtPosition {n : Nat} (j : Fin n) : List (Literal <| Var n) :=
+  List.finRange n |>.map (mkPos <| Var.mk · j)
+
+@[simp] def vertexAtPositions {n : Nat} (i : Fin n) : List (Literal <| Var n) :=
+  List.finRange n |>.map (mkPos <| Var.mk i ·)
+
+def vertexClauses (G : Graph) : VCnf G.vertexSize (vertexConstraints G) :=
+  (let U := Array.finRange G.vertexSize
   seq[
-    for_all (List.toArray <| List.finRange g.vertexSize) fun i =>
+    for_all U fun i =>
       addClause (List.toArray (vertexAtPositions i)),
-    for_all (List.toArray <| List.finRange g.vertexSize) fun i =>
-      amoPairwise (List.toArray (vertexAtPositions i)),
-    for_all (List.toArray <| List.finRange g.vertexSize) fun j =>
-      addClause (List.toArray (verticesAtPosition j)),
-    for_all (List.toArray <| List.finRange g.vertexSize) fun j =>
-      amoPairwise (List.toArray (verticesAtPosition j))
-  ]
-  |>.mapProp (by
+    for_all U fun i =>
+    for_all U fun j =>
+    for_all U fun k =>
+      VEncCNF.guard (j ≠ k) fun _ =>
+        addClause (#[mkNeg <| Var.mk i j, mkNeg <| Var.mk i k])
+  ])
+  |> mapProp (by
     ext τ
-    simp [vertexAtPositions, verticesAtPosition, Clause.satisfies_iff, LitVar.satisfies_iff,
-          LitVar.toVar, LitVar.polarity]
-  )
-
-def path_encoding (g : Graph) : VEncCNF (Literal (Var g.vertexSize)) Unit (fun τ =>
-    (∀ k k', k.val + 1 =  k'.val →
-      ∀ i j, ¬ g.adjacent i j → ¬ (τ (Var.mk i k)) ∨ ¬ (τ (Var.mk j k'))
-    )
-  ) :=
-  seq[
-    for_all (List.toArray <| List.finRange g.vertexSize) (fun k =>
-    for_all (List.toArray <| List.finRange g.vertexSize) fun k' =>
-      guard (k.val + 1 = k'.val) (fun h =>
-        for_all (List.toArray <| List.finRange g.vertexSize) fun i =>
-        for_all (List.toArray <| List.finRange g.vertexSize) fun j =>
-          guard (¬g.adjacent i j) (fun h' =>
-            addClause (#[Var.mk i k, Var.mk j k'].map LitVar.mkNeg)
-          )
-      )
-    )
-  ]
-  |>.mapProp (by
-    ext τ
+    simp [Clause.toPropFun]
+    intro _
     apply Iff.intro
-    · intros h k k' seq i j adj
-      simp_all [vertexAtPositions, verticesAtPosition, Clause.satisfies_iff, LitVar.satisfies_iff,
-            LitVar.toVar, LitVar.polarity, LitVar.mkNeg, not_false_eq_true, implies_true, and_self,
-            LitVar.mkPos_or_mkNeg
-      ]
-      have := h k k'
-      simp [seq] at this
-      have foo := this i j
-      simp [adj] at foo
-      let ⟨l, cond⟩ := foo
-      unhygienic with_reducible aesop_destruct_products
-      unhygienic aesop_cases left <;> [(unhygienic aesop_cases left_1); (unhygienic aesop_cases left_1)]
-      · aesop_subst [h_1, h_2]
-        simp_all only [true_or]
-      · aesop_subst [h_1, h_2]
-        simp_all only [or_self]
-      · aesop_subst [h_2, h_1]
-        simp_all only [or_self]
-      · aesop_subst [h_2, h_1]
-        simp_all only [or_true]
-    · intros h
-      simp_all [vertexAtPositions, verticesAtPosition, Clause.satisfies_iff, LitVar.satisfies_iff,
-            LitVar.toVar, LitVar.polarity, LitVar.mkNeg, not_false_eq_true, implies_true, and_self,
-            LitVar.mkPos_or_mkNeg
-      ]
-      intros k k'
-      have := h k k'
-      have foo : k.val + 1 ≠ k'.val ∨ k.val + 1 = k'.val := by apply Or.symm; apply Decidable.em
-      cases' foo with neq eq
-      simp [neq]
-      simp [eq]
-      intros i j
-      have moo : g.adjacent i j ∨ ¬ g.adjacent i j := by apply Decidable.em
-      cases' moo with adj nadj
-      simp [adj]
-      simp [nadj]
-      simp at nadj
-      have bar := this eq i j nadj
-      cases' bar with l r
-      · simp_all only [implies_true, forall_true_left]
-        apply Exists.intro
-        apply And.intro
-        apply Or.inl
-        apply Eq.refl
-        simp_all only
-      · simp_all only [implies_true, forall_true_left]
-        apply Exists.intro
-        apply And.intro
-        apply Or.inr
-        apply Eq.refl
-        simp_all only
+    intro h' i j k j_neq_k
+    have := h' i j k
+    simp [j_neq_k] at this
+    exact this
+    intro h' i j k
+    split
+    simp
+    next h'' => simp [h', h'']
   )
 
-def hamiltonian_path_encoding (g : Graph) := seq (list_of_distinct_vertices_encoding g) (path_encoding g)
+def positionClauses (G : Graph) : VCnf G.vertexSize (positionConstraints G) :=
+  (let U := Array.finRange G.vertexSize
+  seq[
+    for_all U fun j =>
+      addClause (List.toArray (verticesAtPosition j)),
+    for_all U fun j =>
+    for_all U fun i =>
+    for_all U fun k =>
+      VEncCNF.guard (i ≠ k) fun _ =>
+        addClause (#[mkNeg <| Var.mk i j, mkNeg <| Var.mk k j])
+  ])
+  |> mapProp (by
+    ext τ
+    simp [Clause.toPropFun]
+    intro _
+    apply Iff.intro
+    intro h' i j k j_neq_k
+    have := h' i j k
+    simp [j_neq_k] at this
+    exact this
+    intro h' i j k
+    split
+    simp
+    next h'' => simp [h', h'']
+  )
+
+def edgeClauses (G : Graph) : VCnf G.vertexSize (edgeConstraints G) :=
+  ( let U := Array.finRange G.vertexSize
+    for_all U fun k =>
+    for_all U fun k' =>
+      VEncCNF.guard (k.val + 1 = k'.val) fun _ =>
+        for_all U fun i =>
+        for_all U fun j =>
+          VEncCNF.guard (¬G.adjacent i j) fun _ =>
+            addClause (#[mkNeg <| Var.mk i k, mkNeg <| Var.mk j k'])
+  )
+  |> mapProp (by
+    ext τ
+    simp [Clause.toPropFun]
+    apply Iff.intro
+    intro h k k' h'' i j h'''
+    have := h k k'
+    simp [h''] at this
+    have := this i j
+    simp [h''] at this
+    rename_i this_1
+    simp_all only [↓reduceIte]
+    aesop
+  )
+
+def hamiltonianPathCNF (G : Graph) : VCnf G.vertexSize (hamiltonianPathConstraints G) :=
+  (seq[
+    vertexClauses G, positionClauses G, edgeClauses G
+  ])
+  |> mapProp (by aesop)
 
 /--
   Given a list of vertices of a graph, try to construct a `Path` in the graph from them.
@@ -174,12 +206,12 @@ def buildPath {g : Graph} : Option (List (g.vertex)) → Option (HamiltonianPath
       | none => none
     | none => none
 
-def tryFindHamiltonianPath [Solver IO] (g : Graph) :
+def tryFindHamiltonianPath [Solver IO] (G : Graph) :
   -- IO (Option ((g : Graph) ×' (¬ ∃ (u v : g.vertex) (p : Path g u v), p.isHamiltonian))) := do
   -- Elab.Term.TermElabM (Option (HamiltonianPath g)) := Core.liftIOCore do
-  IO (Option (HamiltonianPath g)) := do
-  let enc := hamiltonian_path_encoding g
-  let foo := EncCNF.run enc.val
+  IO (Option (HamiltonianPath G)) := do
+  let enc := (hamiltonianPathCNF G).val
+  let foo := EncCNF.run enc
   let cnf := foo.2.cnf
   let map := foo.2.vMap
   match ← Solver.solve cnf with
@@ -190,10 +222,10 @@ def tryFindHamiltonianPath [Solver IO] (g : Graph) :
     IO.println "unsat"
     return none
   | .sat assn =>
-    if h : 0 < g.vertexSize then
-      let mut path : Array (g.vertex) := Array.mkArray g.vertexSize ⟨0, h⟩
-      for i in List.fins g.vertexSize do
-        for j in List.fins g.vertexSize do
+    if h : 0 < G.vertexSize then
+      let mut path : Array (G.vertex) := Array.mkArray G.vertexSize ⟨0, h⟩
+      for i in List.fins G.vertexSize do
+        for j in List.fins G.vertexSize do
           match assn.find? (map (Var.mk i j))  with
           | none => panic! "wtf"
           | some true =>
