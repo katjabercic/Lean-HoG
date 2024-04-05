@@ -26,6 +26,7 @@ structure JSONData : Type where
   connectedComponents? : Option ConnectedComponentsData
   hamiltonianPath? : Option HamiltonianPathData
   bipartite? : Option BipartiteData
+  oddClosedWalk? : Option OddClosedWalkData
   neighborhoodMap? : Option NeighborhoodMapData
 
 deriving Lean.FromJson

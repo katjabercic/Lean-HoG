@@ -1,10 +1,10 @@
 import Qq
-import LeanHoG.JsonData
 import LeanHoG.Edge
 import LeanHoG.Graph
 import LeanHoG.Invariant.Bipartite.Basic
 import LeanHoG.Util.Quote
 import LeanHoG.Util.RB
+import LeanHoG.Certificate
 
 namespace LeanHoG
 
@@ -30,5 +30,27 @@ def BipartiteCertificateOfData (G : Q(Graph)) (B : BipartiteData) : Q(BipartiteC
     $vertex0Color
     $vertex1Color
   )
+
+def OddClosedWalkOfData (G : Q(Graph)) (W : OddClosedWalkData) : Q(OddClosedWalk $G) :=
+  match W.closedWalk.map (vertexOfData G) with
+  | [] => panic! "Encountered empty walk"
+  | v :: vs =>
+    let rec fold (u : Q(Graph.vertex $G)):
+      List Q(Graph.vertex $G) → Q(Walk $G $u $v) := fun vs =>
+      match vs with
+      | [] =>
+        let h : Q(decide (@Graph.adjacent $G $u $v) = true) := (q(Eq.refl true) : Lean.Expr)
+        q(.step (of_decide_eq_true $h) (.here $v))
+      | u' :: us =>
+        let w := fold u' us
+        let h : Q(decide (@Graph.adjacent $G $u $u') = true) := (q(Eq.refl true) : Lean.Expr)
+        q(.step (of_decide_eq_true $h) $w)
+    have closedWalk : Q(ClosedWalk $G $v) := fold v vs
+    have decideIsOdd : Q(decide (Odd ($closedWalk).length) = true) := (q(Eq.refl true) : Lean.Expr)
+    q(OddClosedWalk.mk
+      $v
+      $closedWalk
+      (of_decide_eq_true $decideIsOdd)
+    )
 
 end LeanHoG
