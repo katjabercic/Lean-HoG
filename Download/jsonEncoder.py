@@ -2,6 +2,7 @@ import json
 
 from graph import Graph
 from Invariant.ConnectedComponents import ConnectedComponentsCertificate
+from Invariant.HamiltonianPath import HamiltonianPathCertificate
 
 class GraphEncoder(json.JSONEncoder):
     def default(self, graph):
@@ -15,3 +16,11 @@ class GraphEncoder(json.JSONEncoder):
         else:
             # Let the base class default method raise the TypeError
             return json.JSONEncoder.default(self, graph)
+
+class HamiltonianPathEncoder(json.JSONEncoder):
+    def default(self, hamiltonianPath):
+        if isinstance(hamiltonianPath, HamiltonianPathCertificate):
+            return hamiltonianPath.to_json()
+        else:
+            # Let the base class default method raise the TypeError
+            return json.JSONEncoder.default(self, hamiltonianPath)

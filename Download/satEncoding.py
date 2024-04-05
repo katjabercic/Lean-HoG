@@ -5,7 +5,7 @@ from pysat.formula import CNF
 from pysat.solvers import Glucose4, Solver, Cadical195, MinisatGH
 
 from graph import Graph
-from downloadGraph import download_graphs, save_graphs
+from downloadGraph import download_graph
 
 def x(n,i,j):
     return (n*i)+j+1
@@ -79,11 +79,6 @@ def encode_hamiltonian_path(G : Graph):
                     continue
                 else:
                     E.append([-x(n,i,k), -x(n,j,k+1)])
-    # print(f'A: {to_vars(n, A)}')
-    # print(f'B: {to_vars(n, B)}')
-    # print(f'C: {to_vars(n, C)}')
-    # print(f'D: {to_vars(n, D)}')
-    # print(f'E: {to_vars(n, E)}')
     return A + B + C + D + E
 
 def interrupt(s):
@@ -126,11 +121,6 @@ def encode_hamiltonian_cycle(G : Graph):
                     E.append([-y(n,i,k), -y(n,j,k+1)])
     first_pos = [[y(n,0,0)]]
     last_pos = [[y(n,0,n)]]
-    # print(f'A: {to_vars_y(n, A)}')
-    # print(f'B: {to_vars_y(n, B)}')
-    # print(f'C: {to_vars_y(n, C)}')
-    # print(f'D: {to_vars_y(n, D)}')
-    # print(f'E: {to_vars_y(n, E)}')
     return A + B + C + D + E + first_pos + last_pos
 
 def find_hamiltonian_path(G : Graph):
@@ -202,10 +192,9 @@ def find_all_hamiltonian_cycles():
 if __name__ == '__main__':
     # find_all_hamiltonian_cycles()
     id = sys.argv[1]
-    graphs = download_graphs(id, id)
+    graphs = download_graph(id, id)
     G = graphs[0]
     p = find_hamiltonian_path(G)
     G.hamiltonianPath = p
-    save_graphs([G])
     print(p)
 

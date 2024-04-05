@@ -59,20 +59,21 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
     }
     Elab.Command.liftTermElabM <| Meta.addInstance componentsCertificateName .scoped 42
 
-  match jsonData.hamiltonianPath? with
-  | .none => pure ()
-  | .some data =>
-    let hamiltonianPathName := certificateName graphName "HamiltonianPathI"
-    let hpQ := hamiltonianPathOfData graph data
-    Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
-      name := hamiltonianPathName
-      levelParams := []
-      type := q(HamiltonianPath $graph)
-      value := hpQ
-      hints := .regular 0
-      safety := .safe
-    }
-    Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance hamiltonianPathName .global 42
+  -- match jsonData.hamiltonianPath? with
+  -- | .none => pure ()
+  -- | .some data =>
+  --   let hamiltonianPathName := certificateName graphName "HamiltonianPathI"
+  --   let hpQ := hamiltonianPathOfData graph data
+  --   Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
+  --     name := hamiltonianPathName
+  --     levelParams := []
+  --     type := q(HamiltonianPath $graph)
+  --     value := hpQ
+  --     hints := .regular 0
+  --     safety := .safe
+  --   }
+  --   Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance hamiltonianPathName .global 42
+
   match jsonData.bipartite? with
   | .none => pure ()
   | .some data =>
@@ -124,7 +125,7 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
 unsafe def loadGraphImpl : Elab.Command.CommandElab
   | `(load_graph $graphName $fileName) => do
     let graphName := graphName.getId
-    let jsonData ← loadJSONData fileName.getString
+    let jsonData ← loadJSONData JSONData fileName.getString
     loadGraphAux graphName jsonData
 
   | _ => Elab.throwUnsupportedSyntax

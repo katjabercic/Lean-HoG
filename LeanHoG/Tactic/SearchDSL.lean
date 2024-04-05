@@ -740,7 +740,7 @@ unsafe def queryDatabaseForExamples (queries : List ConstructedQuery) (queryHash
   let mut results := []
   for result in resultsList do
     let path := result.path
-    let jsonData ← loadJSONData path
+    let jsonData ← loadJSONData JSONData path
     match jsonData.hogId with
     | none => throwError m!"Result did not have HoG ID"
     | some id => graphId := s!"hog_{id}"
@@ -749,10 +749,10 @@ unsafe def queryDatabaseForExamples (queries : List ConstructedQuery) (queryHash
       results := ⟨graphName⟩ :: results
   return results
 
-syntax (name := searchForExample) "#search_hog " term : command
+syntax (name := searchHoG) "#search_hog " term : command
 
 open ProofWidgets in
-@[command_elab searchForExample]
+@[command_elab searchHoG]
 unsafe def searchForExampleImpl : CommandElab
   | stx@`(#search_hog $q ) => do
     let qs ← liftTermElabM do
@@ -781,7 +781,7 @@ unsafe def searchForExampleImpl : CommandElab
     let mut links := []
     for result in resultsList do
       let path := result.path
-      let jsonData ← loadJSONData path
+      let jsonData ← loadJSONData JSONData path
       match jsonData.hogId with
       | none =>
         graphId := s!"result_{i}"

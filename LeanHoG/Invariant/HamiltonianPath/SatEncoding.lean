@@ -207,8 +207,6 @@ def buildPath {g : Graph} : Option (List (g.vertex)) → Option (HamiltonianPath
     | none => none
 
 def tryFindHamiltonianPath [Solver IO] (G : Graph) :
-  -- IO (Option ((g : Graph) ×' (¬ ∃ (u v : g.vertex) (p : Path g u v), p.isHamiltonian))) := do
-  -- Elab.Term.TermElabM (Option (HamiltonianPath g)) := Core.liftIOCore do
   IO (Option (HamiltonianPath G)) := do
   let enc := (hamiltonianPathCNF G).val
   let foo := EncCNF.run enc
