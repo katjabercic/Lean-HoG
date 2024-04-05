@@ -4,6 +4,7 @@ import LeanHoG.Edge
 import LeanHoG.Graph
 import LeanHoG.Util.RB
 import LeanHoG.Util.Quote
+import LeanHoG.Invariant.Hamiltonicity.Basic
 
 namespace LeanHoG
 
