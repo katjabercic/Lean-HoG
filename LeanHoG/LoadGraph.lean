@@ -2,7 +2,7 @@ import Lean
 import Qq
 
 import LeanHoG.Graph
-import LeanHoG.Invariant.Bipartiteness.Certificate
+import LeanHoG.Invariant.Bipartite.Certificate
 import LeanHoG.Invariant.ConnectedComponents.Certificate
 import LeanHoG.Invariant.NeighborhoodMap.Certificate
 
@@ -10,8 +10,8 @@ import LeanHoG.Certificate
 import LeanHoG.JsonData
 
 import LeanSAT
-import LeanHoG.Invariant.Hamiltonicity.SatEncoding
-import LeanHoG.Invariant.Hamiltonicity.Certificate
+import LeanHoG.Invariant.HamiltonianPath.SatEncoding
+import LeanHoG.Invariant.HamiltonianPath.Certificate
 
 namespace LeanHoG
 
@@ -59,7 +59,7 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) (tryHam : Bool)
     }
     Elab.Command.liftTermElabM <| Meta.addInstance componentsCertificateName .scoped 42
 
-  match jsonData.pathData? with
+  match jsonData.hamiltonianPath? with
   | .none =>
     if tryHam then
       let g ← Elab.Command.liftTermElabM (Meta.evalExpr Graph q(Graph) graph)
@@ -67,7 +67,7 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) (tryHam : Bool)
       match mbHp with
       | .none => pure ()
       | .some hp =>
-        let data : PathData := { vertices := hp.vertices }
+        let data : HamiltonianPathData := { path := hp.vertices }
         let hamiltonianPathName := certificateName graphName "hamiltonianPath"
         let hpQ := hamiltonianPathOfData graph data
         Elab.Command.liftCoreM <| addAndCompile <| .defnDecl {
@@ -94,20 +94,20 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) (tryHam : Bool)
     }
     Elab.Command.liftTermElabM <| Meta.addInstance hamiltonianPathName .scoped 42
 
-  match jsonData.bipartiteness? with
+  match jsonData.bipartite? with
   | .none => pure ()
   | .some data =>
-    let bipartitenessCertificateName := certificateName graphName "bipartitenessCertificateI"
-    let bipartitenessCertificateQ : Q(BipartitenessCertificate $graph) := bipartitenessCertificateOfData graph data
+    let BipartiteCertificateName := certificateName graphName "BipartiteCertificateI"
+    let BipartiteCertificateQ : Q(BipartiteCertificate $graph) := BipartiteCertificateOfData graph data
     Elab.Command.liftCoreM <| addAndCompile <| .defnDecl {
-      name := bipartitenessCertificateName
+      name := BipartiteCertificateName
       levelParams := []
-      type := q(BipartitenessCertificate $graph)
-      value := bipartitenessCertificateQ
+      type := q(BipartiteCertificate $graph)
+      value := BipartiteCertificateQ
       hints := .regular 0
       safety := .safe
     }
-    Elab.Command.liftTermElabM <| Meta.addInstance bipartitenessCertificateName .scoped 42
+    Elab.Command.liftTermElabM <| Meta.addInstance BipartiteCertificateName .scoped 42
 
   match jsonData.neighborhoodMap? with
   | .none => pure ()

@@ -7,24 +7,19 @@ import Mathlib.Lean.Json
 
 namespace LeanHoG
 
--- inductive definition of path in a graph
--- a path is either just an edge or it is constructed from a path and a next edge that fits
+/-- A walk is a sequence of adjacent vertices, it may intersect itself -/
 inductive Walk (g : Graph) : g.vertex → g.vertex → Type
-  | trivial (v : g.vertex) : Walk g v v
-  | left {s t u : g.vertex} : g.adjacent s t → Walk g t u →  Walk g s u
-
--- -- We probably want some kind of list-like notation for defining paths, i.e. < v₁, v₂, …, vₙ > or something
-macro "{" u:term "," v:term "}" " -~ " walk:term : term => `(Walk.left $u $v _ $walk (by rfl))
-macro " ⬝ " u:term : term => `(Walk.trivial $u)
+  | here (v : g.vertex) : Walk g v v
+  | step {s t u : g.vertex} : g.adjacent s t → Walk g t u →  Walk g s u
 
 namespace Walk
 
 def toString {g : Graph} {s t : g.vertex} : Walk g s t → String
-  | .trivial s  => s!"{s}"
-  | .left e w => s!"{s} -> {w.toString}"
+  | here s  => s!"{s}"
+  | step e w => s!"{s} -> {w.toString}"
 
 instance walkToString {g : Graph} {s t : g.vertex} : ToString (Walk g s t) where
-  toString := fun w => w.toString
+  toString := toString
 
 instance reprWalk {g : Graph} {u v : g.vertex} : Repr (Walk g u v) where
   reprPrec w _ := w.toString
@@ -33,32 +28,32 @@ instance {g : Graph} {u v : g.vertex} {_ : Walk g u v} : Inhabited g.vertex wher
   default := u
 
 def isTrivial {g : Graph} {u v : g.vertex} : Walk g u v → Bool
-  | .trivial _ => true
-  | .left _ _ => false
+  | here _ => true
+  | step _ _ => false
 
 def isNontrivial {g : Graph} {s t : g.vertex} : Walk g s t → Prop
-  | .trivial s => False
-  | .left _ _ => True
+  | here s => False
+  | step _ _ => True
 
 def notInWalk {g : Graph} {u v a b : g.vertex} : Walk g u v → g.adjacent a b → Bool
-  | .trivial s , e => true
-  | .left (t := t) _ p, e => (a != u || b != t) && (a != t || b != u) && notInWalk p e
+  | here s , e => true
+  | step (t := t) _ p, e => (a != u || b != t) && (a != t || b != u) && notInWalk p e
 
 macro p:term "↑" : term => `(reverse $p)
 
 def edgeWalk {g : Graph} {s t : g.vertex} (e : g.adjacent s t) : Walk g s t :=
-  left e (trivial t)
+  step e (here t)
 
 -- Definition from https://mathworld.wolfram.com/GraphPath.html
 @[simp]
 def length {g : Graph} {s t : g.vertex} : Walk g s t → ℕ
-  | .trivial s => 0
-  | .left _ p' => length p' + 1
+  | here s => 0
+  | step _ p' => length p' + 1
 
 -- The easy direction, just apply induction on the structure of path
 lemma pathImpliesConnected {g : Graph} {s t : g.vertex} : Walk g s t → g.connected s t
-  | .trivial s => g.connected_of_eq s s (Eq.refl s)
-  | .left e p' => g.connected_trans _ _ _ (g.connected_of_adjacent e) (pathImpliesConnected p')
+  | here s => g.connected_of_eq s s (Eq.refl s)
+  | step e p' => g.connected_trans _ _ _ (g.connected_of_adjacent e) (pathImpliesConnected p')
 
 theorem strongInduction
   (α : Type)
@@ -79,8 +74,8 @@ theorem strongInduction
 
 @[simp]
 def vertices {g : Graph} {u v : g.vertex} : Walk g u v -> List g.vertex
-  | .trivial v => [v]
-  | .left conn_ut walk_tv => u :: walk_tv.vertices
+  | here v => [v]
+  | step conn_ut walk_tv => u :: walk_tv.vertices
 
 @[simp] lemma vertices_len_pos {g : Graph} {u v : g.vertex} {w : Walk g u v} :
   0 < w.vertices.length := by
@@ -109,17 +104,17 @@ instance vertices_fintype {g : Graph} {u v : g.vertex} {w : Walk g u v} : Fintyp
 -- We need to provide the explicit equality of `u = v` here. Is there a nicer way to do this?
 @[simp]
 lemma vertices_trivial {g : Graph} {u v : g.vertex} (p : Walk g u v) (eq : u = v)
-  (p_is_trivial : eq ▸ p = trivial u) :
+  (p_is_trivial : eq ▸ p = here u) :
   p.vertices = [u] := by
   aesop
 
 @[simp]
 lemma vertices_sublist_left {g : Graph} {u v w : g.vertex} {p : Walk g u w} {adj_u_v : g.adjacent u v}
-  {q : Walk g v w} {p_is_left : p = left adj_u_v q} : p.vertices = u :: q.vertices := by
+  {q : Walk g v w} {p_is_left : p = step adj_u_v q} : p.vertices = u :: q.vertices := by
   aesop -- Can't just use simp, as it doesn't apply induction
 
 lemma vertices_left_length {g : Graph} {u v w : g.vertex} {p : Walk g u w} {adj_u_v : g.adjacent u v}
-  {q : Walk g v w} {p_is_left : p = left adj_u_v q} : q.vertices.length + 1 = p.vertices.length := by
+  {q : Walk g v w} {p_is_left : p = step adj_u_v q} : q.vertices.length + 1 = p.vertices.length := by
   rw [@vertices_sublist_left g u v w p adj_u_v q p_is_left]
   simp
 
@@ -134,8 +129,8 @@ lemma length_as_vertices {g : Graph} {u v : g.vertex} (w : Walk g u v) :
   · simp; assumption -- just apply induction hypothesis
 
 @[simp] def edges {g : Graph} {u v : g.vertex} : Walk g u v → List g.edge
-  | .trivial v => []
-  | .left adj_ut walk_tv =>
+  | here v => []
+  | step adj_ut walk_tv =>
     let e := Graph.adjacentEdge adj_ut
     e :: walk_tv.edges
 
@@ -150,7 +145,7 @@ lemma edges_length {g : Graph} {u v : g.vertex} {w : Walk g u v} :
 
 @[simp]
 lemma edges_sublist_left {g : Graph} {u v w : g.vertex} {p : Walk g u w} {adj_u_v : g.adjacent u v}
-  {q : Walk g v w} {p_is_left : p = left adj_u_v q} :
+  {q : Walk g v w} {p_is_left : p = step adj_u_v q} :
   p.edges = g.adjacentEdge adj_u_v :: q.edges := by
   aesop
 
@@ -253,12 +248,13 @@ end ClosedWalk
 /-- A walk is a path if all the vertices are distinct.
     (This implies all the edges are distinct).
 -/
-@[simp] def Walk.isPath {g : Graph} {u v : g.vertex} : Walk g u v → Bool :=
+@[reducible]
+def Walk.isPath {g : Graph} {u v : g.vertex} : Walk g u v → Bool :=
   List.all_distinct ∘ vertices
 
 structure Path (g : Graph) (u v : g.vertex) where
   walk : Walk g u v
-  isPath : walk.isPath = true := by rfl
+  isPath : walk.isPath := by rfl
 
 namespace Path
 
@@ -273,7 +269,7 @@ theorem ext_iff {g : Graph} {u v : g.vertex} (p q : Path g u v) :
   (ext_iff p q).mpr h
 
 instance trivialPath {g : Graph} (u : g.vertex) : Path g u u where
-  walk := Walk.trivial u
+  walk := .here u
   isPath := by simp [List.all_distinct]
 
 instance {g : Graph} {u v : g.vertex} : Repr (Path g u v) where
@@ -303,8 +299,7 @@ def vertices {g : Graph} {u v : g.vertex} : Path g u v → List g.vertex := fun 
 
 @[simp]
 lemma subpathIsPath_left {g : Graph} {u v w : g.vertex} (p : Path g u w) (adj_u_v : g.adjacent u v)
-  (q : Walk g v w) (p_is_left : p.walk = Walk.left adj_u_v q) : q.isPath = true := by
-  simp
+  (q : Walk g v w) (p_is_left : p.walk = .step adj_u_v q) : q.isPath = true := by
   have walk_is_path : p.walk.isPath = true := by apply p.isPath
   aesop
 

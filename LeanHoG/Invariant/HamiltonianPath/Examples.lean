@@ -1,6 +1,6 @@
 import LeanHoG.Graph
 import LeanHoG.Widgets
-import LeanHoG.Invariant.Hamiltonicity.SatEncoding
+import LeanHoG.Invariant.HamiltonianPath.SatEncoding
 import LeanSAT
 
 import Std.Data.RBMap.Basic

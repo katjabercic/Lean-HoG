@@ -2,7 +2,7 @@ import LeanHoG.Graph
 
 namespace LeanHoG
 
-class BipartitenessCertificate (G : Graph) where
+class BipartiteCertificate (G : Graph) where
 
   /-- A coloring of vertices by two colors -/
   color : G.vertex → Fin 2
@@ -22,13 +22,15 @@ class BipartitenessCertificate (G : Graph) where
   /-- Vertex 1 has color 1 -/
   vertex1Color : color vertex1 = 1
 
-
-@[simp] def Graph.isBipartite (G : Graph) : Prop :=
+/-- A graph is bipartite if there is a 2-coloring of vertices which assigns
+    different colors to adjacent vertices. -/
+@[reducible]
+def Graph.isBipartite (G : Graph) : Prop :=
   ∃ (c : G.vertex → Fin 2), ∃ (v0 v1 : G.vertex), c v0 ≠ c v1 ∧ ∀ (e : G.edge), c e.val.fst ≠ c e.val.snd
 
 
-/-- A graph is bipartite if it has a bipartiteness certificate.  -/
-theorem Graph.is_bipartite_if_has_certificate (G : Graph) [B : BipartitenessCertificate G] :
+/-- A graph is bipartite if it has a Bipartite certificate.  -/
+theorem Graph.is_bipartite_if_has_certificate (G : Graph) [B : BipartiteCertificate G] :
   G.isBipartite := by
   use B.color, B.vertex0, B.vertex1
   constructor
