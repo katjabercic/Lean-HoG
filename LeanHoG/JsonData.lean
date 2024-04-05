@@ -1,11 +1,9 @@
 import Lean
--- import LeanHoG.Graph
--- import LeanHoG.Walk
--- import LeanHoG.Invariant.Hamiltonicity.Basic
 
-import LeanHoG.Invariant.Bipartiteness.JsonData
+import LeanHoG.Invariant.Bipartite.JsonData
 import LeanHoG.Invariant.ConnectedComponents.JsonData
 import LeanHoG.Invariant.NeighborhoodMap.JsonData
+import LeanHoG.Invariant.HamiltonianPath.JsonData
 
 namespace LeanHoG
 
@@ -17,11 +15,6 @@ structure GraphData : Type where
   edges : Array (Nat × Nat)
 deriving Lean.FromJson
 
-/-- JSON representation of a path in a graph -/
-structure PathData : Type where
-  vertices : List Nat
-deriving Lean.FromJson
-
 /--
   JSON representation of a graph together with invariants.
 -/
@@ -31,8 +24,8 @@ structure JSONData : Type where
 
   /- Invariants are optional -/
   connectedComponents? : Option ConnectedComponentsData
-  pathData? : Option PathData
-  bipartiteness? : Option BipartitenessData
+  hamiltonianPath? : Option HamiltonianPathData
+  bipartite? : Option BipartiteData
   neighborhoodMap? : Option NeighborhoodMapData
 
 deriving Lean.FromJson

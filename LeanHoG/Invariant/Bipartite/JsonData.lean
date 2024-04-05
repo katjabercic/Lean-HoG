@@ -4,9 +4,9 @@ import LeanHoG.Graph
 namespace LeanHoG
 
 /--
-  A structure that corresponds to the JSON description of bipartiteness certificate.
+  JSON encoding of a Bipartite certificate.
 -/
-structure BipartitenessData : Type where
+structure BipartiteData : Type where
 
   /-- A coloring of vertices by two colors -/
   color : Array (Nat × Nat)
