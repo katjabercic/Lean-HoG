@@ -174,6 +174,11 @@ def Graph.degree (G : Graph) (v : G.vertex) : Nat := Fintype.card (G.neighborhoo
 def Graph.minDegree (G : Graph) : WithTop Nat :=
   Finset.inf (Fin.fintype G.vertexSize).elems (fun v => G.degree v)
 
+def Graph.minimumDegree (G : Graph) : Nat :=
+  match G.minDegree with
+  | some n => n
+  | none => 0
+
 /-- The maximal vertex degree, equals ⊥ for empty graph. -/
 def Graph.maxDegree (G : Graph) : WithBot Nat :=
   Finset.sup (Fin.fintype G.vertexSize).elems (fun v => G.degree v)

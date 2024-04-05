@@ -622,9 +622,7 @@ declare_syntax_cat hog_query
 syntax (name := hog) "hog{ " hog_query " }" : term
 syntax:40 boolean_invariant:41 " = " term:40 : hog_query
 syntax:40 comparison_invariant:41 comparison term:40 : hog_query
-
 syntax:41 comparison_formula:42 comparison comparison_formula:41 : hog_query
-
 syntax:35 hog_query:36 " ∧ " hog_query:35 : hog_query
 syntax:30 hog_query:31 " ∨ " hog_query:30 : hog_query
 syntax:max "(" hog_query ")" : hog_query
@@ -805,5 +803,3 @@ unsafe def searchForExampleImpl : CommandElab
       (return json% { html: $(← Server.RpcEncodable.rpcEncode (putInDiv links)) }) stx
 
   | _ => throwUnsupportedSyntax
-
-#search_hog hog{(minimumDegree < numberOfVertices / 3)}

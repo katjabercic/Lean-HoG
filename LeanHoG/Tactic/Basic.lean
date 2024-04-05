@@ -3,13 +3,14 @@ import LeanHoG.Graph
 import LeanHoG.Tactic.SearchDSL
 import LeanHoG.Tactic.Options
 import LeanHoG.Invariant.Hamiltonicity.Basic
+import Qq
 
 import Aesop.Util.Basic
 import Std.Data.List.Basic
 
 namespace LeanHoG
 
-open Lean Widget Elab Command Term Meta Qq Tactic
+open Lean Widget Elab Command Term Meta Qq Tactic Qq
 
 /-- Express the expression `e` as an exists statement over the type given by `name`.
     If it is of this form return the arguments, otherwise return `none`.
@@ -220,19 +221,121 @@ unsafe def decompose (e : Expr) : MetaM (List HoGEnquiry) := do
   )
   return comparisons
 
-def buildEnquiry (e : Expr) : MetaM (Option HoGEnquiry) := do
-  sorry
-
-def buildQuery (e : Expr) : MetaM (Option (List HoGEnquiry)) := do
-  sorry
-
-syntax (name := searchForExampleInHoG) "search_for_example" : tactic
-
 instance : ToString (Invariant × ComparisonOp × Nat) where
   toString := fun (i, op, n) =>
     s!"{i} {op} {n}"
 
-#check Declaration
+def decomposeIntegralInvQ (e : Q(Graph → Nat)) : MetaM IntegralInvariant := do
+  match e with
+  | ~q(fun G => Graph.vertexSize G) => return IntegralInvariant.NumberOfVertices
+  | ~q(fun G => Graph.edgeSize G) => return IntegralInvariant.NumberOfEdges
+  | ~q(fun G => Graph.minimumDegree G) => return IntegralInvariant.MinimumDegree
+  | _ => throwError s!"cannot decompose integral invariant, got {e}"
+
+def decomposeBoolInvQ (e : Q(Graph → Prop)) : MetaM BoolInvariant := do
+  match e with
+  | ~q(fun G => Graph.isHamiltonian G) => return BoolInvariant.Hamiltonian
+  | ~q(fun G => Graph.isTraceable G) => return BoolInvariant.Traceable
+  | _ => throwError s!"cannot decompose Boolean invariant, got {e}"
+
+unsafe def decomposeFormulaQ (e : Q(Graph → Nat)) : MetaM ArithExpr := do
+  match e with
+  | ~q(fun G => Nat.add ($f G) $n) =>
+    let inv ← decomposeIntegralInvQ f
+    let n ← decomposeNat n
+    return .comp .plus (.integralInv inv) (.nat n)
+
+  | ~q(fun G => HAdd.hAdd ($f G) $n) =>
+    let inv ← decomposeIntegralInvQ f
+    let n ← decomposeNat n
+    return .comp .plus (.integralInv inv) (.nat n)
+
+  | ~q(fun G => HSub.hSub ($f G) $n) =>
+    let inv ← decomposeIntegralInvQ f
+    let n ← decomposeNat n
+    return .comp .minus (.integralInv inv) (.nat n)
+
+  | ~q(fun G => HDiv.hDiv ($f G) $n) =>
+    let inv ← decomposeIntegralInvQ f
+    let n ← decomposeNat n
+    return .comp .div (.integralInv inv) (.nat n)
+
+  | ~q(fun G => HMul.hMul ($f G) $n) =>
+    let inv ← decomposeIntegralInvQ f
+    let n ← decomposeNat n
+    return .comp .times (.integralInv inv) (.nat n)
+
+  | ~q(fun G => $f G) =>
+    let inv ← decomposeIntegralInvQ f
+    return (.integralInv inv)
+  | _ => throwError s!"cannot decompose formula, got {e}"
+
+unsafe def decomposeComparisonQ {G : Q(Sort)} (e : Q($G → Prop)) : MetaM HoGEnquiry := do
+  match e with
+  | ~q(fun G => @LT.lt Nat _ ($f G) $n) =>
+    let inv ← decomposeIntegralInvQ f
+    let n ← decomposeNat n
+    return .IntegralEnquiry { inv := inv, op := .Lt, val := n }
+  | ~q(fun G => Nat.lt ($f G) $n) =>
+    let inv ← decomposeIntegralInvQ f
+    let n ← decomposeNat n
+    return .IntegralEnquiry { inv := inv, op := .Lt, val := n }
+  | ~q(fun G => @LE.le Nat _ ($f G) $n) =>
+    let inv ← decomposeIntegralInvQ f
+    let n ← decomposeNat n
+    return .IntegralEnquiry { inv := inv, op := .Le, val := n }
+  | ~q(fun G => Nat.le ($f G) $n) =>
+    let inv ← decomposeIntegralInvQ f
+    let n ← decomposeNat n
+    return .IntegralEnquiry { inv := inv, op := .Le, val := n }
+  | ~q(fun G => @GT.gt Nat _ ($f G) $n) =>
+    let inv ← decomposeIntegralInvQ f
+    let n ← decomposeNat n
+    return .IntegralEnquiry { inv := inv, op := .Gt, val := n }
+  | ~q(fun G => @Eq Nat ($f G) $n) =>
+    let inv ← decomposeIntegralInvQ f
+    let n ← decomposeNat n
+    return .IntegralEnquiry { inv := inv, op := .Eq, val := n }
+
+  | ~q(fun G => @LT.lt Nat _ ($f G) ($g G)) =>
+    let lhs ← decomposeFormulaQ f
+    let rhs ← decomposeFormulaQ g
+    return .FormulaEnquiry { lhs := lhs, rhs := rhs, cmp := .Lt }
+  | ~q(fun G => @Eq Nat ($f G) ($g G)) =>
+    let lhs ← decomposeFormulaQ f
+    let rhs ← decomposeFormulaQ g
+    return .FormulaEnquiry { lhs := lhs, rhs := rhs, cmp := .Eq }
+  | ~q(fun G => $f G) =>
+    let inv ← decomposeBoolInvQ f
+    return .BoolEnquiry { inv := inv, val := true }
+  | _ => throwError m!"cannot decompose comparison, got {e}"
+
+def decomposeAndQ {G : Q(Sort)} (e : Q($G → Prop)) : MetaM (Q(Prop) × Q(Prop)) := do
+  match e with
+  | ~q(fun G => $P G ∧ $Q G) => return (P,Q)
+  | _ => throwError m!"cannot decompose conjunction, got: {e}"
+
+partial def decomposeAndsQ {G : Q(Sort)} (e : Q($G → Prop)) : MetaM (List Q($G → Prop)) := do
+  match e with
+  | ~q(fun G => $P G ∧ $Q G) =>
+    let lhs ← decomposeAndsQ P
+    let rhs ← decomposeAndsQ Q
+    return lhs ++ rhs
+  | ~q(fun G => $P G) => return [P]
+  | _ => throwError m!"cannot decompose conjunction, got: {e}"
+
+unsafe def decomposeExistsQ (e : Q(Prop)) : MetaM (List HoGEnquiry) := do
+  match e with
+  | ~q(∃ G, $P G) =>
+    let Ps ← decomposeAndsQ P
+    let enquiries ← List.mapM (fun R => do
+       let Q ← decomposeComparisonQ R
+       return Q
+    ) Ps
+    return enquiries
+  | _ => throwError "cannot decompose exists, got: {e}"
+
+syntax (name := searchForExampleInHoG) "search_for_example" : tactic
 
 @[tactic searchForExampleInHoG]
 unsafe def searchForExampleInHoGImpl : Tactic
@@ -244,9 +347,8 @@ unsafe def searchForExampleInHoGImpl : Tactic
       let graphType : Expr ← mkConst ``Graph
       let exists_intro ← mkConst ``Exists.intro
       try
-        let enqs ← decompose goalType
+        let enqs ← decomposeExistsQ goalType
         let hash := hash enqs
-        -- IO.println s!"{hash}"
         let query := HoGQuery.build enqs
         let graphs ← liftCommandElabM (queryDatabaseForExamples [query] hash)
         if h : graphs.length > 0 then
@@ -268,7 +370,14 @@ unsafe def searchForExampleInHoGImpl : Tactic
                 goal.assign r
               -- Now try to simp which will among other things look for instance for e.g. HamiltonianPath
               evalSimp stx
+              evalDecide stx
               Lean.logInfo s!"Closed goal using {graphId.getId}"
+              -- Visualize the graph we used to close the goal
+              -- TODO: Make this an option
+              let wi : Expr ←
+                elabWidgetInstanceSpecAux (mkIdent `visualize) (← ``((Graph.toVisualizationFormat $graphId)))
+              let wi : WidgetInstance ← evalWidgetInstance wi
+              savePanelWidgetInfo wi.javascriptHash wi.props stx
             else
               continue
         else
@@ -279,24 +388,21 @@ unsafe def searchForExampleInHoGImpl : Tactic
 
   | _ => throwUnsupportedSyntax
 
--- #search_hog hog{ numberOfVertices < 5 ∧ traceable = true }
-
 set_option leanHoG.pythonExecutable "/home/jure/source-control/Lean/Lean-HoG/.venv/bin/python"
 
-def a : Nat := 2
+syntax (name := foo) "foo" : tactic
 
-elab "use_a" : tactic =>
-  Lean.Elab.Tactic.withMainContext do
-    let goal ← Lean.Elab.Tactic.getMainGoal
-    closeMainGoalUsing (checkUnassigned := false) fun type => do
-      let a_name := mkIdent ``a
-      let r ← Lean.Elab.Tactic.elabTermEnsuringType a_name type
-      return r
+@[tactic foo]
+unsafe def fooImpl : Tactic
+  | stx@`(tactic|foo) =>
+    withMainContext do
+      let goal ← getMainGoal
+      let goalDecl ← goal.getDecl
+      let goalType := goalDecl.type
+      let _ ← decomposeExistsQ goalType
+  | _ => throwUnsupportedSyntax
 
-example : Nat := by
-  exact a
-
-example : ∃ (G : Graph), G.vertexSize = 7 ∧ G.isTraceable := by
-  search_for_example
+-- example : ∃ (G : Graph), G.isTraceable ∧ G.vertexSize > 3 ∧ (G.minimumDegree < G.vertexSize / 2) := by
+--   search_for_example
 
 end LeanHoG
