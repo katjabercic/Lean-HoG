@@ -27,6 +27,9 @@ class BipartitenessCertificate (G : Graph) where
 @[simp] def Graph.isBipartite (G : Graph) : Prop :=
   ∃ (c : G.vertex → Fin 2), ∃ (v0 v1 : G.vertex), c v0 ≠ c v1 ∧ ∀ (e : G.edge), c e.val.fst ≠ c e.val.snd
 
+instance (G : Graph): Decidable (Graph.isBipartite G) := by
+  simp
+  infer_instance
 
 /-- A graph is bipartite if it has a bipartiteness certificate.  -/
 theorem Graph.is_bipartite_if_has_certificate (G : Graph) [B : BipartitenessCertificate G] :
