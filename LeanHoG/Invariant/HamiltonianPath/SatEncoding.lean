@@ -1,7 +1,7 @@
 import LeanHoG.Graph
 import LeanHoG.Walk
 import LeanHoG.Invariant.ConnectedComponents.Basic
-import LeanHoG.Invariant.Hamiltonicity.Basic
+import LeanHoG.Invariant.HamiltonianPath.Basic
 import Lean
 
 import LeanSAT
@@ -148,7 +148,7 @@ def buildPath {g : Graph} : Option (List (g.vertex)) → Option (HamiltonianPath
         match fold t (v :: vs) with
         | some ⟨s, p⟩ =>
           if h' : s = v then
-            let w := (Walk.left h (h' ▸ p.walk))
+            let w := (.step h (h' ▸ p.walk))
             if h' : Walk.isPath w = true then
               some ⟨u, ⟨w, h'⟩⟩
             else

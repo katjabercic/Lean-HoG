@@ -1,5 +1,5 @@
-import LeanHoG.Invariant.Hamiltonicity.Basic
-import LeanHoG.Invariant.Hamiltonicity.SatEncoding
+import LeanHoG.Invariant.HamiltonianPath.Basic
+import LeanHoG.Invariant.HamiltonianPath.SatEncoding
 import Lean
 import LeanSAT
 import Qq
