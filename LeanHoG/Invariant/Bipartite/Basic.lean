@@ -24,14 +24,14 @@ class BipartiteCertificate (G : Graph) where
 
 /-- A graph is bipartite if there is a 2-coloring of vertices which assigns
     different colors to adjacent vertices. -/
-@[reducible]
-def Graph.isBipartite (G : Graph) : Prop :=
+def Graph.bipartite (G : Graph) : Prop :=
   ∃ (c : G.vertex → Fin 2), ∃ (v0 v1 : G.vertex), c v0 ≠ c v1 ∧ ∀ (e : G.edge), c e.val.fst ≠ c e.val.snd
 
-
-/-- A graph is bipartite if it has a Bipartite certificate.  -/
-theorem Graph.is_bipartite_if_has_certificate (G : Graph) [B : BipartiteCertificate G] :
-  G.isBipartite := by
+/-- A graph is bipartite if it has a bipartite certificate.  -/
+@[default_instance]
+instance Graph.bipartiteFromCerficate (G : Graph) [B : BipartiteCertificate G] : Decidable G.bipartite
+:= by
+  apply isTrue
   use B.color, B.vertex0, B.vertex1
   constructor
   · rw [B.vertex0Color, B.vertex1Color]
