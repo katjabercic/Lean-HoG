@@ -7,7 +7,7 @@ import Mathlib.Tactic.Linarith
 
 namespace LeanHoG
 
-@[simp]
+@[reducible]
 def Graph.connected {G : Graph} : G.vertex → G.vertex → Prop := EqvGen G.adjacent
 
 -- Neighbors are connected
@@ -21,7 +21,7 @@ lemma Graph.connected_of_eq {G : Graph} (u v : G.vertex) : u = v → G.connected
   apply EqvGen.refl
 
 -- Connectedness is transitive
-@[simp]
+@[reducible]
 lemma Graph.connected_trans {G : Graph} (u v w : G.vertex) :
   G.connected u v → G.connected v w → G.connected u w :=
   EqvGen.trans u v w
@@ -33,7 +33,7 @@ lemma Graph.connected_adj {G : Graph} (u v w : G.vertex) :
   · apply EqvGen.rel ; assumption
   · exact vw
 
-@[simp]
+@[reducible]
 lemma Graph.connected_symm {G : Graph} (u v : G.vertex) :
   G.connected u v → G.connected v u :=
   EqvGen.symm u v

@@ -4,6 +4,8 @@ import Qq
 import LeanHoG.Graph
 import LeanHoG.Invariant.Bipartiteness.Certificate
 import LeanHoG.Invariant.ConnectedComponents.Certificate
+import LeanHoG.Invariant.NeighborhoodMap.Certificate
+
 import LeanHoG.Certificate
 import LeanHoG.JsonData
 
@@ -42,7 +44,7 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) (tryHam : Bool)
   setReducibleAttribute graphName
   have graph : Q(Graph) := mkConst graphName []
 
-  match jsonData.connectedComponentsData? with
+  match jsonData.connectedComponents? with
   | .none => pure ()
   | .some data =>
     let componentsCertificateName := certificateName graphName "CertificateI"
@@ -92,7 +94,7 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) (tryHam : Bool)
     }
     Elab.Command.liftTermElabM <| Meta.addInstance hamiltonianPathName .scoped 42
 
-  match jsonData.bipartitenessData? with
+  match jsonData.bipartiteness? with
   | .none => pure ()
   | .some data =>
     let bipartitenessCertificateName := certificateName graphName "bipartitenessCertificateI"
@@ -106,6 +108,22 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) (tryHam : Bool)
       safety := .safe
     }
     Elab.Command.liftTermElabM <| Meta.addInstance bipartitenessCertificateName .scoped 42
+
+  match jsonData.neighborhoodMap? with
+  | .none => pure ()
+  | .some data =>
+    let neighborhoodMapName := certificateName graphName "neighborhoodMapI"
+    let neighborhoodMapQ : Q(NeighborhoodMap $graph) := neighborhoodMapOfData graph data
+    Elab.Command.liftCoreM <| addAndCompile <| .defnDecl {
+      name := neighborhoodMapName
+      levelParams := []
+      type := q(NeighborhoodMap $graph)
+      value := neighborhoodMapQ
+      hints := .regular 0
+      safety := .safe
+    }
+    Elab.Command.liftTermElabM <| Meta.addInstance neighborhoodMapName .scoped 42
+
 
 /-- Load a graph with the given Lean identifier from the given file. -/
 @[command_elab loadGraph]

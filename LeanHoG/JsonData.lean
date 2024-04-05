@@ -5,6 +5,7 @@ import Lean
 
 import LeanHoG.Invariant.Bipartiteness.JsonData
 import LeanHoG.Invariant.ConnectedComponents.JsonData
+import LeanHoG.Invariant.NeighborhoodMap.JsonData
 
 namespace LeanHoG
 
@@ -28,9 +29,12 @@ structure JSONData : Type where
   hogId : Option Nat
   graph : GraphData
 
-  connectedComponentsData? : Option ConnectedComponentsData
+  /- Invariants are optional -/
+  connectedComponents? : Option ConnectedComponentsData
   pathData? : Option PathData
-  bipartitenessData? : Option BipartitenessData
+  bipartiteness? : Option BipartitenessData
+  neighborhoodMap? : Option NeighborhoodMapData
+
 deriving Lean.FromJson
 
 /-- Load the JSon representation of a graph with invariants from a file. -/
