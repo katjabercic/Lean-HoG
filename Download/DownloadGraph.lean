@@ -1,8 +1,8 @@
 import LeanHoG.Util.IO
 
 def usage :=
-"Usage: lake exe get_graphs <ID1> <ID2>
-Download and process graphs from the House of Graphs with ids between ID1 and ID2"
+"Usage: lake exe get_graphs <min-id> <max-id>
+Download graphs with in the given id range from the House of Graphs"
 
 def Option.toIntOpt : Option String -> Option Int
   | none => none
@@ -18,14 +18,14 @@ def main (args : List String) : IO Unit := do
   | some a, some b =>
     let exitCode ← IO.Process.spawn {
       cmd := pythonExe
-      args := #["Convert/downloadGraph.py", s!"{a}", s!"{b}"]
+      args := #["Download/downloadGraph.py", s!"{a}", s!"{b}"]
     } >>= (·.wait)
     if exitCode ≠ 0 then
       IO.eprintln s!"failed to download graphs"
   | some a, none =>
     let exitCode ← IO.Process.spawn {
       cmd := pythonExe
-      args := #["Convert/downloadGraph.py", s!"{a}", s!"{a}"]
+      args := #["Download/downloadGraph.py", s!"{a}", s!"{a}"]
     } >>= (·.wait)
     if exitCode ≠ 0 then
       IO.eprintln s!"failed to download graphs"
