@@ -66,4 +66,14 @@ theorem OddClosedWalkNotBipartite
     let _ := (VertexColoring.EvenOddWalkEndpointEquality w coloring).left isOdd
     contradiction
 
+class OddClosedWalk (G : Graph) where
+  vertex : G.vertex
+  walk : ClosedWalk G vertex
+  oddLength : Odd walk.length
+
+/-- A graph is not bipartite if it contains an odd closed walk.  -/
+@[default_instance]
+instance Graph.nonBipartiteFromOddClosedWalk (G : Graph) [W : OddClosedWalk G] : Decidable G.bipartite :=
+  .isFalse (OddClosedWalkNotBipartite W.vertex W.walk W.oddLength)
+
 end LeanHoG
