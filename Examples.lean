@@ -1,7 +1,8 @@
 import LeanHoG.LoadGraph
 import LeanHoG.Invariant.ConnectedComponents.Basic
--- import LeanHoG.Widgets
--- import LeanHoG.Tactic.SearchDSL
+import LeanHoG.Widgets
+import LeanHoG.Tactic.SearchDSL
+import LeanHoG.Invariant.HamiltonianPath.Tactic
 
 namespace LeanHoG
 
@@ -39,7 +40,18 @@ load_graph Petersen "build/graphs/660.json"
 #visualizeGraph Petersen
 #eval Petersen.numberOfConnectedComponents
 
+load_graph Foo "build/graphs/670.json"
+#visualizeGraph Foo
+
+#compute_hamiltonian_path Foo
+
+#check Foo.HamiltonianPathI
+
+-- #check Foo.HamiltonianPath
+
+-- #eval tryFindHamiltonianPath Foo
+
 -- Search for graphs in the database
-#search_hog hog{ bipartite = true ∧ (numberOfEdges = 1 ∨ numberOfVertices < 6) }
+-- #search_hog hog{ bipartite = true ∧ (numberOfEdges = 1 ∨ numberOfVertices < 6) }
 
 end LeanHoG

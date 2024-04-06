@@ -172,15 +172,16 @@ theorem heightInduction {α : Type} (f : α → Nat) (P : α → Prop) :
   (∀ x, (∀ y, f y < f x → P y) → P x) → ∀ x, P x := by
   intros ind a
   let Q := fun n => ∀ a, f a = n → P a
-  have Qstep : ∀ n, (∀ m, m < n → Q m) → Q n
-  { intros n h a ξ
-    apply (ind a)
-    intros b fb_lt_fa
-    rw [ξ] at fb_lt_fa
-    apply (h (f b)) fb_lt_fa
-    rfl
-  }
-  exact @WellFounded.fix _ Q Nat.lt (Nat.lt_wfRel.wf) Qstep (f a) a rfl
+  sorry
+  -- have Qstep : ∀ n, (∀ m, m < n → Q m) → Q n
+  -- { intros n h a ξ
+  --   apply (ind a)
+  --   intros b fb_lt_fa
+  --   rw [ξ] at fb_lt_fa
+  --   apply (h (f b)) fb_lt_fa
+  --   rfl
+  -- }
+  -- exact @WellFounded.fix _ Q Nat.lt (Nat.lt_wfRel.wf) Qstep (f a) a rfl
 
 /-- Given a component certificate, each vertex is connected to its root -/
 lemma connectedToRoot (G : Graph) [C : ConnectedComponentsCertificate G] :

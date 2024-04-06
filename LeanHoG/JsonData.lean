@@ -32,9 +32,9 @@ structure JSONData : Type where
 deriving Lean.FromJson
 
 /-- Load the JSon representation of a graph with invariants from a file. -/
-def loadJSONData (filePath : System.FilePath) : IO JSONData := do
+def loadJSONData (α : Type) [Lean.FromJson α] (filePath : System.FilePath) : IO α := do
   let fileContent ← IO.FS.readFile filePath
-  match Lean.Json.parse fileContent >>= Lean.FromJson.fromJson? (α := JSONData) with
+  match Lean.Json.parse fileContent >>= Lean.FromJson.fromJson? (α := α) with
   | .ok data => pure data
   | .error msg => throw (.userError msg)
 

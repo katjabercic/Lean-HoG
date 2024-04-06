@@ -10,9 +10,10 @@ def search_hog(data, search_hash):
     url = "https://houseofgraphs.org/api/enquiry"
     headers = {"content-type" : "application/json"}
     buildDir = 'build'
-    searchResDir = f'search_results_{search_hash}'
+    searchResDir = f'search_results'
+    final_path = f"{buildDir}/{searchResDir}/{search_hash}"
     
-    if Path(f"{buildDir}/{searchResDir}").exists():
+    if Path(final_path).exists():
         sys.exit(0)
     else:
         try:
@@ -22,15 +23,15 @@ def search_hog(data, search_hash):
             if int(response_json['page']['totalElements']) > 0:
                 for res in response_json['_embedded']['graphSearchModelList']:
                     G = Graph(res['graphId'], res)
-
-                    Path(f"{buildDir}/{searchResDir}").mkdir(parents=True, exist_ok=True)
-                    with open(os.path.join(buildDir, searchResDir, f"{G.HoG_id}.json"), 'w') as fh:
+                    Path(final_path).mkdir(parents=True, exist_ok=True)
+                    with open(os.path.join(buildDir, searchResDir, search_hash, f"{G.HoG_id}.json"), 'w') as fh:
                         json.dump(G, fh, cls=GraphEncoder)
                     
             else:
                 sys.exit(-1)
 
-        except:
+        except Exception as e:
+            sys.stderr.write(e)
             sys.exit(1)
 
 if __name__ == '__main__':

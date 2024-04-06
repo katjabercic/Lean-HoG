@@ -3,13 +3,13 @@ from typing import List, Set, Dict, Iterable
 
 class Graph():
     """An object representing a single HoG graph"""
-    HoG_id : int
+    HoG_id : str
     vertex_size : int
     edges : Set[List[int]]
     adjacency : Dict[int, Set[int]]
 
     def __init__(self, id : str, data : json):
-        self.HoG_id = int(id)
+        self.HoG_id = id
         self.adjacency = Graph._parse_adjacency_list(data['adjacencyList'])
         self.vertex_size = len(self.adjacency)
         self.edges = set(Graph._to_edge(int(u), int(v)) for u in self.adjacency for v in self.adjacency[u])

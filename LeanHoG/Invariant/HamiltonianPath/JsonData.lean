@@ -7,7 +7,6 @@ namespace LeanHoG
   JSON encoding of a Hamiltonian path.
 -/
 structure HamiltonianPathData : Type where
-
   /-- Hamiltonian path -/
   path : List Nat
 
