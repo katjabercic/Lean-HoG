@@ -28,6 +28,9 @@ if __name__ == "__main__":
     data = edgeListToAdjacencyList(vertexSize, edgeList)
     G = Graph(graphId, data)
     path = find_hamiltonian_path(G)
-    hamiltonian_path = HamiltonianPathCertificate(G, path)
-    with open(os.path.join(destDir, "{0}.json".format(graphId)), 'w') as fh:
-        json.dump(hamiltonian_path, fh, cls=HamiltonianPathEncoder)
+    if path is None:
+        sys.exit(1)
+    else:
+        hamiltonian_path = HamiltonianPathCertificate(G, path)
+        with open(os.path.join(destDir, "{0}.json".format(graphId)), 'w') as fh:
+            json.dump(hamiltonian_path, fh, cls=HamiltonianPathEncoder)
