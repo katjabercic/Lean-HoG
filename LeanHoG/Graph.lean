@@ -166,7 +166,7 @@ lemma Graph.all_edges (G : Graph) (p : G.edgeType → Prop) [DecidablePred p] :
 -/
 def Graph.all_adjacent_of_edges {G : Graph} (R : G.vertex → G.vertex → Prop) :
     (∀ u v, R u v → R v u) →
-    (∀ (e : G.edge), R e.val.fst e.val.snd) →
+    (∀ (e : G.edge), R (G.fst e) (G.snd e)) →
     (∀ u v, G.adjacent u v → R u v)
   := by
   intro R_symm all_edge u v uv

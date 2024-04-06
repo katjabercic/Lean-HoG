@@ -17,16 +17,15 @@ def BipartiteCertificateOfData (G : Q(Graph)) (B : BipartiteData) : Q(BipartiteC
   have colorMap : Q(Std.RBMap (Graph.vertex $G) (Fin 2) Fin.instLinearOrderFin.compare) :=
     build_RBMap (B.color.map convertToFin) q(Fin.instLinearOrderFin)
   have color : Q(Graph.vertex $G → Fin 2) := q(fun v => Std.RBMap.findD $colorMap v 0)
+  have edgeColor : Q(Std.RBSet.all (Graph.edgeSet $G) (fun e => $color e.fst ≠ $color e.snd) = true) := (q(Eq.refl true) : Lean.Expr)
   have vertex0 : Q(Graph.vertex $G) := finOfData n B.vertex0
   have vertex1 : Q(Graph.vertex $G) := finOfData n B.vertex1
-  have edgeColor : Q(Std.RBSet.all (Graph.edgeSet $G) (fun e => $color e.fst ≠ $color e.snd) = true) := (q(Eq.refl true) : Lean.Expr)
   have vertex0Color : Q($color $vertex0 = 0) := (q(Eq.refl (0 : Fin 2)) : Lean.Expr)
   have vertex1Color : Q($color $vertex1 = 1) := (q(Eq.refl (1 : Fin 2)) : Lean.Expr)
   q(BipartiteCertificate.mk
-    $color
+    (@TwoColoring.mk $G (VertexColoring.mk' $G $color (Graph.all_edges $G (fun e => $color e.fst ≠ $color e.snd) $edgeColor)))
     $vertex0
     $vertex1
-    (Graph.all_edges $G (fun e => $color e.fst ≠ $color e.snd) $edgeColor)
     $vertex0Color
     $vertex1Color
   )
