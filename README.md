@@ -109,3 +109,85 @@ The graphs are also available in Lean, which you can check with e.g.
 ```lean
 #check hog_302
 ```
+
+## Raw data format
+
+The JSON file should have the following structure.
+```json
+{
+  "graph" : {
+    "vertexSize" : <number of vertices>,
+    "edges" : <list of edges>,
+  },
+  <invariants>
+}
+```
+
+**IMPORTANT:** 
+Lean-HoG expects all lists and maps, including the list of edges, to be **(lexicographically) ordered**.
+In particular, edges must be **ordered pairs** (`[1, 2]`, never `[2, 1]`) and 
+the list of edges should be lexicographically ordered.
+
+### Example
+
+The 3-cycle with certificates for invariants. 
+The latter are described in more detail below.
+```json
+{
+  "graph" : {
+    "vertexSize" : 3,
+    "edges" : [[0,1],[0,2],[1,2]],
+  },
+  "neighborhoodMap" : {
+    "neighbors" : [[0, [1, 2]], [1, [0, 2]], [2, [0, 1]]],
+  },
+  "connectedComponents" : {
+    "val" : 1,
+    "component" : [[0,0],[1,0],[2,0]],
+    "root" : [[0, 0]],
+    "next" : [[0, 0], [1, 0], [2, 1]],
+    "distToRoot" : [[0, 0], [1, 1], [2, 2]],
+  },
+  "oddClosedWalk" : {
+    "closedWalk" : [0, 1, 2],
+  }
+}
+```
+
+### Neighborhood map
+
+```json
+"neighborhoodMap" : {
+  "neighbors" : <map vertices to their neighbors>,
+}
+```
+
+### Connected components
+
+```json
+"connectedComponents" : {
+  "val" : <number of components>,
+  "component" : <map vertices to components>,
+  "root" : <map components to their roots>,
+  "next" : <map vertices to their parents, roots to roots>,
+  "distToRoot" : <map vertices to their distance to the root>,
+}
+```
+
+### Bipartite
+
+```json
+"bipartite" : {
+  "color" : <map vertices to color, 0 or 1>,
+  "vertex0" : <vertex with color 0>,
+  "vertex1" : <vertex with color 1>,
+},
+```
+
+### Odd closed walk
+
+```json
+"oddClosedWalk" : {
+  "closedWalk" : <list of vertices>,
+}
+```
