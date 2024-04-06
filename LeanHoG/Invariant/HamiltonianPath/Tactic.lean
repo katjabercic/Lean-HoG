@@ -30,8 +30,7 @@ unsafe def computeHamiltonianPathImpl : CommandElab
       args := #["Download/findHamiltonianPath.py", s!"{g.getId}", s!"{G.vertexSize}", s!"{toJson G.edgeSet.toList}"]
     }
     if output.exitCode ≠ 0 then
-      IO.eprintln f!"failed to download graphs: {output.stderr}"
-      return
+      throwError m!"could not find Hamiltonian path"
 
     let path : System.FilePath := System.mkFilePath ["build", "invariants", "hamiltonianPath", s!"{g.getId}.json"]
     let pathData ← loadJSONData HamiltonianPathData path
