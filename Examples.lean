@@ -2,6 +2,7 @@ import LeanHoG.LoadGraph
 import LeanHoG.Invariant.ConnectedComponents.Basic
 import LeanHoG.Widgets
 import LeanHoG.Tactic.SearchDSL
+import LeanHoG.Tactic.Basic
 import LeanHoG.Invariant.HamiltonianPath.Tactic
 
 namespace LeanHoG
@@ -41,23 +42,28 @@ load_graph ThreeFour "examples/cycle3-cycle4.json"
 #eval ThreeFour.connectedGraph
 #eval ThreeFour.numberOfConnectedComponents
 
+#download_hog_graph wierdStar 332
+#check wierdStar
+
 -- Load the Petersen graph from the House of Graphs
 load_graph Petersen "build/graphs/660.json"
 #visualizeGraph Petersen
 #eval Petersen.numberOfConnectedComponents
 
+-- #download_hog_graph 330
+
 load_graph Foo "build/graphs/670.json"
 #visualizeGraph Foo
 
-#compute_hamiltonian_path Foo
+-- #compute_hamiltonian_path Foo
 
-#check Foo.HamiltonianPathI
+-- #check Foo.HamiltonianPathI
 
 -- #check Foo.HamiltonianPath
 
 -- #eval tryFindHamiltonianPath Foo
 
 -- Search for graphs in the database
--- #search_hog hog{ bipartite = true ∧ (numberOfEdges = 1 ∨ numberOfVertices < 6) }
+-- #search_hog hog{ bipartite = true ∧ (numberOfEdges = 2 ∨ numberOfVertices < 6) }
 
 end LeanHoG

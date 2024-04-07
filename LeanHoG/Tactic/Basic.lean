@@ -18,10 +18,12 @@ open Lean Widget Elab Term Tactic Command Qq
 -- Download graph command
 -----------------------------------------------------------------
 
-syntax (name := downloadHoGGraph) "#download_hog_graph " term : command
+syntax (name := downloadHoGGraph) "#download_hog_graph " ident ppSpace term : command
 
-/-- `#download_hog_graph <hog_id>` downloads the graphs with House of Graphs
-    ID `<hog_id>` and stores in the folder indicated by the user option
+/-- `#download_hog_graph <name> <hog_id>` downloads the graphs with House of Graphs
+    ID `<hog_id>` and loads it into the veriable `<name>`.
+
+    Note: The graph is downloaded into the folder defined by the user option
     `leanHoG.graphDownloadLocation`.
 
     Note: To download the graph it uses an external python script. The location
@@ -31,22 +33,25 @@ syntax (name := downloadHoGGraph) "#download_hog_graph " term : command
  -/
 @[command_elab downloadHoGGraph]
 unsafe def downloadHoGGraphImpl : CommandElab
-  | `(#download_hog_graph $id) => liftTermElabM do
-    let qn : Q(Nat) ← elabTermEnsuringTypeQ id q(Nat)
-    let n ← evaluateNat qn
+  | `(#download_hog_graph $name $id) =>  do
+    let n ← liftTermElabM do
+      let qn : Q(Nat) ← (elabTermEnsuringTypeQ id q(Nat))
+      evaluateNat qn
     let opts ← getOptions
     let pythonExe := opts.get leanHoG.pythonExecutable.name leanHoG.pythonExecutable.defValue
     let downloadLocation := opts.get leanHoG.graphDownloadLocation.name leanHoG.graphDownloadLocation.defValue
     let output ← IO.Process.output {
       cmd := pythonExe
-      args := #["Download/downloadGraph.py", downloadLocation, s!"{n}", s!"{n}"]
+      args := #["Download/downloadGraph.py", downloadLocation, s!"{n}"]
     }
     if output.exitCode ≠ 0 then
       throwError f!"failed to download graph: {output.stderr}"
-    logInfo s!"downloaded graph to {downloadLocation}/{n}.json"
+    let filePath := s!"{downloadLocation}/{n}.json"
+    let jsonData ← loadJSONData JSONData filePath
+    loadGraphAux name.getId jsonData
+    logInfo s!"loaded graph hog_{n} into {name.getId}"
 
   | _ => throwUnsupportedSyntax
-
 
 -----------------------------------------------------------------
 -- Search tactic

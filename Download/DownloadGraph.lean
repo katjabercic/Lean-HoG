@@ -19,14 +19,14 @@ def main (args : List String) : IO Unit := do
   | some a, some b =>
     let exitCode ← IO.Process.spawn {
       cmd := pythonExe
-      args := #["Download/downloadGraph.py", downloadLocation, s!"{a}", s!"{b}"]
+      args := #["Download/downloadGraphs.py", downloadLocation, s!"{a}", s!"{b}"]
     } >>= (·.wait)
     if exitCode ≠ 0 then
       IO.eprintln s!"failed to download graphs"
   | some a, none =>
     let exitCode ← IO.Process.spawn {
       cmd := pythonExe
-      args := #["Download/downloadGraph.py", downloadLocation, s!"{a}", s!"{a}"]
+      args := #["Download/downloadGraphs.py", downloadLocation, s!"{a}", s!"{a}"]
     } >>= (·.wait)
     if exitCode ≠ 0 then
       IO.eprintln s!"failed to download graphs"
