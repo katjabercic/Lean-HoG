@@ -6,12 +6,10 @@ from graph import Graph
 from pathlib import Path
 from jsonEncoder import GraphEncoder
 
-def search_hog(data, search_hash):
+def search_hog(destDir : str, data, search_hash):
     url = "https://houseofgraphs.org/api/enquiry"
     headers = {"content-type" : "application/json"}
-    buildDir = 'build'
-    searchResDir = f'search_results'
-    final_path = f"{buildDir}/{searchResDir}/{search_hash}"
+    final_path = f"{destDir}/{search_hash}"
     
     if Path(final_path).exists():
         sys.exit(0)
@@ -24,7 +22,7 @@ def search_hog(data, search_hash):
                 for res in response_json['_embedded']['graphSearchModelList']:
                     G = Graph(res['graphId'], res)
                     Path(final_path).mkdir(parents=True, exist_ok=True)
-                    with open(os.path.join(buildDir, searchResDir, search_hash, f"{G.HoG_id}.json"), 'w') as fh:
+                    with open(os.path.join(final_path, f"{G.HoG_id}.json"), 'w') as fh:
                         json.dump(G, fh, cls=GraphEncoder)
                     
             else:
@@ -35,6 +33,8 @@ def search_hog(data, search_hash):
             sys.exit(1)
 
 if __name__ == '__main__':
-    data = sys.argv[1]
-    search_hash = sys.argv[2]
-    search_hog(data, search_hash)
+    destDir = sys.argv[1]
+    Path(destDir).mkdir(parents=True, exist_ok=True)
+    data = sys.argv[2]
+    search_hash = sys.argv[3]
+    search_hog(destDir, data, search_hash)

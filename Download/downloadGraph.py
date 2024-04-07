@@ -7,9 +7,7 @@ from pathlib import Path
 from graph import Graph
 from jsonEncoder import GraphEncoder
 
-destDir = os.path.join("build", "graphs")
-
-def download_graph(minId : int, maxId : int):
+def download_graph(destDir : str, minId : int, maxId : int):
     k = 0
     print(f'Downloading graphs with ID from {minId} to {maxId}.')
     for graphId in range(minId, maxId+1):
@@ -25,7 +23,8 @@ def download_graph(minId : int, maxId : int):
     print(f'Downloaded {k} graphs')
 
 if __name__ == '__main__':
+    destDir = sys.argv[1]
     Path(destDir).mkdir(parents=True, exist_ok=True)
-    minId = int(sys.argv[1])
-    maxId = int(sys.argv[2])
-    download_graph(minId, maxId)
+    minId = int(sys.argv[2])
+    maxId = int(sys.argv[3])
+    download_graph(destDir, minId, maxId)

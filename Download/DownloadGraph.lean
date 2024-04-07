@@ -14,18 +14,19 @@ def main (args : List String) : IO Unit := do
     IO.println usage
     return
   let pythonExe ← IO.findPythonExecutable -- Hacky solution, can we make into user option?
+  let downloadLocation := "build/graphs"
   match args[0]!.toInt?, args[1]?.toIntOpt with
   | some a, some b =>
     let exitCode ← IO.Process.spawn {
       cmd := pythonExe
-      args := #["Download/downloadGraph.py", s!"{a}", s!"{b}"]
+      args := #["Download/downloadGraph.py", downloadLocation, s!"{a}", s!"{b}"]
     } >>= (·.wait)
     if exitCode ≠ 0 then
       IO.eprintln s!"failed to download graphs"
   | some a, none =>
     let exitCode ← IO.Process.spawn {
       cmd := pythonExe
-      args := #["Download/downloadGraph.py", s!"{a}", s!"{a}"]
+      args := #["Download/downloadGraph.py", downloadLocation, s!"{a}", s!"{a}"]
     } >>= (·.wait)
     if exitCode ≠ 0 then
       IO.eprintln s!"failed to download graphs"

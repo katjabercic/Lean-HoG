@@ -725,10 +725,11 @@ unsafe def queryDatabaseForExamples (queries : List ConstructedQuery) (queryHash
   CommandElabM (List QueryResult) := do
   let opts ← getOptions
   let pythonExe := opts.get leanHoG.pythonExecutable.name leanHoG.pythonExecutable.defValue
+  let downloadLocation := (opts.get leanHoG.downloadLocation.name leanHoG.downloadLocation.defValue) ++  "/search_results"
   for q in queries do
     let output ← IO.Process.output {
       cmd := pythonExe
-      args := #["Download/searchHoG.py", s!"{q.query}", s!"{queryHash}"]
+      args := #["Download/searchHoG.py", downloadLocation, s!"{q.query}", s!"{queryHash}"]
     }
     if output.exitCode ≠ 0 then
       throwError f!"failed to download graphs: {output.stderr}"
@@ -762,10 +763,11 @@ unsafe def searchForExampleImpl : CommandElab
       return qs
     let opts ← getOptions
     let pythonExe := opts.get leanHoG.pythonExecutable.name leanHoG.pythonExecutable.defValue
+    let downloadLocation := (opts.get leanHoG.downloadLocation.name leanHoG.downloadLocation.defValue) ++  "/search_results"
     for q in qs.queries do
       let output ← IO.Process.output {
         cmd := pythonExe
-        args := #["Download/searchHoG.py", s!"{q.query}", s!"{qs.hash}"]
+        args := #["Download/searchHoG.py", downloadLocation, s!"{q.query}", s!"{qs.hash}"]
       }
       if output.exitCode ≠ 0 then
         IO.eprintln f!"failed to download graphs: {output.stderr}"
