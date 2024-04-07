@@ -2,6 +2,7 @@ import LeanHoG.Graph
 import LeanHoG.Walk
 import LeanHoG.Invariant.ConnectedComponents.Basic
 import LeanHoG.Invariant.HamiltonianPath.Basic
+import LeanHoG.Invariant.HamiltonianPath.Correctness
 import Lean
 
 import LeanSAT
@@ -157,6 +158,69 @@ def hamiltonianPathCNF (G : Graph) : VCnf G.vertexSize (hamiltonianPathConstrain
     vertexClauses G, positionClauses G, edgeClauses G
   ])
   |> mapProp (by aesop)
+
+--------------------------------------------------------------------------------
+-- Now produce an assignment from a Hamiltonian path
+
+abbrev posToVar {n : Nat} : Pos n → Var n := fun ⟨i,j⟩ => ⟨i,j⟩
+abbrev varToPos {n : Nat} : Var n → Pos n := fun ⟨i,j⟩ => ⟨i,j⟩
+
+@[simp] def posToVarAssignment {n : Nat} : PropAssignment (Pos n) → PropAssignment (Var n) :=
+  fun τ => τ ∘ varToPos
+
+def has_hamiltonian_path_to_hamiltonianPath_constraints {G : Graph} :
+  (∃ (τ : PropAssignment (Pos G.vertexSize)), τ ⊨ has_hamiltonian_path G) →
+  (∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianPathConstraints G) := by
+  intro h
+  rcases h with ⟨τ, h⟩
+  let σ := (posToVarAssignment τ)
+  exists σ
+  aesop
+
+/-- State the correctness theorem in terms of the constraints defined above. -/
+theorem hamiltonian_path_to_var_assignment {G : Graph} :
+  (∃ (_ : HamiltonianPath G), True) →
+  (∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianPathConstraints G) := by
+  intro h
+  rcases h with ⟨hp,_⟩
+  have exists_τ := hamiltonian_path_to_sat G hp
+  apply has_hamiltonian_path_to_hamiltonianPath_constraints exists_τ
+
+-- unsat_to_no_hamiltonian_path
+theorem no_assignment_implies_no_hamiltonian_path {G : Graph} :
+  (¬ ∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianPathConstraints G) →
+  (¬ ∃ (_ : HamiltonianPath G), True) := by
+  apply imp_neg hamiltonian_path_to_var_assignment
+
+lemma helper {G : Graph} :
+  (∃ (_ : HamiltonianPath G), True) ↔
+  (∃ (u v : G.vertex) (p : Path G u v), p.isHamiltonian) := by
+  apply Iff.intro
+  intro h
+  rcases h with ⟨⟨u, v, p, cond⟩, _⟩
+  use u,v,p,cond
+  intro h
+  rcases h with ⟨u,v,p,cond⟩
+  have hp : HamiltonianPath G := { path := p, isHamiltonian := cond }
+  use hp
+
+theorem no_assignment_implies_no_hamiltonian_path' {G : Graph} :
+  (¬ ∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianPathConstraints G) →
+  (¬ ∃ (u v : G.vertex) (p : Path G u v), p.isHamiltonian) := by
+  -- TODO: This proof can definitely be made nicer.
+  have := @Iff.imp
+    ((¬ ∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianPathConstraints G))
+    ((¬ ∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianPathConstraints G))
+    (¬ ∃ (_ : HamiltonianPath G), True)
+    (¬ ∃ (u v : G.vertex) (p : Path G u v), p.isHamiltonian)
+    (Iff.refl _)
+    (Iff.not helper)
+  apply Iff.mp this
+  apply no_assignment_implies_no_hamiltonian_path
+
+------------------------------------------------------------------------------
+-- By adding an axiom show that if the SAT solver and proof checker say there
+-- is no solution to the constraints, then there is no Hamiltonian path
 
 /--
   Given a list of vertices of a graph, try to construct a `Path` in the graph from them.

@@ -10,7 +10,7 @@ import Std.Data.List.Basic
 
 namespace LeanHoG
 
-open Lean Widget Elab Command Term Meta Qq Tactic Qq
+open Lean Widget Elab Command Term Meta Qq Tactic
 
 /-- Evaluate an expression into a Nat -/
 unsafe def evaluateNat (e : Expr) : MetaM Nat := do
