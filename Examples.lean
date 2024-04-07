@@ -6,7 +6,13 @@ import LeanHoG.Invariant.HamiltonianPath.Tactic
 
 namespace LeanHoG
 
--- Loading graphs from JSON files, visualizing them, and checking their properties
+-- Loading graphs, visualizing them, and checking their properties
+
+/-
+In the examples, some invariant certificates are omitted on purpose.
+Below, they are marked with a comment. In some cases, the kernel can
+compute the invariant values, but not in all of them.
+-/
 
 -- The discrete graph on two vertices
 load_graph Two "examples/two.json"
@@ -16,12 +22,16 @@ load_graph Two "examples/two.json"
 
 -- The path of length 1 (on two vertices)
 load_graph Path1 "examples/path1.json"
-#eval Path1.connectedGraph -- missing components certificate
+/- Lean can not check whether a graph is connected
+   without a certificate (TODO why) -/
+#eval Path1.connectedGraph -- missing certificate
 #eval Path1.bipartite
 
 -- The cycle on 7 vertices
 load_graph Cycle7 "examples/cycle7.json"
--- #visualizeGraph Cycle7
+#visualizeGraph Cycle7
+/- It is easy to check whether a graph is bipartite
+   even without a certificate on small graphs. -/
 #eval Cycle7.bipartite -- missing certificate
 #eval Cycle7.connectedGraph
 
