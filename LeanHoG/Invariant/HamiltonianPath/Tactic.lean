@@ -95,8 +95,17 @@ unsafe def showNoHamiltonianPathImpl : CommandElab
 
   | _ => throwUnsupportedSyntax
 
-syntax (name := showNoHamiltonianPathTactic) "show_no_hamiltonian_path " ident : tactic
+syntax (name := showNoHamiltonianPathTactic) "show_no_hamiltonian_path " ident (" with" (ppSpace colGt ident)+)? : tactic
 
+/-- `show_no_hamiltonian_path G` runs a SAT solver on the encoding of the Hamiltonian path problem
+    on the graph `G` and if the SAT solver says the problem is unsat it runs the produced proof
+    through a verified proof checker cake_lpr. If the checker agrees with the proof, we add an axiom
+    saying there exists no satisfying assignmment for the encoding. The tactic uses the new axiom to
+    deduce that there is no Hamiltonian path in the graph by using theorem
+    `no_assignment_implies_no_hamiltonian_path'` and adds it to the current context.
+
+    Can optionaly name the new hypothesis via `show_no_hamiltonia_path G with hyp`.
+-/
 @[tactic showNoHamiltonianPathTactic]
 unsafe def showNoHamiltonianPathTacticImpl : Tactic
   | `(tactic|show_no_hamiltonian_path $g) =>
@@ -110,6 +119,20 @@ unsafe def showNoHamiltonianPathTacticImpl : Tactic
       let noExistsType := q(¬ ∃ (u v : Graph.vertex $graph) (p : Path $graph u v), p.isHamiltonian)
       liftMetaTactic fun mvarId => do
         let mvarIdNew ← mvarId.assert .anonymous noExistsType noExistsHamPath
+        let (_, mvarIdNew) ← mvarIdNew.intro1P
+        return [mvarIdNew]
+
+  | `(tactic|show_no_hamiltonian_path $g with $ident) =>
+    withMainContext do
+      let graphName := g.getId
+      let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
+      let (declName, type) ← showNoHamiltonianPathAux graphName graph
+      logWarning m!"added axiom {declName} : {type}"
+      let noExistsCert ← Tactic.elabTermEnsuringType (mkIdent declName) type
+      let noExistsHamPath ← mkAppM ``LeanHoG.no_assignment_implies_no_hamiltonian_path' #[noExistsCert]
+      let noExistsType := q(¬ ∃ (u v : Graph.vertex $graph) (p : Path $graph u v), p.isHamiltonian)
+      liftMetaTactic fun mvarId => do
+        let mvarIdNew ← mvarId.assert ident.getId noExistsType noExistsHamPath
         let (_, mvarIdNew) ← mvarIdNew.intro1P
         return [mvarIdNew]
 
