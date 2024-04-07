@@ -49,10 +49,11 @@ syntax (name := showNoHamiltonianPath) "#show_no_hamiltonian_path " ident : comm
 unsafe def showNoHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) : TermElabM (Name × Q(Prop)) := do
     let G ← evalExpr' Graph ``Graph graph
     let enc := (hamiltonianPathCNF G).val
-    -- let cadicalExe := "/home/jure/source-control/cadical/build/cadical"
-    -- let cake_lprExr := "/home/jure/source-control/cake_lpr/cake_lpr"
-    -- let solver := LeanSAT.Solver.Impl.CakeLpr cadicalExe #["--no-binary"] cake_lprExr
-    let solver : LeanSAT.Solver IO := (LeanSAT.Solver.Impl.DimacsCommand "/home/jure/source-control/cadical/build/cadical")
+    let opts ← getOptions
+    let cadicalExe := opts.get leanHoG.cadicalCmd.name leanHoG.cadicalCmd.defValue
+    let cake_lprExr := opts.get leanHoG.cake_lprCmd.name leanHoG.cake_lprCmd.defValue
+    let solver := LeanSAT.Solver.Impl.CakeLpr cadicalExe #["--no-binary", "--lrat=true"] cake_lprExr
+    -- let solver : LeanSAT.Solver IO := (LeanSAT.Solver.Impl.DimacsCommand "/home/jure/source-control/cadical/build/cadical")
     let cnf := Encode.EncCNF.toICnf enc
     let res ← solver.solve cnf
     match res with
