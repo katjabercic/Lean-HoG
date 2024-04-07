@@ -13,7 +13,11 @@ class Graph():
         self.adjacency = Graph._parse_adjacency_list(data['adjacencyList'])
         self.vertex_size = len(self.adjacency)
         self.edges = set(Graph._to_edge(int(u), int(v)) for u in self.adjacency for v in self.adjacency[u])
-        
+    
+    def vertices(self):
+        """An iterator over the vertices of the graph."""
+        return range(0, self.vertex_size)
+
     @staticmethod
     def _to_edge(fst, snd):
         return (min(fst, snd), max(fst, snd))

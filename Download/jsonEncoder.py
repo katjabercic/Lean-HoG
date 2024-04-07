@@ -3,6 +3,7 @@ import json
 from graph import Graph
 from Invariant.ConnectedComponents import ConnectedComponentsCertificate
 from Invariant.HamiltonianPath import HamiltonianPathCertificate
+from Invariant.NeighborhoodMap import NeighborhoodMap
 
 class GraphEncoder(json.JSONEncoder):
     def default(self, graph):
@@ -10,7 +11,8 @@ class GraphEncoder(json.JSONEncoder):
             g = {
                 "hogId": graph.HoG_id,
                 "graph": graph.to_json(),
-                "connectedComponents": ConnectedComponentsCertificate(graph).to_json()
+                "connectedComponents": ConnectedComponentsCertificate(graph).to_json(),
+                "neighborhoodMap": NeighborhoodMap(graph).to_json()
             }
             return g
         else:

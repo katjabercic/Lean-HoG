@@ -2,37 +2,37 @@
 
 A library for computational graph theory in [Lean 4](https://leanprover.github.io), with emphasis on verification of large datasets of graphs; in particular the [House of Graphs](https://houseofgraphs.org).
 
-## Installation and setup
+## Prerequisites
 
-Install Lean 4 by following [these instructions](https://leanprover-community.github.io/get_started.html).
-When successful, you should have the executables `elan` (for installing and updating versions of Lean), `lean` itself, and `lake` (the Lean build system).
+You need the following software:
 
-Before compiling and using Lean-HoG, run the following in the present folder:
+* **[Lean 4](https://lean-lang.org) proof assistant**: Install Lean 4 by following [these instructions](https://leanprover-community.github.io/get_started.html). When successful, you should have the executables `elan` (for installing and updating versions of Lean), `lean` itself, and `lake` (the Lean build system).
+* **([Visual Studio Code](https://code.visualstudio.com))**: the editor that has good Lean support.
+* **[Node.js and `npm` cli](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)**. 
+* **[Python](https://www.python.org)** version 3, with the [requests](https://pypi.org/project/requests/)  library, which you can install with `pip3 install requests`.
+
+On MacOS you can use [Homebrew](https://brew.sh) to install Visual Studio Code and `Node.js` with
+```
+brew install npm
+brew install --cask visual-studio-code
+```
+
+## Installation
+
+To install all the dependencies and compile Lean-HoG, run these commands from withing the Lean-HoG directory:
 
 * `elan update` to make sure you have an up-to-date version of Lean,
-* `lake exe cache get` to get a cached version of Mathlib (or else wait for it to compile).
+* `lake exe cache get` to get a cached version of Mathlib (or else wait for it to compile),
+* `lake exe build_widgets` to build the Javascript graph visualization widgets,
+* `lake build` to compile Lean-HoG
 
 ## Usage
 
-Lean 4 is best used in interactive mode using the [Visual Studio Code](https://code.visualstudio.com) editor, please consult the Lean documentation.
-Once you set it up, simply open the file [`Examples.lean`](Examples.lean), which should trigger compilation.
-
-Alternatively, build the project from the command line:
-
-* `lake build` to compile the Lean files,
-* `lake clean` to remove the compiled Lean files.
-
-It is possible to write or generate your own files with graphs for Lean-HoG. 
-TODO format description.
+Open the file [`Examples.lean`](Examples.lean) to check whether the example graphs load successfully.
 
 ### Downloading graphs
 
-To download graphs from the [House of Graphs](https://houseofgraphs.org/) (HoG) website and import them into Lean
-you're going to need:
-* [Pyhton](https://www.python.org/) version 3 or higher.
-* The [requests](https://pypi.org/project/requests/) library.
-
-Run
+To download graphs from the [House of Graphs](https://houseofgraphs.org/) (HoG) website run
 * `lake exe download <id>` to download the graph with the ID `<id>`,
 * `lake exe download <min-id> <max-id>` to download graphs whose IDs are in the range from `<min-id>` to `<max-id>`,
 
@@ -52,18 +52,8 @@ Lean-HoG can visualize the imported graphs in the Lean infoview using
 which work by running Javascript in the Infoview.
 The visualization uses the [cytoscape.js](https://js.cytoscape.org/) javascript library.
 
-Requirements:
-* [Node.js and npm cli](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
 
-To build the widgets library run
-```
-lake exe build_widgets
-```
-To use the visualization widget in a file, add the line `import LeanHog.Widgets` at the top.
-
-Once you built the widgets, you can try them out by opening the `Examples.lean` file
-and clicking on the line `#visualizeGraph Cycle7`. In the info view you should now see
-something like this:
+Try them out by opening the `Examples.lean` file and clicking on the line `#visualizeGraph Cycle7`. In the info view you should now see something like this:
 ![image](https://github.com/katjabercic/Lean-HoG/assets/6967728/f4ee94ab-4d31-4192-ac80-7e35323e5c4b)
 
 ### Search the House of Graphs from Lean
@@ -128,31 +118,9 @@ Lean-HoG expects all lists and maps, including the list of edges, to be **(lexic
 In particular, edges must be **ordered pairs** (`[1, 2]`, never `[2, 1]`) and 
 the list of edges should be lexicographically ordered.
 
-### Example
+### Examples of JSON encoding of graphs
 
-The 3-cycle with certificates for invariants. 
-The latter are described in more detail below.
-```json
-{
-  "graph" : {
-    "vertexSize" : 3,
-    "edges" : [[0,1],[0,2],[1,2]],
-  },
-  "neighborhoodMap" : {
-    "neighbors" : [[0, [1, 2]], [1, [0, 2]], [2, [0, 1]]],
-  },
-  "connectedComponents" : {
-    "val" : 1,
-    "component" : [[0,0],[1,0],[2,0]],
-    "root" : [[0, 0]],
-    "next" : [[0, 0], [1, 0], [2, 1]],
-    "distToRoot" : [[0, 0], [1, 1], [2, 2]],
-  },
-  "oddClosedWalk" : {
-    "closedWalk" : [0, 1, 2],
-  }
-}
-```
+Consult the (`examples`)[./examples] folder.
 
 ### Neighborhood map
 
