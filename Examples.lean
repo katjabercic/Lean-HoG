@@ -16,12 +16,12 @@ load_graph Two "examples/two.json"
 
 -- The path of length 1 (on two vertices)
 load_graph Path1 "examples/path1.json"
-#eval Path1.connectedGraph -- missing components certificate
+#eval Path1.connectedGraph -- should not work, missing components certificate
 #eval Path1.bipartite
 
 -- The cycle on 7 vertices
 load_graph Cycle7 "examples/cycle7.json"
--- #visualizeGraph Cycle7
+#visualizeGraph Cycle7
 #eval Cycle7.bipartite -- missing certificate
 #eval Cycle7.connectedGraph
 
