@@ -20,6 +20,15 @@ open Lean Widget Elab Term Tactic Command Qq
 
 syntax (name := downloadHoGGraph) "#download_hog_graph " term : command
 
+/-- `#download_hog_graph <hog_id>` downloads the graphs with House of Graphs
+    ID `<hog_id>` and stores in the folder indicated by the user option
+    `leanHoG.graphDownloadLocation`.
+
+    Note: To download the graph it uses an external python script. The location
+    of the python executable is provided by the user option `leanHoG.pythonExecutable`.
+
+    Note: The python environment is expected to have the `requests` library installed.
+ -/
 @[command_elab downloadHoGGraph]
 unsafe def downloadHoGGraphImpl : CommandElab
   | `(#download_hog_graph $id) => liftTermElabM do
