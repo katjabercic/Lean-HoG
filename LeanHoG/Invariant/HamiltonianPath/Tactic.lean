@@ -91,7 +91,7 @@ unsafe def showNoHamiltonianPathImpl : CommandElab
     let graphName := g.getId
     let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
     let (declName, type) ← showNoHamiltonianPathAux graphName graph
-    logInfo m!"added axiom {declName} : {type}"
+    logWarning m!"added axiom {declName} : {type}"
 
   | _ => throwUnsupportedSyntax
 
@@ -104,6 +104,7 @@ unsafe def showNoHamiltonianPathTacticImpl : Tactic
       let graphName := g.getId
       let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
       let (declName, type) ← showNoHamiltonianPathAux graphName graph
+      logWarning m!"added axiom {declName} : {type}"
       let noExistsCert ← Tactic.elabTermEnsuringType (mkIdent declName) type
       let noExistsHamPath ← mkAppM ``LeanHoG.no_assignment_implies_no_hamiltonian_path' #[noExistsCert]
       let noExistsType := q(¬ ∃ (u v : Graph.vertex $graph) (p : Path $graph u v), p.isHamiltonian)
