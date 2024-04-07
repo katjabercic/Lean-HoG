@@ -10,12 +10,6 @@ namespace LeanHoG
 
 open Lean Widget Elab Command Term Meta Qq LeanSAT Model Tactic
 
--- def loadHamiltonianPathData (filePath : System.FilePath) : IO HamiltonianPathData := do
---   let fileContent ← IO.FS.readFile filePath
---   match Lean.Json.parse fileContent >>= Lean.FromJson.fromJson? (α := HamiltonianPathData) with
---   | .ok data => pure data
---   | .error msg => throw (.userError msg)
-
 syntax (name := computeHamiltonianPath) "#compute_hamiltonian_path " ident : command
 
 @[command_elab computeHamiltonianPath]
