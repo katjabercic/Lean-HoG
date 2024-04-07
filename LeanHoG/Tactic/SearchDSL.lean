@@ -725,7 +725,7 @@ unsafe def queryDatabaseForExamples (queries : List ConstructedQuery) (queryHash
   CommandElabM (List QueryResult) := do
   let opts ← getOptions
   let pythonExe := opts.get leanHoG.pythonExecutable.name leanHoG.pythonExecutable.defValue
-  let downloadLocation := (opts.get leanHoG.downloadLocation.name leanHoG.downloadLocation.defValue) ++  "/search_results"
+  let downloadLocation := opts.get leanHoG.searchCacheLocation.name leanHoG.searchCacheLocation.defValue
   for q in queries do
     let output ← IO.Process.output {
       cmd := pythonExe
@@ -763,7 +763,7 @@ unsafe def searchForExampleImpl : CommandElab
       return qs
     let opts ← getOptions
     let pythonExe := opts.get leanHoG.pythonExecutable.name leanHoG.pythonExecutable.defValue
-    let downloadLocation := (opts.get leanHoG.downloadLocation.name leanHoG.downloadLocation.defValue) ++  "/search_results"
+    let downloadLocation := opts.get leanHoG.searchCacheLocation.name leanHoG.searchCacheLocation.defValue
     for q in qs.queries do
       let output ← IO.Process.output {
         cmd := pythonExe

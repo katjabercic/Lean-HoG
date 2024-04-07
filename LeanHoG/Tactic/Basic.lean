@@ -27,8 +27,7 @@ unsafe def downloadHoGGraphImpl : CommandElab
     let n ← evaluateNat qn
     let opts ← getOptions
     let pythonExe := opts.get leanHoG.pythonExecutable.name leanHoG.pythonExecutable.defValue
-    let downloadLocation := opts.get leanHoG.downloadLocation.name leanHoG.downloadLocation.defValue
-    let downloadLocation := downloadLocation ++ "/graphs"
+    let downloadLocation := opts.get leanHoG.graphDownloadLocation.name leanHoG.graphDownloadLocation.defValue
     let output ← IO.Process.output {
       cmd := pythonExe
       args := #["Download/downloadGraph.py", downloadLocation, s!"{n}", s!"{n}"]
