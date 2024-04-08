@@ -32,7 +32,7 @@ instance {g : Graph} : Repr (HamiltonianPath g) where
 instance {g : Graph} : ToString (HamiltonianPath g) where
   toString p := toString p.path
 
-@[simp] theorem certificate_to_hamiltonian_path {g : Graph} [hp : HamiltonianPath g] : g.isTraceable := by
+@[simp] theorem path_of_cert {g : Graph} [hp : HamiltonianPath g] : g.isTraceable := by
   let ⟨u, v, p, cond⟩ := hp
   simp [Graph.isTraceable]
   apply Exists.intro u
