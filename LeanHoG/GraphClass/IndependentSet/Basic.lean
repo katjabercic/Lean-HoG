@@ -33,9 +33,8 @@ lemma not_adjacent (I : IndependentSet) (u v : I.vertex) : ¬ I.adjacent u v := 
 instance : Coe IndependentSet Graph := by
   sorry
 
-lemma not_connected (G : Graph) (u v : G.vertex) : G.edgeSet = ∅ → ¬ G.connected u v := by
+lemma not_connected (G : Graph) (u v : G.vertex) : G.edgeSet = ∅ → G.connected u v → u = v := by
   sorry
-
 
 instance (I : IndependentSet) : ConnectedComponents I :=
   let G : Graph := I
@@ -50,8 +49,8 @@ instance (I : IndependentSet) : ConnectedComponents I :=
     · intro eq
       apply Graph.connected_of_eq
       assumption
-    · unfold Graph.connected
-      sorry
+    · intro connected
+      apply not_connected G u v I.noEdge connected
   {
     val := G.vertexSize
     component := component
