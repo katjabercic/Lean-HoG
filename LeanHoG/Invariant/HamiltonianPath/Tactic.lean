@@ -8,15 +8,15 @@ import LeanSAT
 
 namespace LeanHoG
 
-open Lean Widget Elab Command Term Meta Qq LeanSAT Model Tactic
+open Lean Elab Qq
 
 syntax (name := computeHamiltonianPath) "#compute_hamiltonian_path " ident : command
 
 @[command_elab computeHamiltonianPath]
-unsafe def computeHamiltonianPathImpl : CommandElab
-  | `(#compute_hamiltonian_path $g ) => liftTermElabM do
+unsafe def computeHamiltonianPathImpl : Command.CommandElab
+  | `(#compute_hamiltonian_path $g ) => Command.liftTermElabM do
     let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
-    let G ← evalExpr' Graph ``Graph graph
+    let G ← Meta.evalExpr' Graph ``Graph graph
 
     let opts ← getOptions
     let pythonExe := opts.get leanHoG.pythonExecutable.name leanHoG.pythonExecutable.defValue
@@ -46,8 +46,9 @@ unsafe def computeHamiltonianPathImpl : CommandElab
 
 syntax (name := showNoHamiltonianPath) "#show_no_hamiltonian_path " ident : command
 
+open LeanSAT Model in
 unsafe def showNoHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) : TermElabM (Name × Q(Prop)) := do
-    let G ← evalExpr' Graph ``Graph graph
+    let G ← Meta.evalExpr' Graph ``Graph graph
     let enc := (hamiltonianPathCNF G).val
     let opts ← getOptions
     let cadicalExe := opts.get leanHoG.cadicalCmd.name leanHoG.cadicalCmd.defValue
@@ -81,8 +82,8 @@ unsafe def showNoHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) : Term
     saying there exists no satisfying assignmment for the encoding.
 -/
 @[command_elab showNoHamiltonianPath]
-unsafe def showNoHamiltonianPathImpl : CommandElab
-  | `(#show_no_hamiltonian_path $g ) => liftTermElabM do
+unsafe def showNoHamiltonianPathImpl : Command.CommandElab
+  | `(#show_no_hamiltonian_path $g ) => Command.liftTermElabM do
     let graphName := g.getId
     let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
     let (declName, type) ← showNoHamiltonianPathAux graphName graph
@@ -102,31 +103,31 @@ syntax (name := showNoHamiltonianPathTactic) "show_no_hamiltonian_path " ident (
     Can optionaly name the new hypothesis via `show_no_hamiltonia_path G with hyp`.
 -/
 @[tactic showNoHamiltonianPathTactic]
-unsafe def showNoHamiltonianPathTacticImpl : Tactic
+unsafe def showNoHamiltonianPathTacticImpl : Tactic.Tactic
   | `(tactic|show_no_hamiltonian_path $g) =>
-    withMainContext do
+    Tactic.withMainContext do
       let graphName := g.getId
       let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
       let (declName, type) ← showNoHamiltonianPathAux graphName graph
       logWarning m!"added axiom {declName} : {type}"
       let noExistsCert ← Tactic.elabTermEnsuringType (mkIdent declName) type
-      let noExistsHamPath ← mkAppM ``LeanHoG.no_assignment_implies_no_hamiltonian_path' #[noExistsCert]
+      let noExistsHamPath ← Meta.mkAppM ``LeanHoG.no_assignment_implies_no_hamiltonian_path' #[noExistsCert]
       let noExistsType := q(¬ ∃ (u v : Graph.vertex $graph) (p : Path $graph u v), p.isHamiltonian)
-      liftMetaTactic fun mvarId => do
+      Tactic.liftMetaTactic fun mvarId => do
         let mvarIdNew ← mvarId.assert .anonymous noExistsType noExistsHamPath
         let (_, mvarIdNew) ← mvarIdNew.intro1P
         return [mvarIdNew]
 
   | `(tactic|show_no_hamiltonian_path $g with $ident) =>
-    withMainContext do
+    Tactic.withMainContext do
       let graphName := g.getId
       let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
       let (declName, type) ← showNoHamiltonianPathAux graphName graph
       logWarning m!"added axiom {declName} : {type}"
       let noExistsCert ← Tactic.elabTermEnsuringType (mkIdent declName) type
-      let noExistsHamPath ← mkAppM ``LeanHoG.no_assignment_implies_no_hamiltonian_path' #[noExistsCert]
+      let noExistsHamPath ← Meta.mkAppM ``LeanHoG.no_assignment_implies_no_hamiltonian_path' #[noExistsCert]
       let noExistsType := q(¬ ∃ (u v : Graph.vertex $graph) (p : Path $graph u v), p.isHamiltonian)
-      liftMetaTactic fun mvarId => do
+      Tactic.liftMetaTactic fun mvarId => do
         let mvarIdNew ← mvarId.assert ident.getId noExistsType noExistsHamPath
         let (_, mvarIdNew) ← mvarIdNew.intro1P
         return [mvarIdNew]
