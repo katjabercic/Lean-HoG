@@ -3,6 +3,7 @@ import Qq
 import LeanHoG.LoadGraph
 import LeanHoG.Invariant.HamiltonianPath.SatEncoding
 import LeanHoG.Tactic.Options
+import LeanHoG.Util.LeanSAT
 
 import LeanSAT
 
@@ -91,46 +92,87 @@ unsafe def showNoHamiltonianPathImpl : Command.CommandElab
 
   | _ => throwUnsupportedSyntax
 
-syntax (name := showNoHamiltonianPathTactic) "show_no_hamiltonian_path " ident (" with" (ppSpace colGt ident)+)? : tactic
+syntax (name := searchForHamiltonianPath) "search_for_hamiltonian_path " ident (" with" (ppSpace colGt ident)) : tactic
 
-/-- `show_no_hamiltonian_path G` runs a SAT solver on the encoding of the Hamiltonian path problem
+open LeanSAT Model in
+/-- `search_for_hamiltonian_path G with <h>` runs a SAT solver on the encoding of the Hamiltonian path problem
     on the graph `G` and if the SAT solver says the problem is unsat it runs the produced proof
     through a verified proof checker cake_lpr. If the checker agrees with the proof, we add an axiom
     saying there exists no satisfying assignmment for the encoding. The tactic uses the new axiom to
     deduce that there is no Hamiltonian path in the graph by using theorem
-    `no_assignment_implies_no_hamiltonian_path'` and adds it to the current context.
-
-    Can optionaly name the new hypothesis via `show_no_hamiltonia_path G with hyp`.
+    `no_assignment_implies_no_hamiltonian_path'` and adds it to the current context in the variable `h`.
 -/
-@[tactic showNoHamiltonianPathTactic]
-unsafe def showNoHamiltonianPathTacticImpl : Tactic.Tactic
-  | `(tactic|show_no_hamiltonian_path $g) =>
+@[tactic searchForHamiltonianPath]
+unsafe def searchForHamiltonianPathImpl : Tactic.Tactic
+  | `(tactic|search_for_hamiltonian_path $g with $ident) =>
     Tactic.withMainContext do
       let graphName := g.getId
       let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
-      let (declName, type) ← showNoHamiltonianPathAux graphName graph
-      logWarning m!"added axiom {declName} : {type}"
-      let noExistsCert ← Tactic.elabTermEnsuringType (mkIdent declName) type
-      let noExistsHamPath ← Meta.mkAppM ``LeanHoG.no_assignment_implies_no_hamiltonian_path' #[noExistsCert]
-      let noExistsType := q(¬ ∃ (u v : Graph.vertex $graph) (p : Path $graph u v), p.isHamiltonian)
-      Tactic.liftMetaTactic fun mvarId => do
-        let mvarIdNew ← mvarId.assert .anonymous noExistsType noExistsHamPath
-        let (_, mvarIdNew) ← mvarIdNew.intro1P
-        return [mvarIdNew]
 
-  | `(tactic|show_no_hamiltonian_path $g with $ident) =>
-    Tactic.withMainContext do
-      let graphName := g.getId
-      let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
-      let (declName, type) ← showNoHamiltonianPathAux graphName graph
-      logWarning m!"added axiom {declName} : {type}"
-      let noExistsCert ← Tactic.elabTermEnsuringType (mkIdent declName) type
-      let noExistsHamPath ← Meta.mkAppM ``LeanHoG.no_assignment_implies_no_hamiltonian_path' #[noExistsCert]
-      let noExistsType := q(¬ ∃ (u v : Graph.vertex $graph) (p : Path $graph u v), p.isHamiltonian)
-      Tactic.liftMetaTactic fun mvarId => do
-        let mvarIdNew ← mvarId.assert ident.getId noExistsType noExistsHamPath
-        let (_, mvarIdNew) ← mvarIdNew.intro1P
-        return [mvarIdNew]
+      let G ← Meta.evalExpr' Graph ``Graph graph
+      let enc := (hamiltonianPathCNF G).val
+      let opts ← getOptions
+      let cadicalExe := opts.get leanHoG.cadicalCmd.name leanHoG.cadicalCmd.defValue
+      let cake_lprExr := opts.get leanHoG.cake_lprCmd.name leanHoG.cake_lprCmd.defValue
+      let solver := SolverWithCakeLpr.SolverWithCakeLpr cadicalExe #["--no-binary", "--lrat=true"] cake_lprExr
+      -- let solver := LeanSAT.Solver.Impl.CakeLpr cadicalExe #["--no-binary", "--lrat=true"] cake_lprExr
+      -- let solver : LeanSAT.Solver IO := (LeanSAT.Solver.Impl.DimacsCommand "/home/jure/source-control/cadical/build/cadical")
+      let cnf := Encode.EncCNF.toICnf enc
+      let (_, s) := Encode.EncCNF.run enc
+      let res ← solver.solve cnf
+      match res with
+      | .sat assn =>
+        -- Build a Hamiltonian path from the solution given by the SAT solver
+        let mut path : Array Nat := Array.mkArray G.vertexSize 0
+        for i in List.fins G.vertexSize do
+          for j in List.fins G.vertexSize do
+            match assn.find? (s.vMap (Var.mk i j))  with
+            | none => throwError "invalid index ({i},{j})"
+            | some true => path := path.set! j i
+            | some false => continue
+        let hpQ := hamiltonianPathOfData graph ⟨path.toList⟩
+        -- Add a Hamiltonian path instance from the constructed path
+        let hamiltonianPathName := certificateName graphName "HamiltonianPathI"
+        Lean.addAndCompile <| .defnDecl {
+          name := hamiltonianPathName
+          levelParams := []
+          type := q(HamiltonianPath $graph)
+          value := hpQ
+          hints := .regular 0
+          safety := .safe
+        }
+        Lean.Meta.addInstance hamiltonianPathName .scoped 42
+
+        -- Add the existence of the Hamiltonian path to the context
+        let existsHamPath ← Meta.mkAppM ``LeanHoG.HamiltonianPath.path_of_cert #[]
+        let existsType := q(Graph.isTraceable $graph)
+        Tactic.liftMetaTactic fun mvarId => do
+          let mvarIdNew ← mvarId.assert ident.getId existsType existsHamPath
+          let (_, mvarIdNew) ← mvarIdNew.intro1P
+          return [mvarIdNew]
+
+      | .unsat =>
+        -- The formula is UNSAT, add an axiom saying so
+        let declName : Name := .str graphName "noHamiltonianPathCertificateExists"
+        let type : Q(Prop) := q(¬ (∃ (τ : PropAssignment (Var (Graph.vertexSize $graph))), τ |> hamiltonianPathConstraints $graph))
+        let decl := Declaration.axiomDecl {
+          name        := declName,
+          levelParams := [],
+          type        := type,
+          isUnsafe    := false
+        }
+        trace[Elab.axiom] "{declName} : {type}"
+        Term.ensureNoUnassignedMVars decl
+        addDecl decl
+        logWarning m!"added axiom {declName} : {type}"
+        let noExistsCert ← Tactic.elabTermEnsuringType (mkIdent declName) type
+        let noExistsHamPath ← Meta.mkAppM ``LeanHoG.no_assignment_implies_no_hamiltonian_path' #[noExistsCert]
+        let noExistsType := q(¬ ∃ (u v : Graph.vertex $graph) (p : Path $graph u v), p.isHamiltonian)
+        Tactic.liftMetaTactic fun mvarId => do
+          let mvarIdNew ← mvarId.assert ident.getId noExistsType noExistsHamPath
+          let (_, mvarIdNew) ← mvarIdNew.intro1P
+          return [mvarIdNew]
+      | .error => throwError "SAT solver exited with error"
 
   | _ => throwUnsupportedSyntax
 
