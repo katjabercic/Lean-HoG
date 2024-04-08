@@ -1,5 +1,5 @@
 import Lake
-open Lake DSL System
+open Lake DSL
 
 package «LeanHoG» {
   moreLeanArgs := #["-DautoImplicit=false"]
@@ -26,7 +26,7 @@ lean_exe build_widgets where
   root := `widget.Build
 
 def npmCmd : String :=
-  if Platform.isWindows then "npm.cmd" else "npm"
+  if System.Platform.isWindows then "npm.cmd" else "npm"
 
 def widgetDir := __dir__ / "widget"
 
