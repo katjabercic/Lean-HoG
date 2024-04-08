@@ -2,6 +2,7 @@ import LeanHoG.LoadGraph
 import LeanHoG.Invariant.ConnectedComponents.Basic
 import LeanHoG.Widgets
 import LeanHoG.Tactic.SearchDSL
+import LeanHoG.Tactic.Basic
 import LeanHoG.Invariant.HamiltonianPath.Tactic
 
 namespace LeanHoG
@@ -41,23 +42,48 @@ load_graph ThreeFour "examples/cycle3-cycle4.json"
 #eval ThreeFour.connectedGraph
 #eval ThreeFour.numberOfConnectedComponents
 
+-- An example of directly downloading from the HoG database
+#download_hog_graph wierdStar 332
+#check wierdStar
+
+-- The next two graphs have respectively 15 and 16 edges.
+-- Uncomment the next lines to see the time Lean needs to decide bipartitness without a certificate
+/-
+load_graph PoussinNoCertificates "examples/Poussin-no-certificates.json"
+#eval PoussinNoCertificates.bipartite
+-/
+
+/-
+load_graph HanoiNoCertificates "examples/Hanoi2Disks-no-certificates.json"
+#eval HanoiNoCertificates.bipartite
+-/
+
+-- Using a certificate provides a significant speed up.
+load_graph Poussin "examples/Poussin.json"
+#eval Poussin.bipartite
+
+load_graph Hanoi "examples/Hanoi2Disks.json"
+#eval Hanoi.bipartite
+
 -- Load the Petersen graph from the House of Graphs
 load_graph Petersen "build/graphs/660.json"
 #visualizeGraph Petersen
 #eval Petersen.numberOfConnectedComponents
 
+-- #download_hog_graph 330
+
 load_graph Foo "build/graphs/670.json"
 #visualizeGraph Foo
 
-#compute_hamiltonian_path Foo
+-- #compute_hamiltonian_path Foo
 
-#check Foo.HamiltonianPathI
+-- #check Foo.HamiltonianPathI
 
 -- #check Foo.HamiltonianPath
 
 -- #eval tryFindHamiltonianPath Foo
 
 -- Search for graphs in the database
--- #search_hog hog{ bipartite = true ∧ (numberOfEdges = 1 ∨ numberOfVertices < 6) }
+-- #search_hog hog{ bipartite = true ∧ (numberOfEdges = 2 ∨ numberOfVertices < 6) }
 
 end LeanHoG
