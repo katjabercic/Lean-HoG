@@ -11,15 +11,13 @@ import LeanHoG.Invariant.HamiltonianPath.Basic
 
 namespace LeanHoG
 
-open Lean Widget Elab Term Tactic Command Qq
-
-
 -----------------------------------------------------------------
 -- Download graph command
 -----------------------------------------------------------------
 
 syntax (name := downloadHoGGraph) "#download_hog_graph " ident ppSpace term : command
 
+open Lean Qq Elab in
 /-- `#download_hog_graph <name> <hog_id>` downloads the graphs with House of Graphs
     ID `<hog_id>` and loads it into the veriable `<name>`.
 
@@ -32,9 +30,9 @@ syntax (name := downloadHoGGraph) "#download_hog_graph " ident ppSpace term : co
     Note: The python environment is expected to have the `requests` library installed.
  -/
 @[command_elab downloadHoGGraph]
-unsafe def downloadHoGGraphImpl : CommandElab
+unsafe def downloadHoGGraphImpl : Command.CommandElab
   | `(#download_hog_graph $name $id) =>  do
-    let n ← liftTermElabM do
+    let n ← Command.liftTermElabM do
       let qn : Q(Nat) ← (elabTermEnsuringTypeQ id q(Nat))
       evaluateNat qn
     let opts ← getOptions
@@ -59,15 +57,16 @@ unsafe def downloadHoGGraphImpl : CommandElab
 
 syntax (name := searchForExampleInHoG) "search_for_example" : tactic
 
+open Lean Qq Elab in
 @[tactic searchForExampleInHoG]
-unsafe def searchForExampleInHoGImpl : Tactic
+unsafe def searchForExampleInHoGImpl : Tactic.Tactic
   | stx@`(tactic|search_for_example) =>
-    withMainContext do
-      let goal ← getMainGoal
+    Tactic.withMainContext do
+      let goal ← Tactic.getMainGoal
       let goalDecl ← goal.getDecl
       let goalType := goalDecl.type
-      let graphType : Expr ← mkConst ``Graph
-      let exists_intro ← mkConst ``Exists.intro
+      let graphType : Expr ← Term.mkConst ``Graph
+      let exists_intro ← Term.mkConst ``Exists.intro
       try
         let enqs ← decomposeExistsQ goalType
         let hash := hash enqs
@@ -77,8 +76,8 @@ unsafe def searchForExampleInHoGImpl : Tactic
           let ⟨graphId⟩ := graphs[0]'(by simp_all only [not_lt_zero'])
           -- IO.println f!"Found such a graph: {name}"
           let mvarIds' ← Lean.MVarId.apply goal exists_intro
-          replaceMainGoal mvarIds'
-          let newGoals ← getGoals
+          Tactic.replaceMainGoal mvarIds'
+          let newGoals ← Tactic.getGoals
           for goal in newGoals do
             -- find the goal with type Graph and try to close it with `graph`
             let goalDecl ← goal.getDecl
@@ -91,15 +90,15 @@ unsafe def searchForExampleInHoGImpl : Tactic
                 let r ← Lean.Elab.Tactic.elabTermEnsuringType graphId goalType
                 goal.assign r
               -- Now try to simp which will among other things look for instance for e.g. HamiltonianPath
-              evalSimp stx
-              evalDecide stx
+              Tactic.evalSimp stx
+              Tactic.evalDecide stx
               Lean.logInfo s!"Closed goal using {graphId.getId}"
               -- Visualize the graph we used to close the goal
               -- TODO: Make this an option
               let wi : Expr ←
-                elabWidgetInstanceSpecAux (mkIdent `visualize) (← ``((Graph.toVisualizationFormat $graphId)))
-              let wi : WidgetInstance ← evalWidgetInstance wi
-              savePanelWidgetInfo wi.javascriptHash wi.props stx
+                Widget.elabWidgetInstanceSpecAux (mkIdent `visualize) (← ``((Graph.toVisualizationFormat $graphId)))
+              let wi ← Widget.evalWidgetInstance wi
+              Widget.savePanelWidgetInfo wi.javascriptHash wi.props stx
             else
               continue
         else
