@@ -23,7 +23,7 @@ load_graph Two "examples/two.json"
 
 -- The path of length 1 (on two vertices)
 load_graph Path1 "examples/path1.json"
-#eval Path1.connectedGraph -- should not work, missing certificate
+#eval Path1.connectedGraph
 #eval Path1.bipartite
 
 -- The cycle on 7 vertices

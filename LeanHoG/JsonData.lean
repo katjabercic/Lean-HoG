@@ -25,7 +25,7 @@ structure JSONData : Type where
   /- Invariants are optional -/
   connectedComponents? : Option ConnectedComponentsData
   hamiltonianPath? : Option HamiltonianPathData
-  bipartite? : Option BipartiteData
+  twoColoring? : Option TwoColoringData
   oddClosedWalk? : Option OddClosedWalkData
   neighborhoodMap? : Option NeighborhoodMapData
 

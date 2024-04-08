@@ -1,10 +1,15 @@
 {
     "graph" : { "vertexSize" : 2, "edges" : [[0, 1]] },
-    "bipartite" : {
-        "color" : [[0,0],[1,1]],
-        "vertex0" : 0,
-        "vertex1" : 1
+    "twoColoring" : {
+        "color" : [[0,0],[1,1]]
     },
+    "connectedComponents" : {
+        "val" : 1,
+        "component" : [[0,0],[1,0]],
+        "root" : [[0,0]],
+        "next" : [[0, 0], [1, 0]],
+        "distToRoot" : [[0, 0], [1, 1]]
+    },  
     "neighborhoodMap" : {
         "neighbors" : [[0, [1]], [1, [0]]]
     }

@@ -59,20 +59,20 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
     }
     Elab.Command.liftTermElabM <| Meta.addInstance componentsCertificateName .scoped 42
 
-  match jsonData.bipartite? with
+  match jsonData.twoColoring? with
   | .none => pure ()
   | .some data =>
-    let BipartiteCertificateName := certificateName graphName "BipartiteCertificateI"
-    let BipartiteCertificateQ : Q(BipartiteCertificate $graph) := BipartiteCertificateOfData graph data
+    let TwoColoringName := certificateName graphName "TwoColoringI"
+    let TwoColoringQ : Q(TwoColoring $graph) := TwoColoringOfData graph data
     Elab.Command.liftCoreM <| addAndCompile <| .defnDecl {
-      name := BipartiteCertificateName
+      name := TwoColoringName
       levelParams := []
-      type := q(BipartiteCertificate $graph)
-      value := BipartiteCertificateQ
+      type := q(TwoColoring $graph)
+      value := TwoColoringQ
       hints := .regular 0
       safety := .safe
     }
-    Elab.Command.liftTermElabM <| Meta.addInstance BipartiteCertificateName .scoped 42
+    Elab.Command.liftTermElabM <| Meta.addInstance TwoColoringName .scoped 42
 
   match jsonData.oddClosedWalk? with
   | .none => pure ()

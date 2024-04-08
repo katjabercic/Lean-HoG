@@ -10,12 +10,12 @@ namespace LeanHoG
 
 open Qq
 
-def finSetOfData (n : Q(Nat)) (a : Array Nat) : Q(Std.RBSet (Fin $n) Fin.instLinearOrderFin.compare) :=
+def finSetOfData (n : Q(Nat)) (a : Array Nat) : Q(EdgeSet $n) :=
   build_RBSet (a.map (finOfData n)) q(Fin.instLinearOrderFin)
 
 def neighborhoodMapOfData (G : Q(Graph)) (M : NeighborhoodMapData) : Q(NeighborhoodMap $G) :=
   have n : Q(Nat) := q(Graph.vertexSize $G)
-  have convert : Nat × Array Nat → Q(Fin $n × Std.RBSet (Fin $n) Fin.instLinearOrderFin.compare) :=
+  have convert : Nat × Array Nat → Q(Fin $n × EdgeSet $n) :=
     fun (u, vs) => q(($(finOfData n u), $(finSetOfData n vs)))
   have nbhMap : Q(Std.RBMap (Graph.vertex $G) (Std.RBSet (Graph.vertex $G) Graph.vertex_compare) Graph.vertex_compare) :=
     build_RBMap (M.neighbors.map convert) q(Fin.instLinearOrderFin)

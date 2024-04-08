@@ -7,7 +7,7 @@ namespace LeanHoG
 def isVertexColoring {Color : Type} (G : Graph) (c : G.vertex → Color) :=
   ∀ {u v : G.vertex}, G.adjacent u v → c u ≠ c v
 
-structure VertexColoring (Color : Type) [DecidableEq Color] (G : Graph) : Type where
+class VertexColoring (Color : Type) [DecidableEq Color] (G : Graph) : Type where
   color : G.vertex → Color
   isColoring :  isVertexColoring G color
 deriving Fintype
@@ -20,7 +20,7 @@ def VertexColoring.mk' {Color : Type} [DecidableEq Color] (G : Graph) (color : G
   · assumption
 
 @[reducible]
-structure TwoColoring (G : Graph) extends VertexColoring (Fin 2) G
+class TwoColoring (G : Graph) extends VertexColoring (Fin 2) G
 deriving Fintype
 
 theorem TwoColoring.even_odd_walk
