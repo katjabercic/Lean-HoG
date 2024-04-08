@@ -54,7 +54,7 @@ abbrev e {g : Graph} (k k' : Fin g.vertexSize) :
   let is := List.finRange n
   let js := List.finRange n
   let pairs := is ×ˢ js
-  let non_edges := List.filter (fun (i,j) => ¬ (g.badjacent i j)) pairs
+  let non_edges := List.filter (fun (i,j) => ¬ (g.adjacent i j)) pairs
   conj_list (non_edges |>.map fun (i,j) => disj_list [(x i k)ᶜ, (x j k')ᶜ])
 
 @[simp] lemma satisfies_a_iff {n : Nat} {i : Fin n} {τ : PropAssignment (Pos n)} :
@@ -125,7 +125,7 @@ abbrev e {g : Graph} (k k' : Fin g.vertexSize) :
 
 @[simp] lemma satisfies_e_iff {g : Graph} {k k' : Fin g.vertexSize}
   {τ : PropAssignment (Pos g.vertexSize)} :
-  τ ⊨ e k k' ↔ ∀ i j, ¬ g.badjacent i j → τ ⊨ (x i k)ᶜ ∨ τ ⊨ (x j k')ᶜ := by
+  τ ⊨ e k k' ↔ ∀ i j, ¬ g.adjacent i j → τ ⊨ (x i k)ᶜ ∨ τ ⊨ (x j k')ᶜ := by
   apply Iff.intro
   · intros h i j not_edge
     simp [satisfies_conj_list] at h
@@ -238,7 +238,7 @@ abbrev has_hamiltonian_path (g : Graph) :=
 @[simp] lemma satisfies_no_non_edges_iff {g : Graph} {τ : PropAssignment (Pos g.vertexSize)} :
   τ ⊨ no_non_edges g ↔
   ∀ (k k' : Fin g.vertexSize), k.val + 1 =  k'.val →
-  ∀ i j, ¬ g.badjacent i j → τ ⊨ (x i k)ᶜ ∨ τ ⊨ (x j k')ᶜ := by
+  ∀ i j, ¬ g.adjacent i j → τ ⊨ (x i k)ᶜ ∨ τ ⊨ (x j k')ᶜ := by
   apply Iff.intro
   · intros h k k' rel
     simp [satisfies_conj_list, List.mem_filter] at h
@@ -249,14 +249,15 @@ abbrev has_hamiltonian_path (g : Graph) :=
     simp [satisfies_conj_list, List.mem_filter]
     intro p x x_1 a a_1
     aesop_subst a_1
-    simp_all only [satisfies_e_iff, Bool.not_eq_true, satisfies_neg, satisfies_var, implies_true]
+    simp_all only [Pos, satisfies_neg, satisfies_var, Bool.not_eq_true, satisfies_e_iff, not_false_eq_true,
+      implies_true]
 
 @[simp] lemma satisfies_has_hamiltonian_path_iff {g : Graph} {τ : PropAssignment (Pos g.vertexSize)} :
   τ ⊨ has_hamiltonian_path g ↔
   (∀ i, ∃ j, τ ⊨ x i j ∧ (∀ j k, j ≠ k → τ ⊨ (x i j)ᶜ ∨ τ ⊨ (x i k)ᶜ)) ∧
   (∀ j, ∃ i, τ ⊨ x i j ∧ (∀ i k, i ≠ k → τ ⊨ (x i j)ᶜ ∨ τ ⊨ (x k j)ᶜ)) ∧
   (∀ k k', k.val + 1 =  k'.val →
-    ∀ i j, ¬ g.badjacent i j → τ ⊨ (x i k)ᶜ ∨ τ ⊨ (x j k')ᶜ
+    ∀ i j, ¬ g.adjacent i j → τ ⊨ (x i k)ᶜ ∨ τ ⊨ (x j k')ᶜ
   ) := by
   simp_all only [Pos, satisfies_conj, satisfies_at_least_one_at_pos_iff, satisfies_c_iff, satisfies_var,
     satisfies_at_most_one_at_pos_iff, satisfies_d_iff, ne_eq, satisfies_neg, Bool.not_eq_true,
@@ -407,7 +408,7 @@ lemma hamiltonian_path_to_assignment_expanded {g : Graph} :
     (∀ i, ∃ j, τ ⊨ x i j ∧ (∀ j k, j ≠ k → τ ⊨ (x i j)ᶜ ∨ τ ⊨ (x i k)ᶜ)) ∧
     (∀ j, ∃ i, τ ⊨ x i j ∧ (∀ i k, i ≠ k → τ ⊨ (x i j)ᶜ ∨ τ ⊨ (x k j)ᶜ)) ∧
     (∀ k k', k.val + 1 =  k'.val →
-      ∀ i j, ¬ g.badjacent i j → τ ⊨ (x i k)ᶜ ∨ τ ⊨ (x j k')ᶜ))
+      ∀ i j, ¬ g.adjacent i j → τ ⊨ (x i k)ᶜ ∨ τ ⊨ (x j k')ᶜ))
   := by
   intro h
   let ⟨τ, cond⟩ := hamiltonian_path_to_assignment h
@@ -424,7 +425,7 @@ theorem unsat_to_no_hamiltonian_path_expanded {g : Graph} :
     (∀ i, ∃ j, τ ⊨ x i j ∧ (∀ j k, j ≠ k → τ ⊨ (x i j)ᶜ ∨ τ ⊨ (x i k)ᶜ)) ∧
     (∀ j, ∃ i, τ ⊨ x i j ∧ (∀ i k, i ≠ k → τ ⊨ (x i j)ᶜ ∨ τ ⊨ (x k j)ᶜ)) ∧
     (∀ k k', k.val + 1 =  k'.val →
-      ∀ i j, ¬ g.badjacent i j → τ ⊨ (x i k)ᶜ ∨ τ ⊨ (x j k')ᶜ)) →
+      ∀ i j, ¬ g.adjacent i j → τ ⊨ (x i k)ᶜ ∨ τ ⊨ (x j k')ᶜ)) →
   (¬ ∃ (u v : g.vertex) (p : Path g u v), p.isHamiltonian) := by
   apply imp_neg hamiltonian_path_to_assignment_expanded
 
