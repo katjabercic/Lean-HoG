@@ -1,5 +1,6 @@
 import sys
 from threading import Timer
+from pathlib import Path
 
 from pysat.formula import CNF
 from pysat.solvers import Glucose4, Solver, Cadical195, MinisatGH
@@ -161,38 +162,38 @@ def find_hamiltonian_cycle(G : Graph):
             print('Time: {0:.2f}s'.format(solver.time()))
             return None
 
-def find_all_hamiltonian_paths():
+def find_all_hamiltonian_paths(destDir : str):
     for id in range(52000):
         try: 
-            graphs = download_graphs(id, id)
+            graphs = download_graph(destDir, id, id)
             if len(graphs) < 1:
                 continue
             G = graphs[0]
             path = find_hamiltonian_path(G)
             G.hamiltonianPath = path
-            save_graphs([G])
         except KeyboardInterrupt:
             print("System interrupt")
             sys.exit()
 
-def find_all_hamiltonian_cycles():
+def find_all_hamiltonian_cycles(destDir : str):
     for id in range(1100, 52000):
         try: 
-            graphs = download_graphs(id, id)
+            graphs = download_graph(destDir, id, id)
             if len(graphs) < 1:
                 continue
             G = graphs[0]
             path = find_hamiltonian_cycle(G)
             G.hamiltonianPath = path
-            save_graphs([G])
         except KeyboardInterrupt:
             print("System interrupt")
             sys.exit()
 
 if __name__ == '__main__':
     # find_all_hamiltonian_cycles()
-    id = sys.argv[1]
-    graphs = download_graph(id, id)
+    destDir = sys.argv[1]
+    Path(destDir).mkdir(parents=True, exist_ok=True)
+    id = sys.argv[2]
+    graphs = download_graph(destDir, id, id)
     G = graphs[0]
     p = find_hamiltonian_path(G)
     G.hamiltonianPath = p

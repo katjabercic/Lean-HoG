@@ -59,21 +59,6 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
     }
     Elab.Command.liftTermElabM <| Meta.addInstance componentsCertificateName .scoped 42
 
-  -- match jsonData.hamiltonianPath? with
-  -- | .none => pure ()
-  -- | .some data =>
-  --   let hamiltonianPathName := certificateName graphName "HamiltonianPathI"
-  --   let hpQ := hamiltonianPathOfData graph data
-  --   Lean.Elab.Command.liftCoreM <| Lean.addAndCompile <| .defnDecl {
-  --     name := hamiltonianPathName
-  --     levelParams := []
-  --     type := q(HamiltonianPath $graph)
-  --     value := hpQ
-  --     hints := .regular 0
-  --     safety := .safe
-  --   }
-  --   Lean.Elab.Command.liftTermElabM <| Lean.Meta.addInstance hamiltonianPathName .global 42
-
   match jsonData.bipartite? with
   | .none => pure ()
   | .some data =>
@@ -118,6 +103,7 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
       safety := .safe
     }
     Elab.Command.liftTermElabM <| Meta.addInstance neighborhoodMapName .scoped 42
+
 
 
 /-- Load a graph with the given Lean identifier from the given file. -/
