@@ -3,7 +3,7 @@
 lake-manifest.json
 /lake-packages
 /archive/*
-js/node_modules
+widget/node_modules
 build
 Download/__pycache__
 *.pyc
