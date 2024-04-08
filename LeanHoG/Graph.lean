@@ -7,7 +7,7 @@ namespace LeanHoG
 
 structure Graph where
   vertexSize : Nat
-  edgeSet : Std.RBSet (Edge vertexSize) Edge.linearOrder.compare
+  edgeSet : EdgeSet vertexSize
 
 /-- The type of graph vertices -/
 @[reducible]
@@ -29,6 +29,9 @@ def Graph.edgeType (G : Graph) := Edge G.vertexSize
 /-- The type of edges -/
 @[reducible]
 def Graph.edge (G : Graph) := { e : G.edgeType // G.edgeSet.contains e }
+
+@[reducible]
+def Graph.edge_compare (G : Graph) := (Edge.linearOrder G.vertexSize).compare
 
 @[reducible]
 def Graph.fst {G : Graph} (e : G.edgeType) : G.vertex := e.fst
@@ -83,17 +86,14 @@ lemma Graph.symmetricAdjacent (G : Graph) :
     intros u v
     apply ltByCases u v <;> (intro h ; simp [ltByCases, not_lt_of_lt, h, adjacent, badjacent])
 
-lemma edge_cmp_eq_impl_eq (G: Graph) (e1 e2 : G.edgeType) : Edge.linearOrder.compare e1 e2 = Ordering.eq ↔ e1 = e2 := by
-  exact compare_eq_iff_eq
-
-lemma member_rbset (G: Graph) (e : G.edgeType) : e ∈ G.edgeSet ↔ G.edgeSet.Mem e := by
+lemma member_rbset (G : Graph) (e : G.edgeType) : e ∈ G.edgeSet ↔ G.edgeSet.Mem e := by
   constructor
   · intro H
     exact H
   · intro H
     exact H
 
-lemma member_rbnode (G: Graph) (e : G.edgeType) : e ∈ G.edgeSet.1 ↔ G.edgeSet.1.EMem e := by
+lemma member_rbnode (G : Graph) (e : G.edgeType) : e ∈ G.edgeSet.1 ↔ G.edgeSet.1.EMem e := by
   constructor
   · intro H
     exact H
@@ -113,7 +113,7 @@ lemma edge_in_node (G : Graph) (e : G.edgeType) : e ∈ G.edgeSet ↔ e ∈ G.ed
     apply Exists.elim H
     intro a H'
     obtain ⟨belongs, compare⟩ := H'
-    rw [edge_cmp_eq_impl_eq] at compare
+    rw [compare_eq_iff_eq] at compare
     use a
   · rw [member_rbset, member_rbnode]
     unfold Std.RBSet.Mem
@@ -126,7 +126,7 @@ lemma edge_in_node (G : Graph) (e : G.edgeType) : e ∈ G.edgeSet ↔ e ∈ G.ed
     apply Exists.elim H
     intro a H'
     obtain ⟨belongs, compare⟩ := H'
-    rw [← edge_cmp_eq_impl_eq] at compare
+    rw [← compare_eq_iff_eq] at compare
     use a
 
 
@@ -143,7 +143,7 @@ The problem here is that the RBSet checks for membership using the cmp function 
 -/
 /-- An efficient way of checking that a statement holds for all edges. -/
 lemma Graph.all_edges (G : Graph) (p : G.edgeType → Prop) [DecidablePred p] :
-    G.edgeSet.all p = true → ∀ (e : G.edge), p e.val
+    G.edgeSet.all p = true → ∀ (e : G.edge), p e
   := by
     unfold Std.RBSet.all
     rw [Std.RBNode.all_iff]

@@ -36,7 +36,10 @@ def fst_snd_injective {m : Nat} : Function.Injective (fst_snd m) := by
   cases a ; cases b ; simp
   intro h ; injection h ; trivial
 
-instance Edge.linearOrder {m : Nat} : LinearOrder (Edge m) :=
+instance Edge.linearOrder (m : Nat) : LinearOrder (Edge m) :=
   LinearOrder.lift' (fst_snd m) fst_snd_injective
+
+@[reducible]
+def EdgeSet (n : Nat) := Std.RBSet (Edge n) (Edge.linearOrder n).compare
 
 end LeanHoG

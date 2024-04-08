@@ -26,7 +26,7 @@ def vertexOfData (G : Q(Graph)) : Nat → Q(Graph.vertex $G) :=
 def graphOfData (D : GraphData) : Q(Graph) :=
   have vertexSize : Q(Nat) := Lean.mkRawNatLit D.vertexSize
   have arrQ : Array Q(LeanHoG.Edge $vertexSize) := D.edges.map (LeanHoG.edgeOfData vertexSize)
-  have edges : Q(Std.RBSet (LeanHoG.Edge $vertexSize) LeanHoG.Edge.linearOrder.compare) := build_RBSet arrQ q(LeanHoG.Edge.linearOrder)
+  have edges : Q(EdgeSet $vertexSize) := build_RBSet arrQ q(Edge.linearOrder $vertexSize)
   q(Graph.mk $vertexSize $edges)
 
 def forallFin {n : Nat} (p : Fin n → Prop) [DecidablePred p] := decide (∀ x, p x)
