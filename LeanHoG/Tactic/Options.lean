@@ -6,9 +6,9 @@ register_option leanHoG.pythonExecutable : String := {
   descr := "The python executable location for external calls"
 }
 
-register_option leanHoG.cadicalCmd : String := {
+register_option leanHoG.solverCmd : String := {
   defValue := "cadical"
-  descr := "The location of a cadical executable to run the SAT problems"
+  descr := "The location of a solver executable to run the SAT problems"
 }
 
 register_option leanHoG.cake_lprCmd : String := {

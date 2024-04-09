@@ -89,7 +89,6 @@ unsafe def searchForExampleInHoGImpl : Tactic.Tactic
         let graphs ← liftCommandElabM (queryDatabaseForExamples [query] hash)
         if h : graphs.length > 0 then
           let ⟨graphId⟩ := graphs[0]'(by simp_all only [not_lt_zero'])
-          -- IO.println f!"Found such a graph: {name}"
           let mvarIds' ← Lean.MVarId.apply goal exists_intro
           Tactic.replaceMainGoal mvarIds'
           let newGoals ← Tactic.getGoals
@@ -128,8 +127,13 @@ unsafe def searchForExampleInHoGImpl : Tactic.Tactic
                     | some mvarId => replaceMainGoal [mvarId]
                     Tactic.evalDecide stx
                 else
-                  Tactic.evalSimp stx
-                  Tactic.evalDecide stx
+                  let ctx ← mkSimpContext (← `(tactic|simp_all)) false
+                  let (result?, _) ← simpAll (← getMainGoal) ctx.ctx (simprocs := ctx.simprocs)
+                  match result? with
+                  | none => replaceMainGoal []
+                  | some mvarId =>
+                    replaceMainGoal [mvarId]
+                    Tactic.evalDecide stx
                 Lean.logInfo s!"Closed goal using {graphId.getId}"
               -- Visualize the graph we used to close the goal
               -- TODO: Make this an option
