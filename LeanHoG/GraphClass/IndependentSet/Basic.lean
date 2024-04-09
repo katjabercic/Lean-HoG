@@ -2,10 +2,11 @@ import LeanHoG.Graph
 import LeanHoG.Invariant.ConnectedComponents.Basic
 import LeanHoG.Invariant.Bipartite.Basic
 import LeanHoG.Invariant.NeighborhoodMap.Basic
-import Mathlib.Order.Basic
 import Std.Data.RBMap.Lemmas
-import Mathlib.Init.Order.Defs
+import Std.Data.Fin.Basic
+import Mathlib.Order.Basic
 import Mathlib.Logic.Relation
+import Mathlib.Init.Order.Defs
 import Mathlib.Init.Data.Quot
 
 namespace LeanHoG
@@ -155,6 +156,45 @@ def independentBipartite {n : Nat} : 1 < n → BipartiteCertificate (Independent
     vertex1Color := col_v2_one
     isColoring := is_coloring
   }
+
+
+instance neighborsIndependent {n : Nat} : NeighborhoodMap (IndependentSet n) :=
+  let G : Graph := IndependentSet n
+  have empty : G.edgeSet = Std.RBSet.empty := by rfl
+  let array : Array (Fin G.vertexSize × (Std.RBSet G.vertex G.vertex_compare)) := (Array.ofFn (@id (Fin G.vertexSize))).map fun x => (x, ∅)
+  let neighbors := Std.RBMap.ofArray array G.vertex_compare
+  -- By construction, every value in the map is the empty set but there should be a way to tell that to Lean.
+  have empty_neighbors : ∀ (u : G.vertex), neighbors.findD u Std.RBSet.empty = Std.RBSet.empty := by
+    intro u
+    unfold Std.RBMap.findD
+    rw [Option.getD_eq_iff]
+    constructor
+    · unfold Std.RBMap.find?
+      simp
+      unfold Std.RBMap.findEntry?
+      unfold Std.RBSet.findP?
+      use u
+      --rw [Std.RBSet.find?_some_eq_eq] -- Doesn't work
+      sorry
+  have neighbors_is_adjacent : ∀ (u : G.vertex), (neighbors.findD u Std.RBSet.empty).all (G.adjacent u) := by
+    intro u
+    unfold Std.RBSet.all
+    rw [Std.RBNode.all_iff, Std.RBNode.All_def]
+    intro x belongs
+    rw [empty_neighbors] at belongs
+    contradiction
+  have adjacent_is_neighbor : ∀ e : G.edge, edgeCorrect G neighbors e := by
+    intro e
+    have belongs : e.val ∈ G.edgeSet := by
+      rw [← Std.RBSet.contains_iff]
+      exact e.2
+    simp [empty] at belongs
+    contradiction
+  {
+    neighbors := neighbors
+    neighbor_is_adjacent := neighbors_is_adjacent
+    adjacent_is_neighbor := adjacent_is_neighbor
+}
 
 /--
 For testing purposes, this should ideally not be required.
