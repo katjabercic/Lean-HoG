@@ -12,7 +12,7 @@ instance (G : Graph): Decidable G.bipartite := by
   infer_instance
 
 /-- A graph is bipartite if it has a bipartite certificate.  -/
-@[default_instance 200]
+@[default_instance]
 instance Graph.bipartiteFromTwoColoring (G : Graph) [C : TwoColoring G] : Decidable G.bipartite
 := by apply isTrue; exists C
 
@@ -23,12 +23,14 @@ class OddClosedWalk (G : Graph) where
   oddLength : Odd walk.length
 
 theorem OddClosedWalk.not_bipartite {G : Graph} (O : OddClosedWalk G) : ¬ Graph.bipartite G := by
-  rintro ⟨BG⟩
-  have h := BG.odd_walk O.walk O.oddLength
-  contradiction
+  intro bG
+  cases bG with
+  | intro BG _ =>
+    have h := BG.odd_walk O.walk O.oddLength
+    contradiction
 
 /-- A graph is not bipartite if it contains an odd closed walk.  -/
-@[default_instance 200]
+@[default_instance]
 instance Graph.nonBipartiteFromOddClosedWalk (G : Graph) [W : OddClosedWalk G] : Decidable G.bipartite :=
   .isFalse W.not_bipartite
 
