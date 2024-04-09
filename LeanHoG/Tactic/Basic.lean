@@ -8,8 +8,11 @@ import LeanHoG.Tactic.SearchDSL
 import LeanHoG.Tactic.Options
 import LeanHoG.Tactic.ParseExpr
 import LeanHoG.Invariant.HamiltonianPath.Basic
+import LeanHoG.Invariant.HamiltonianPath.Tactic
 
 namespace LeanHoG
+
+open Lean Meta Elab Tactic
 
 -----------------------------------------------------------------
 -- Download graph command
@@ -57,7 +60,18 @@ unsafe def downloadHoGGraphImpl : Command.CommandElab
 
 syntax (name := searchForExampleInHoG) "search_for_example" : tactic
 
-open Lean Qq Elab in
+open Lean Qq Elab Tactic in
+/-- `search_for_example` works on goals of the form `∃ (G : Graph), P G`, where
+    `P` is a limited propositional formula on `G` which consists of conjunction,
+    disjunctions and comparisons of invariants of G, i.e. the kinds of queries
+    HoG is able to answer.
+
+    Note: The tactic constructs a query and sends it to the HoG database.
+
+    Example goal the tactic works on:
+    ∃ (G : Graph), G.isTraceable ∧ G.vertexSize > 3 ∧
+    (G.minimumDegree < G.vertexSize / 2)
+-/
 @[tactic searchForExampleInHoG]
 unsafe def searchForExampleInHoGImpl : Tactic.Tactic
   | stx@`(tactic|search_for_example) =>
@@ -69,6 +83,7 @@ unsafe def searchForExampleInHoGImpl : Tactic.Tactic
       let exists_intro ← Term.mkConst ``Exists.intro
       try
         let enqs ← decomposeExistsQ goalType
+        let mentionsTracability := enqs.any (fun enq => enq.mentionsTracability)
         let hash := hash enqs
         let query := HoGQuery.build enqs
         let graphs ← liftCommandElabM (queryDatabaseForExamples [query] hash)
@@ -89,10 +104,33 @@ unsafe def searchForExampleInHoGImpl : Tactic.Tactic
               goal.withContext do
                 let r ← Lean.Elab.Tactic.elabTermEnsuringType graphId goalType
                 goal.assign r
-              -- Now try to simp which will among other things look for instance for e.g. HamiltonianPath
-              Tactic.evalSimp stx
-              Tactic.evalDecide stx
-              Lean.logInfo s!"Closed goal using {graphId.getId}"
+                -- Now try to simp which will among other things look for instance for e.g. HamiltonianPath
+                if mentionsTracability then
+                  -- If we want to prove things about tracability we need to search for a Hamiltonian path
+                  let (val, type, res) ← LeanHoG.searchForHamiltonianPathAux graphId.getId r
+                  match res with
+                  | .unsat =>
+                    Tactic.liftMetaTactic fun mvarId => do
+                      let mvarIdNew ← mvarId.assert .anonymous val type
+                      let (_, mvarIdNew) ← mvarIdNew.intro1P
+                      return [mvarIdNew]
+                    let ctx ← mkSimpContext (← `(tactic|simp_all only [LeanHoG.Graph.no_path_not_traceable, not_false_eq_true])) false
+                    let (result?, _) ← simpAll (← getMainGoal) ctx.ctx (simprocs := ctx.simprocs)
+                    match result? with
+                    | none => replaceMainGoal []
+                    | some mvarId => replaceMainGoal [mvarId]
+                    Tactic.evalDecide stx
+                  | _ =>
+                    let ctx ← mkSimpContext (← `(tactic|simp_all only [LeanHoG.Graph.no_path_not_traceable, not_false_eq_true])) false
+                    let (result?, _) ← simpAll (← getMainGoal) ctx.ctx (simprocs := ctx.simprocs)
+                    match result? with
+                    | none => replaceMainGoal []
+                    | some mvarId => replaceMainGoal [mvarId]
+                    Tactic.evalDecide stx
+                else
+                  Tactic.evalSimp stx
+                  Tactic.evalDecide stx
+                Lean.logInfo s!"Closed goal using {graphId.getId}"
               -- Visualize the graph we used to close the goal
               -- TODO: Make this an option
               let wi : Expr ←

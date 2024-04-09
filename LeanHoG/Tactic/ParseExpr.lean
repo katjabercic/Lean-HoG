@@ -24,10 +24,11 @@ def decomposeIntegralInvQ (e : Q(Graph → Nat)) : MetaM IntegralInvariant := do
   | ~q(fun G => Graph.minimumDegree G) => return IntegralInvariant.MinimumDegree
   | _ => throwError s!"cannot decompose integral invariant, got {e}"
 
-def decomposeBoolInvQ (e : Q(Graph → Prop)) : MetaM BoolInvariant := do
+def decomposeBoolInvQ (e : Q(Graph → Prop)) : MetaM (BoolInvariant × Bool) := do
   match e with
-  | ~q(fun G => Graph.isHamiltonian G) => return BoolInvariant.Hamiltonian
-  | ~q(fun G => Graph.isTraceable G) => return BoolInvariant.Traceable
+  | ~q(fun G => Graph.isHamiltonian G) => return (BoolInvariant.Hamiltonian, true)
+  | ~q(fun G => Graph.isTraceable G) => return (BoolInvariant.Traceable, true)
+  | ~q(fun G => ¬ Graph.isTraceable G) => return (BoolInvariant.Traceable, false)
   | _ => throwError s!"cannot decompose Boolean invariant, got {e}"
 
 unsafe def decomposeFormulaQ (e : Q(Graph → Nat)) : MetaM ArithExpr := do
@@ -98,8 +99,8 @@ unsafe def decomposeComparisonQ {G : Q(Sort)} (e : Q($G → Prop)) : MetaM HoGEn
     let rhs ← decomposeFormulaQ g
     return .FormulaEnquiry { lhs := lhs, rhs := rhs, cmp := .Eq }
   | ~q(fun G => $f G) =>
-    let inv ← decomposeBoolInvQ f
-    return .BoolEnquiry { inv := inv, val := true }
+    let (inv, val) ← decomposeBoolInvQ f
+    return .BoolEnquiry { inv := inv, val := val }
   | _ => throwError m!"cannot decompose comparison, got {e}"
 
 def decomposeAndQ {G : Q(Sort)} (e : Q($G → Prop)) : MetaM (Q(Prop) × Q(Prop)) := do

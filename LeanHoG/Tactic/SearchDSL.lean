@@ -95,7 +95,7 @@ inductive IntegralInvariant
   | Treewidth
   | VertexConnectivity
   | VertexCoverNumber
-deriving Repr, Hashable
+deriving Repr, Hashable, DecidableEq
 
 instance : ToString IntegralInvariant where
   toString := fun i =>
@@ -284,6 +284,13 @@ def ArithExpr.toAPIRepr : ArithExpr → String
 instance : ToJson ArithExpr where
   toJson := fun ae => Json.str ae.toAPIRepr
 
+def ArithExpr.mentionsIntegralInvariant : ArithExpr → IntegralInvariant → Bool
+  | .nat _, _ => false
+  | .float _, _ => false
+  | .integralInv inv, inv' => inv = inv'
+  | .numeralInv _, _ => false
+  | .comp _ lhs rhs, inv => lhs.mentionsIntegralInvariant inv || rhs.mentionsIntegralInvariant inv
+
 structure BoolEnquiry where
   inv : BoolInvariant
   val : Bool
@@ -333,6 +340,13 @@ instance : ToString HoGEnquiry where
     | .NumericalEnquiry n => toString n
     | .IntegralEnquiry i => toString i
     | .FormulaEnquiry f => toString f
+
+def HoGEnquiry.mentionsTracability : HoGEnquiry → Bool
+  | .BoolEnquiry ⟨.Traceable, _⟩ => true
+  | .BoolEnquiry _ => false
+  | .NumericalEnquiry _ => false
+  | .IntegralEnquiry _ => false
+  | .FormulaEnquiry _ => false
 
 structure InvariantQuery where
   invariantId : Nat
