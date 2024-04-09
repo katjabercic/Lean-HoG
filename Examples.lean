@@ -56,7 +56,7 @@ load_graph HanoiNoCertificates "examples/Hanoi2Disks-no-certificates.json"
 
 -- Using a certificate provides a significant speed up.
 load_graph Poussin "examples/Poussin.json"
--- #eval Poussin.bipartite
+#eval Poussin.bipartite
 
 load_graph Hanoi "examples/Hanoi2Disks.json"
 -- #eval Hanoi.bipartite
@@ -68,8 +68,10 @@ load_graph Petersen "build/graphs/660.json"
 
 -- We can download graphs directly from HoG
 #download_hog_graph Wheel 204
-#check Wheel
-#visualizeGraph Wheel
+#eval Graph.bipartite Wheel
+example : Graph.bipartite Wheel = false := by
+  decide
+
 
 -- We can use a command to compute a Hamiltonian path and add it as an instance
 
@@ -94,7 +96,8 @@ load_graph Petersen "build/graphs/660.json"
 
 -- set_option leanHoG.solverCmd "cadical"
 -- set_option leanHoG.cake_lprCmd "cake_lpr"
--- example : ∃ (G : Graph), G.isTraceable ∧ G.vertexSize > 3 ∧ (G.minimumDegree < G.vertexSize / 2) := by
---   search_for_example
+
+example : ∃ (G : Graph), G.vertexSize = 4 ∧ G.bipartite := by
+  search_for_example
 
 end LeanHoG

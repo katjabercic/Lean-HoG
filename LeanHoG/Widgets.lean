@@ -42,10 +42,10 @@ def HamiltonianPath.toVisualizationFormat? (G : Graph) : IO Json := do
     ]
   | none => return Json.null
 
-/-- Use `#visualizeGraph G` to render a visualization of the graph `G` in the panel widget.
-This is done using the `https://js.cytoscape.org/` javascript library. -/
 syntax (name := visualizeGraphCmd) "#visualizeGraph " term : command
 
+/-- Use `#visualizeGraph G` to render a visualization of the graph `G` in the panel widget.
+This is done using the `https://js.cytoscape.org/` javascript library. -/
 @[command_elab visualizeGraphCmd]
 def elabVisualizeGraphCmd : CommandElab
   | stx@`(#visualizeGraph $g) => liftTermElabM do
@@ -57,12 +57,12 @@ def elabVisualizeGraphCmd : CommandElab
 
 def buildVisualizationInstance (G : Graph) [inst : HamiltonianPath G] : Json := HamiltonianPath.toVisualizationFormat G inst
 
-syntax (name := visualizeHamiltonianPathCmd) "#visualizeHamiltonianPath" term : command
+syntax (name := visualizeHamiltonianPathCmd) "#visualizeHamiltonianPath " term : command
 
 @[command_elab visualizeHamiltonianPathCmd]
 unsafe def elabVisualizeHamiltonianPathCmd : CommandElab
-  | stx@`(#visualizeHamiltonianPath $g) => liftTermElabM do
-    let gg : Expr ← elabTerm g none
+  | stx@`(#visualizeHamiltonianPath $G) => liftTermElabM do
+    let gg : Expr ← elabTerm G none
     let hpInst ← mkAppM ``HamiltonianPath #[gg]
     if let .some _ ← synthInstance? hpInst then
       let wi : Expr ← elabWidgetInstanceSpecAux (mkIdent `visualize) (← ``(buildVisualizationInstance $g))
