@@ -42,21 +42,64 @@ lemma empty_edges_impl_not_adj (G : Graph) (u v : G.vertex) : G.edgeSet = Std.RB
     rw [empty] at adjacent
     contradiction
 
+lemma empty_edges_and_diff_impl_not_connected (G : Graph) (u v : G.vertex) : G.edgeSet = Std.RBSet.empty → u ≠ v → ¬ G.connected u v := by
+  intro empty ne connected
+  unfold Graph.connected at connected
+  induction connected with
+  | rel x y adj =>
+    unfold Graph.adjacent at adj
+    unfold Graph.badjacent at adj
+    apply ltByCases x y
+    · intro x_lt
+      simp[x_lt] at adj
+      rw [empty] at adj
+      contradiction
+    · intro eq
+      contradiction
+    · intro x_gt
+      simp[x_gt] at adj
+      rw [empty] at adj
+      contradiction
+  | refl x =>
+    contradiction
+  | symm x y _ hi =>
+    symm at ne
+    exact hi ne
+  | trans x y z _ _ x_ne_y y_ne_z =>
+    cases ne_or_eq x y with
+    | inl hi =>
+      have _ := x_ne_y hi
+      contradiction
+    | inr x_eq_y =>
+      cases ne_or_eq y z with
+      | inl hi =>
+        have _ := y_ne_z hi
+        contradiction
+      | inr hi =>
+        have _ := Eq.trans x_eq_y hi
+        contradiction
+
 /--
   If the edge set of a graph is empty and two vertices are connected, they can only be equal.
 -/
 lemma empty_edges_impl_connected_eq (G : Graph) (u v : G.vertex) : G.edgeSet = Std.RBSet.empty → G.connected u v → u = v := by
   intro empty
-  unfold Graph.connected
   apply ltByCases u v
   · intro lt
     -- The adjacent relation should always be false since we have no edges.
-    sorry
-  · intro eq adj
+    have ne := ne_of_lt lt
+    have not_connected := empty_edges_and_diff_impl_not_connected G u v empty ne
+    intro connected
+    contradiction
+  · intro eq _
     assumption
   · intro gt
     -- The adjacent relation should always be false since we have no edges.
-    sorry
+    have ne := ne_of_lt gt
+    symm at ne
+    have not_connected := empty_edges_and_diff_impl_not_connected G u v empty ne
+    intro connected
+    contradiction
 
 /--
   Instance of ConnectedComponents for the independent set.
