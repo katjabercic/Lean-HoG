@@ -65,7 +65,7 @@ unsafe def elabVisualizeHamiltonianPathCmd : CommandElab
     let gg : Expr ← elabTerm G none
     let hpInst ← mkAppM ``HamiltonianPath #[gg]
     if let .some _ ← synthInstance? hpInst then
-      let wi : Expr ← elabWidgetInstanceSpecAux (mkIdent `visualize) (← ``(buildVisualizationInstance $g))
+      let wi : Expr ← elabWidgetInstanceSpecAux (mkIdent `visualize) (← ``(buildVisualizationInstance $G))
       let wi : WidgetInstance ← evalWidgetInstance wi
       savePanelWidgetInfo wi.javascriptHash wi.props stx
     else
