@@ -7,6 +7,9 @@ import LeanHoG.Invariant.HamiltonianPath.Tactic
 
 namespace LeanHoG
 
+-- You may have to change this
+set_option leanHoG.pythonExecutable "python3"
+
 -- Loading graphs, visualizing them, and checking their properties
 
 /-
@@ -62,12 +65,9 @@ load_graph Hanoi "examples/Hanoi2Disks.json"
 -- #eval Hanoi.bipartite
 
 -- Load the Petersen graph from the House of Graphs
-load_graph Petersen "build/graphs/660.json"
+#download Petersen 660
 #show Petersen
 #eval Petersen.numberOfConnectedComponents
-
--- You may have to change this
-set_option leanHoG.pythonExecutable "python3"
 
 -- We can download graphs directly from HoG
 #download Wheel 204

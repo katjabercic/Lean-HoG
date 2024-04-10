@@ -785,7 +785,6 @@ unsafe def searchForExampleImpl : Command.CommandElab
       if output.exitCode ≠ 0 then
         IO.eprintln f!"failed to download graphs: {output.stderr}"
         return
-    -- IO.println s!"{qs.hash}"
 
     let path : System.FilePath := System.mkFilePath ["build", "search_results", s!"{qs.hash}"]
     let contents ← path.readDir
