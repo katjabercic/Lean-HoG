@@ -8,15 +8,13 @@ import LeanHoG.Invariant.HamiltonianPath.Tactic
 namespace LeanHoG
 
 -- You may have to change this
-set_option leanHoG.pythonExecutable "python3"
+set_option leanHoG.pythonExecutable "/Users/katja/Git/Lean-HoG/.venv/bin/python"
+
 
 -- Loading graphs, visualizing them, and checking their properties
 
-/-
-In the examples, some invariant certificates are omitted on purpose.
-Below, they are marked with a comment. In some cases, the kernel can
-compute the invariant values, but not in all of them.
--/
+-- In the examples, some invariant certificates are omitted on purpose.
+-- Below, they are marked with a comment.
 
 -- The discrete graph on two vertices
 load_graph Two "examples/two.json"
@@ -45,46 +43,48 @@ load_graph ThreeFour "examples/cycle3-cycle4.json"
 #eval ThreeFour.connectedGraph
 #eval ThreeFour.numberOfConnectedComponents
 
+
+-- Checking bipartiteness with and without certificates
+
 -- The next two graphs have respectively 15 and 16 edges.
 -- Uncomment the next lines to see the time Lean needs to decide bipartitness without a certificate
-/-
-load_graph PoussinNoCertificates "examples/Poussin-no-certificates.json"
-#eval PoussinNoCertificates.bipartite
--/
-
-/-
-load_graph HanoiNoCertificates "examples/Hanoi2Disks-no-certificates.json"
-#eval HanoiNoCertificates.bipartite
--/
+-- load_graph PoussinNoCertificates "examples/Poussin-no-certificates.json"
+-- #eval PoussinNoCertificates.bipartite
+-- load_graph HanoiNoCertificates "examples/Hanoi2Disks-no-certificates.json"
+-- #eval HanoiNoCertificates.bipartite
 
 -- Using a certificate provides a significant speed up.
 load_graph Poussin "examples/Poussin.json"
 -- #eval Poussin.bipartite
-
 load_graph Hanoi "examples/Hanoi2Disks.json"
 -- #eval Hanoi.bipartite
 
--- Load the Petersen graph from the House of Graphs
+
+-- Loading and searching for graphs from the House of Graphs
+
+-- Load the Petersen graph from HoG
+-- First run `lake exe download 660`
 #download Petersen 660
 #show Petersen
 #eval Petersen.numberOfConnectedComponents
 
--- We can download graphs directly from HoG
+-- Alternatively, download graphs directly from HoG
 #download Wheel 204
 #check Wheel
 #show Wheel
 
--- We can use a command to compute a Hamiltonian path and add it as an instance
-
-#check_traceable Wheel
-#show_hamiltonian_path Wheel
-
 -- Search the HoG database directly from Lean
--- Uncomment the line below to initiate the search
 #search hog{ bipartite = true ∧ (numberOfEdges = 2 ∨ numberOfVertices < 6) }
 #show hog_904
-
+-- Uncomment the line below to initiate the search
 -- #search hog{ traceable = true ∧ numberOfVertices > 3 ∧ minimumDegree < numberOfVertices / 2}
+
+
+-- Hamiltonian paths
+
+-- We can use a command to compute a Hamiltonian path and add it as an instance
+#check_traceable Wheel
+#show_hamiltonian_path Wheel
 
 -- Tactic to close goals of the form ∃ G, P G
 -- Not all P are supported, only propositions using invariants defined
