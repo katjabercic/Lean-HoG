@@ -20,11 +20,8 @@ brew install --cask visual-studio-code
 
 ### SAT solving
 
-For using the SAT solving facilities of the library (e.g. computing Hamiltonian paths)
-you need the following:
+For using the SAT solving facilities of the library (e.g. computing Hamiltonian paths) you need the following:
 
-* The python **[pysat](https://pysathq.github.io/)** library, which you can install with
-  `pip3 install python-sat`
 * A modern SAT solver capable of producing proofs of unsatisfiability, 
   we recommend **[CaDiCaL](https://github.com/arminbiere/cadical)**.
 * A SAT proof checker, we recommend the formally verified checker **[cake_lpr](https://github.com/tanyongkiam/cake_lpr)**.

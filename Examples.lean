@@ -80,12 +80,24 @@ load_graph hog_904 "build/graphs/904.json"
 -- Uncomment the line below to initiate the search
 -- #search hog{ traceable = true ∧ numberOfVertices > 3 ∧ minimumDegree < numberOfVertices / 2}
 
-
+-----------------------------------------
 -- Hamiltonian paths
+-----------------------------------------
 
 -- We can use a command to compute a Hamiltonian path and add it as an instance
 #check_traceable Wheel
 #show_hamiltonian_path Wheel
+
+-- We can also show that there is no Hamiltonian path is some graphs
+#search hog{ traceable = false ∧ numberOfEdges = 2}
+load_graph hog_896 "build/graphs/896.json"
+#show hog_896
+#check_traceable hog_896
+#show_hamiltonian_path hog_896
+
+---------------------------------------
+-- Tactics
+---------------------------------------
 
 -- Tactic to close goals of the form ∃ G, P G
 -- Not all P are supported, only propositions using invariants defined
@@ -101,7 +113,7 @@ load_graph hog_904 "build/graphs/904.json"
 
 -- set_option leanHoG.solverCmd "cadical"
 -- set_option leanHoG.proofCheckerCmd "cake_lpr"
--- example : ∃ (G : Graph), G.isTraceable ∧ G.vertexSize > 3 ∧ (G.minimumDegree < G.vertexSize / 2) := by
--- find_example
+example : ∃ (G : Graph), G.isTraceable ∧ G.vertexSize > 3 ∧ (G.minimumDegree < G.vertexSize / 2) := by
+  find_example
 
 end LeanHoG

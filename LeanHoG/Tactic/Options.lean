@@ -12,7 +12,7 @@ register_option leanHoG.solverCmd : String := {
 }
 
 register_option leanHoG.proofCheckerCmd : String := {
-  defValue := "cake_lrp"
+  defValue := "cake_lpr"
   descr := "The location of a proof checker executable used for checking unsat proofs.
   The checker should except LRAT proofs."
 }

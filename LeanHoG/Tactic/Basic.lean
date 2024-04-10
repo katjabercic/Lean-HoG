@@ -67,8 +67,7 @@ open Lean Qq Elab Tactic in
     Note: The tactic constructs a query and sends it to the HoG database.
 
     Example goal the tactic works on:
-    ∃ (G : Graph), G.isTraceable ∧ G.vertexSize > 3 ∧
-    (G.minimumDegree < G.vertexSize / 2)
+    `∃ (G : Graph), G.isTraceable ∧ G.vertexSize > 3 ∧ (G.minimumDegree < G.vertexSize / 2)`
 -/
 @[tactic findExample]
 unsafe def findExampleImpl : Tactic.Tactic
@@ -86,8 +85,17 @@ unsafe def findExampleImpl : Tactic.Tactic
         let query := HoGQuery.build enqs
         let graphs ← liftCommandElabM (queryDatabaseForExamplesAux [query] hash)
         if h : graphs.length > 0 then
+          -- We now have to load one of the results into the context
+          -- TODO: Currently we globaly load the graph, should just load it into the local context
           let ⟨graphId⟩ := graphs[0]'(by simp_all only [not_lt_zero'])
+          let opts ← getOptions
+          let downloadLocation := opts.get leanHoG.graphDownloadLocation.name leanHoG.graphDownloadLocation.defValue
+          let graphLoc := System.mkFilePath [downloadLocation, s!"{graphId}.json"]
           let graphIdent := mkIdent (Name.mkSimple s!"hog_{graphId}")
+          let jsonData ← loadJSONData JSONData graphLoc
+          liftCommandElabM (loadGraphAux graphIdent.getId jsonData)
+
+          -- Now try to use the loaded graph to close the goal
           let mvarIds' ← Lean.MVarId.apply goal exists_intro
           Tactic.replaceMainGoal mvarIds'
           let newGoals ← Tactic.getGoals
