@@ -16,12 +16,6 @@ require proofwidgets from git "https://github.com/EdAyers/ProofWidgets4"@"v0.0.2
 
 lean_lib LeanHoG
 
-lean_lib Download
-lean_lib js
-
-lean_exe download where
-  root := `Download.DownloadGraph
-
 lean_exe build_widgets where
   root := `widget.Build
 

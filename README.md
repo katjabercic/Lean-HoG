@@ -52,18 +52,22 @@ Open the file [`Examples.lean`](Examples.lean) to check whether the example grap
 
 ### Downloading graphs
 
-To download graphs from the [House of Graphs](https://houseofgraphs.org/) (HoG) website run
-* `lake exe download <id>` to download the graph with the ID `<id>`,
-* `lake exe download <min-id> <max-id>` to download graphs whose IDs are in the range from `<min-id>` to `<max-id>`,
+To download graphs from the [House of Graphs](https://houseofgraphs.org/) (HoG) you can
+use the `#download <graphName> <hog_id>` command. 
+It downloads the graphs with House of Graphs ID `hog_id` and loads it into the variable `graphName`.
 
-The JSON files with the graps are downloaded into `build/graphs`.
-
-To use a downloaded graph with ID `<id>` in Lean, use the command
-```lean
-load_graph <graphName> "build/graphs/<ID>"
-```
-This will load the graph into the variable `<graphName>`.
 You can check that it loaded it with `#check <graphName>`.
+
+**Note**: To download the graph it uses an external python script. The location of the python executable is provided by the user option `leanHoG.pythonExecutable`.
+
+**Note**: The python environment is expected to have the requests library installed.
+
+#### Example
+```lean
+#download Petersen 660
+#check Petersen
+```
+
 
 ### Visualization widget
 
