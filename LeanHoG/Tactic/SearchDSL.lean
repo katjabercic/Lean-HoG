@@ -4,7 +4,6 @@ import Lean.Data.Json.Basic
 import LeanHoG.LoadGraph
 import LeanHoG.Widgets
 import LeanHoG.Tactic.Options
-import LeanHoG.Util.IO
 
 import ProofWidgets.Component.HtmlDisplay
 
@@ -769,7 +768,7 @@ syntax (name := searchHoG) "#search" term : command
 open ProofWidgets in
 @[command_elab searchHoG]
 unsafe def searchForExampleImpl : Command.CommandElab
-  | stx@`(#search_hog $q ) => do
+  | stx@`(#search $q ) => do
     let qs ← Command.liftTermElabM do
       let qe : Expr ← Term.elabTerm q none
       let query ← Meta.mkAppM ``Queries.mk #[(← Meta.mkAppM ``List.map #[(← Meta.mkAppM ``HoGQuery.build #[]), qe])]
