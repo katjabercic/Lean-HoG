@@ -67,7 +67,7 @@ open Lean Qq Elab Tactic in
     Note: The tactic constructs a query and sends it to the HoG database.
 
     Example goal the tactic works on:
-    `∃ (G : Graph), G.isTraceable ∧ G.vertexSize > 3 ∧ (G.minimumDegree < G.vertexSize / 2)`
+    `∃ (G : Graph), G.traceable ∧ G.vertexSize > 3 ∧ (G.minimumDegree < G.vertexSize / 2)`
 -/
 @[tactic findExample]
 unsafe def findExampleImpl : Tactic.Tactic

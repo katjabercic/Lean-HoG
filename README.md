@@ -123,6 +123,29 @@ The graphs are also available in Lean, which you can check with e.g.
 #check hog_302
 ```
 
+### Search tactic
+
+The library provides a tactic `find_example`,
+which uses the search feature to close certain goals of the form
+`∃ (G : Graph), P G` for Boolean predicates `P`.
+The predicate `P` must be a conjunction of comparisons of invariants with
+either invariants or numbers.
+The supported invariants are those Lean-HoG currently implements. They include:
+* `vertexSize`
+* `edgeSize`
+* `minimumDegree`
+* `maximumDegree`
+* `traceable`
+* `bipartite`
+
+#### Example
+
+```lean
+example : ∃ (G : Graph), G.traceable ∧ G.vertexSize > 3 ∧ 
+  (G.minimumDegree < G.vertexSize / 2) := by
+  find_example
+```
+
 ## Raw data format
 
 The JSON file should have the following structure.

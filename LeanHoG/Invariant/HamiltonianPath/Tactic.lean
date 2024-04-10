@@ -46,7 +46,7 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) :
     }
     Lean.Meta.addInstance hamiltonianPathName .scoped 42
     let existsHamPath ← Meta.mkAppM ``LeanHoG.HamiltonianPath.path_of_cert #[]
-    let existsType := q(Graph.isTraceable $graph)
+    let existsType := q(Graph.traceable $graph)
     return (existsType, existsHamPath, res)
 
   | .unsat =>

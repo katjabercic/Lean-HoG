@@ -113,7 +113,7 @@ load_graph hog_896 "build/graphs/896.json"
 
 -- set_option leanHoG.solverCmd "cadical"
 -- set_option leanHoG.proofCheckerCmd "cake_lpr"
-example : ∃ (G : Graph), G.isTraceable ∧ G.vertexSize > 3 ∧ (G.minimumDegree < G.vertexSize / 2) := by
+example : ∃ (G : Graph), G.traceable ∧ G.vertexSize > 3 ∧ (G.minimumDegree < G.vertexSize / 2) := by
   find_example
 
 end LeanHoG
