@@ -1,5 +1,0 @@
-[package]
-name = "Lean-HoG"
-version = "0.2"
-lean_version = "leanprover/lean4:nightly"
-path = "src"

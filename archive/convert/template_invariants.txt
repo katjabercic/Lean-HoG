@@ -1,9 +1,0 @@
-
-def ${name}_invariants : GraphInfo := 
-{ vertexSize := $vertex_size,
-  edgeSize := $edge_size,
-  minDegree := $min_degree,
-  maxDegree := $max_degree,
-  isRegular := $is_regular,
-  isBipartite := $is_bipartite
-}
