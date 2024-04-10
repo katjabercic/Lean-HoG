@@ -84,9 +84,10 @@ unsafe def findExampleImpl : Tactic.Tactic
         let mentionsTracability := enqs.any (fun enq => enq.mentionsTracability)
         let hash := hash enqs
         let query := HoGQuery.build enqs
-        let graphs ← liftCommandElabM (queryDatabaseForExamples [query] hash)
+        let graphs ← liftCommandElabM (queryDatabaseForExamplesAux [query] hash)
         if h : graphs.length > 0 then
           let ⟨graphId⟩ := graphs[0]'(by simp_all only [not_lt_zero'])
+          let graphIdent := mkIdent (Name.mkSimple s!"hog_{graphId}")
           let mvarIds' ← Lean.MVarId.apply goal exists_intro
           Tactic.replaceMainGoal mvarIds'
           let newGoals ← Tactic.getGoals
@@ -99,12 +100,12 @@ unsafe def findExampleImpl : Tactic.Tactic
               goal.checkNotAssigned `search_for_counterexample
               -- try to close the goal with the found graph
               goal.withContext do
-                let r ← Lean.Elab.Tactic.elabTermEnsuringType graphId goalType
+                let r ← Lean.Elab.Tactic.elabTermEnsuringType graphIdent goalType
                 goal.assign r
                 -- Now try to simp which will among other things look for instance for e.g. HamiltonianPath
                 if mentionsTracability then
                   -- If we want to prove things about tracability we need to search for a Hamiltonian path
-                  let (val, type, res) ← LeanHoG.searchForHamiltonianPathAux graphId.getId r
+                  let (val, type, res) ← LeanHoG.searchForHamiltonianPathAux graphIdent.getId r
                   match res with
                   | .unsat =>
                     Tactic.liftMetaTactic fun mvarId => do
@@ -132,11 +133,11 @@ unsafe def findExampleImpl : Tactic.Tactic
                   | some mvarId =>
                     replaceMainGoal [mvarId]
                     Tactic.evalDecide stx
-                Lean.logInfo s!"Closed goal using {graphId.getId}"
+                Lean.logInfo s!"Closed goal using {graphIdent.getId}"
               -- Visualize the graph we used to close the goal
               -- TODO: Make this an option
               let wi : Expr ←
-                Widget.elabWidgetInstanceSpecAux (mkIdent `visualize) (← ``((Graph.toVisualizationFormat $graphId)))
+                Widget.elabWidgetInstanceSpecAux (mkIdent `visualize) (← ``((Graph.toVisualizationFormat $graphIdent)))
               let wi ← Widget.evalWidgetInstance wi
               Widget.savePanelWidgetInfo wi.javascriptHash wi.props stx
             else

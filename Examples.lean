@@ -8,7 +8,7 @@ import LeanHoG.Invariant.HamiltonianPath.Tactic
 namespace LeanHoG
 
 -- You may have to change this
-set_option leanHoG.pythonExecutable "/Users/katja/Git/Lean-HoG/.venv/bin/python"
+set_option leanHoG.pythonExecutable "python"
 
 
 -- Loading graphs, visualizing them, and checking their properties
@@ -75,6 +75,7 @@ load_graph Hanoi "examples/Hanoi2Disks.json"
 
 -- Search the HoG database directly from Lean
 #search hog{ bipartite = true ∧ (numberOfEdges = 2 ∨ numberOfVertices < 6) }
+load_graph hog_904 "build/graphs/904.json"
 #show hog_904
 -- Uncomment the line below to initiate the search
 -- #search hog{ traceable = true ∧ numberOfVertices > 3 ∧ minimumDegree < numberOfVertices / 2}
@@ -95,11 +96,11 @@ load_graph Hanoi "examples/Hanoi2Disks.json"
 -- LRAT proofs of unsat. We recommend CaDiCal 1.9.5+ (https://github.com/arminbiere/cadical)
 -- and cake_lpr (https://github.com/tanyongkiam/cake_lpr).
 -- We set the location of the solver and proof checker with user options
--- `leanHoG.solverCmd` and `leanHoG.cake_lprCmd`.
+-- `leanHoG.solverCmd` and `leanHoG.proofCheckerCmd`.
 -- Uncomment lines below to run the tactic
 
 -- set_option leanHoG.solverCmd "cadical"
--- set_option leanHoG.cake_lprCmd "cake_lpr"
+-- set_option leanHoG.proofCheckerCmd "cake_lpr"
 -- example : ∃ (G : Graph), G.isTraceable ∧ G.vertexSize > 3 ∧ (G.minimumDegree < G.vertexSize / 2) := by
 -- find_example
 

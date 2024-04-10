@@ -53,7 +53,7 @@ unsafe def showNoHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) : Term
     let enc := (hamiltonianPathCNF G).val
     let opts ← getOptions
     let cadicalExe := opts.get leanHoG.solverCmd.name leanHoG.solverCmd.defValue
-    let cake_lprExr := opts.get leanHoG.cake_lprCmd.name leanHoG.cake_lprCmd.defValue
+    let cake_lprExr := opts.get leanHoG.proofCheckerCmd.name leanHoG.proofCheckerCmd.defValue
     let solver := LeanSAT.Solver.Impl.CakeLpr cadicalExe #["--no-binary", "--lrat=true"] cake_lprExr
     -- let solver : LeanSAT.Solver IO := (LeanSAT.Solver.Impl.DimacsCommand "/home/jure/source-control/cadical/build/cadical")
     let cnf := Encode.EncCNF.toICnf enc
@@ -99,7 +99,7 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) :
   let enc := (hamiltonianPathCNF G).val
   let opts ← getOptions
   let cadicalExe := opts.get leanHoG.solverCmd.name leanHoG.solverCmd.defValue
-  let cake_lprExr := opts.get leanHoG.cake_lprCmd.name leanHoG.cake_lprCmd.defValue
+  let cake_lprExr := opts.get leanHoG.proofCheckerCmd.name leanHoG.proofCheckerCmd.defValue
   let solver := SolverWithCakeLpr.SolverWithCakeLpr cadicalExe #["--no-binary", "--lrat=true"] cake_lprExr
   let cnf := Encode.EncCNF.toICnf enc
   let (_, s) := Encode.EncCNF.run enc

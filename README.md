@@ -1,6 +1,6 @@
 # Lean-HoG
 
-A library for computational graph theory in [Lean 4](https://leanprover.github.io), with emphasis on verification of large datasets of graphs; in particular the [House of Graphs](https://houseofgraphs.org).
+A library for computational graph theory in [Lean 4](https://leanprover.github.io), with emphasis on verification of large datasets of graphs; in particular the [House of Graphs](https://houseofgraphs.org) (HoG).
 
 ## Prerequisites
 
@@ -11,11 +11,27 @@ You need the following software:
 * **[Node.js and `npm` cli](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)**. 
 * **[Python](https://www.python.org)** version 3, with the [requests](https://pypi.org/project/requests/)  library, which you can install with `pip3 install requests`.
 
+
 On MacOS you can use [Homebrew](https://brew.sh) to install Visual Studio Code and `Node.js` with
 ```
 brew install npm
 brew install --cask visual-studio-code
 ```
+
+### SAT solving
+
+For using the SAT solving facilities of the library (e.g. computing Hamiltonian paths)
+you need the following:
+
+* The python **[pysat](https://pysathq.github.io/)** library, which you can install with
+  `pip3 install python-sat`
+* A modern SAT solver capable of producing proofs of unsatisfiability, 
+  we recommend **[CaDiCaL](https://github.com/arminbiere/cadical)**.
+* A SAT proof checker, we recommend the formally verified checker **[cake_lpr](https://github.com/tanyongkiam/cake_lpr)**.
+
+Once you have installed the SAT solver and a proof checker, you should set in Lean
+* `leanHoG.solverCmd` to the location of the SAT solver executable.
+* `leanHoG.proofCheckerCmd` to the location of the SAT proof checker.
 
 ## Installation
 
@@ -27,6 +43,13 @@ To install all the dependencies and compile Lean-HoG, run these commands from wi
 * `lake build` to compile Lean-HoG
 
 ## Usage
+
+The library uses Python to interact with the HoG database and process the data
+before it's imported in Lean.
+To make Lean aware of the location of your Python executable set
+```
+set_option leanHoG.pythonExecutable <path-to-python>
+```
 
 Open the file [`Examples.lean`](Examples.lean) to check whether the example graphs load successfully.
 
@@ -58,17 +81,20 @@ Try them out by opening the `Examples.lean` file and clicking on the line `#show
 
 ### Search the House of Graphs from Lean
 
-You can query the House of Graphs database from within Lean via the command `#search_hog`.
+You can query the House of Graphs database from within Lean via the command `#search`.
 To use it you have to construct a valid `hog_query` and enclose it into
 `hog{ }` syntax. It has the following syntax:
 ```
-hog_query q ::= boolean_invariant = b | numerical_invariant op x | ( q ) | q ∧ q | q ∨ q
+hog_query q ::= boolean_invariant = b | numerical_invariant op x | query_formula op query_formula | ( q ) | q ∧ q | q ∨ q
 ```
 where `b` is a boolean value, `x` is a numerical value
-(`Int` for invariants with integral values, `Float` for invariants with continous values)
-and
+(`Int` for invariants with integral values, `Float` for invariants with continous values),
 ```
 op ::= < | <= | > | >= | =
+```
+and 
+```
+query_formula f ::= x | numerical_invariant | f + f | f - f | f / f | f * f
 ```
 The list of available invariants can be found in the [House of Graphs documentation](https://houseofgraphs.org/help#invariants).
 The invariants use [lower camel case](https://en.wikipedia.org/wiki/Camel_case).
