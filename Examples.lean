@@ -28,7 +28,7 @@ load_graph Path1 "examples/path1.json"
 
 -- The cycle on 7 vertices
 load_graph Cycle7 "examples/cycle7.json"
-#visualizeGraph Cycle7
+#show Cycle7
 #eval Cycle7.bipartite -- works despite missing certificate
 #eval Cycle7.connectedGraph
 
@@ -63,7 +63,7 @@ load_graph Hanoi "examples/Hanoi2Disks.json"
 
 -- Load the Petersen graph from the House of Graphs
 load_graph Petersen "build/graphs/660.json"
-#visualizeGraph Petersen
+#show Petersen
 #eval Petersen.numberOfConnectedComponents
 
 -- You may have to change this
@@ -72,16 +72,19 @@ set_option leanHoG.pythonExecutable "python3"
 -- We can download graphs directly from HoG
 #download Wheel 204
 #check Wheel
-#visualizeGraph Wheel
+#show Wheel
 
 -- We can use a command to compute a Hamiltonian path and add it as an instance
 
--- #compute_hamiltonian_path Wheel
--- #check Wheel.HamiltonianPathI
+#check_traceable Wheel
+#show_hamiltonian_path Wheel
 
 -- Search the HoG database directly from Lean
 -- Uncomment the line below to initiate the search
--- #search_hog hog{ bipartite = true ∧ (numberOfEdges = 2 ∨ numberOfVertices < 6) }
+#search hog{ bipartite = true ∧ (numberOfEdges = 2 ∨ numberOfVertices < 6) }
+#show hog_904
+
+-- #search hog{ traceable = true ∧ numberOfVertices > 3 ∧ minimumDegree < numberOfVertices / 2}
 
 -- Tactic to close goals of the form ∃ G, P G
 -- Not all P are supported, only propositions using invariants defined
@@ -98,6 +101,6 @@ set_option leanHoG.pythonExecutable "python3"
 -- set_option leanHoG.solverCmd "cadical"
 -- set_option leanHoG.cake_lprCmd "cake_lpr"
 -- example : ∃ (G : Graph), G.isTraceable ∧ G.vertexSize > 3 ∧ (G.minimumDegree < G.vertexSize / 2) := by
---   search
+-- find_example
 
 end LeanHoG

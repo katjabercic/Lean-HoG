@@ -53,7 +53,7 @@ which work by running Javascript in the Infoview.
 The visualization uses the [cytoscape.js](https://js.cytoscape.org/) javascript library.
 
 
-Try them out by opening the `Examples.lean` file and clicking on the line `#visualizeGraph Cycle7`. In the info view you should now see something like this:
+Try them out by opening the `Examples.lean` file and clicking on the line `#show Cycle7`. In the info view you should now see something like this:
 ![image](https://github.com/katjabercic/Lean-HoG/assets/6967728/f4ee94ab-4d31-4192-ac80-7e35323e5c4b)
 
 ### Search the House of Graphs from Lean
