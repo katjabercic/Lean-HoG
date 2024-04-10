@@ -10,11 +10,11 @@ import Std.Data.List.Basic
 
 namespace LeanHoG
 
-open Lean Meta Qq
+open Lean Qq
 
 /-- Evaluate an expression into a Nat -/
 unsafe def evaluateNat (e : Q(Nat)) : MetaM Nat := do
-  let n ← evalExpr' Nat ``Nat e
+  let n ← Meta.evalExpr' Nat ``Nat e
   return n
 
 def decomposeIntegralInvQ (e : Q(Graph → Nat)) : MetaM IntegralInvariant := do

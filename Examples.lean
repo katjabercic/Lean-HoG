@@ -66,8 +66,11 @@ load_graph Petersen "build/graphs/660.json"
 #visualizeGraph Petersen
 #eval Petersen.numberOfConnectedComponents
 
+-- You may have to change this
+set_option leanHoG.pythonExecutable "python3"
+
 -- We can download graphs directly from HoG
-#download_hog_graph Wheel 204
+#download Wheel 204
 #check Wheel
 #visualizeGraph Wheel
 
@@ -95,6 +98,6 @@ load_graph Petersen "build/graphs/660.json"
 -- set_option leanHoG.solverCmd "cadical"
 -- set_option leanHoG.cake_lprCmd "cake_lpr"
 -- example : ∃ (G : Graph), G.isTraceable ∧ G.vertexSize > 3 ∧ (G.minimumDegree < G.vertexSize / 2) := by
---   search_for_example
+--   search
 
 end LeanHoG

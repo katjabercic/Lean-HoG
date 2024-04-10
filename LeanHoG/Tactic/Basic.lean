@@ -12,16 +12,14 @@ import LeanHoG.Invariant.HamiltonianPath.Tactic
 
 namespace LeanHoG
 
-open Lean Meta Elab Tactic
-
 -----------------------------------------------------------------
 -- Download graph command
 -----------------------------------------------------------------
 
-syntax (name := downloadHoGGraph) "#download_hog_graph " ident ppSpace term : command
+syntax (name := downloadHoG) "#download" ident ppSpace term : command
 
-open Lean Qq Elab in
-/-- `#download_hog_graph <name> <hog_id>` downloads the graphs with House of Graphs
+open Lean Qq in
+/-- `#download <name> <hog_id>` downloads the graphs with House of Graphs
     ID `<hog_id>` and loads it into the veriable `<name>`.
 
     Note: The graph is downloaded into the folder defined by the user option
@@ -32,10 +30,10 @@ open Lean Qq Elab in
 
     Note: The python environment is expected to have the `requests` library installed.
  -/
-@[command_elab downloadHoGGraph]
-unsafe def downloadHoGGraphImpl : Command.CommandElab
-  | `(#download_hog_graph $name $id) =>  do
-    let n ← Command.liftTermElabM do
+@[command_elab downloadHoG]
+unsafe def downloadHoGImpl : Elab.Command.CommandElab
+  | `(#download $name $id) =>  do
+    let n ← Elab.Command.liftTermElabM do
       let qn : Q(Nat) ← (elabTermEnsuringTypeQ id q(Nat))
       evaluateNat qn
     let opts ← getOptions
@@ -52,16 +50,16 @@ unsafe def downloadHoGGraphImpl : Command.CommandElab
     loadGraphAux name.getId jsonData
     logInfo s!"loaded graph hog_{n} into {name.getId}"
 
-  | _ => throwUnsupportedSyntax
+  | _ => Elab.throwUnsupportedSyntax
 
 -----------------------------------------------------------------
 -- Search tactic
 -----------------------------------------------------------------
 
-syntax (name := searchForExampleInHoG) "search_for_example" : tactic
+syntax (name := findExample) "find_example" : tactic
 
 open Lean Qq Elab Tactic in
-/-- `search_for_example` works on goals of the form `∃ (G : Graph), P G`, where
+/-- `find_example` works on goals of the form `∃ (G : Graph), P G`, where
     `P` is a limited propositional formula on `G` which consists of conjunction,
     disjunctions and comparisons of invariants of G, i.e. the kinds of queries
     HoG is able to answer.
@@ -72,9 +70,9 @@ open Lean Qq Elab Tactic in
     ∃ (G : Graph), G.isTraceable ∧ G.vertexSize > 3 ∧
     (G.minimumDegree < G.vertexSize / 2)
 -/
-@[tactic searchForExampleInHoG]
-unsafe def searchForExampleInHoGImpl : Tactic.Tactic
-  | stx@`(tactic|search_for_example) =>
+@[tactic findExample]
+unsafe def findExampleImpl : Tactic.Tactic
+  | stx@`(tactic|find_example) =>
     Tactic.withMainContext do
       let goal ← Tactic.getMainGoal
       let goalDecl ← goal.getDecl
@@ -114,21 +112,21 @@ unsafe def searchForExampleInHoGImpl : Tactic.Tactic
                       let (_, mvarIdNew) ← mvarIdNew.intro1P
                       return [mvarIdNew]
                     let ctx ← mkSimpContext (← `(tactic|simp_all only [LeanHoG.Graph.no_path_not_traceable, not_false_eq_true])) false
-                    let (result?, _) ← simpAll (← getMainGoal) ctx.ctx (simprocs := ctx.simprocs)
+                    let (result?, _) ← Meta.simpAll (← getMainGoal) ctx.ctx (simprocs := ctx.simprocs)
                     match result? with
                     | none => replaceMainGoal []
                     | some mvarId => replaceMainGoal [mvarId]
                     Tactic.evalDecide stx
                   | _ =>
                     let ctx ← mkSimpContext (← `(tactic|simp_all only [LeanHoG.Graph.no_path_not_traceable, not_false_eq_true])) false
-                    let (result?, _) ← simpAll (← getMainGoal) ctx.ctx (simprocs := ctx.simprocs)
+                    let (result?, _) ← Meta.simpAll (← getMainGoal) ctx.ctx (simprocs := ctx.simprocs)
                     match result? with
                     | none => replaceMainGoal []
                     | some mvarId => replaceMainGoal [mvarId]
                     Tactic.evalDecide stx
                 else
                   let ctx ← mkSimpContext (← `(tactic|simp_all)) false
-                  let (result?, _) ← simpAll (← getMainGoal) ctx.ctx (simprocs := ctx.simprocs)
+                  let (result?, _) ← Meta.simpAll (← getMainGoal) ctx.ctx (simprocs := ctx.simprocs)
                   match result? with
                   | none => replaceMainGoal []
                   | some mvarId =>

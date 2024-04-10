@@ -11,7 +11,7 @@ import ProofWidgets.Component.HtmlDisplay
 namespace LeanHoG
 
 open scoped ProofWidgets.Jsx
-open Lean Widget Elab Command Term Meta Qq
+open Lean Elab Qq
 
 inductive BoolInvariant where
   | Acyclic
@@ -736,7 +736,7 @@ structure QueryResult where
   graphId : Ident
 
 unsafe def queryDatabaseForExamples (queries : List ConstructedQuery) (queryHash : UInt64) :
-  CommandElabM (List QueryResult) := do
+  Command.CommandElabM (List QueryResult) := do
   let opts ← getOptions
   let pythonExe := opts.get leanHoG.pythonExecutable.name leanHoG.pythonExecutable.defValue
   let downloadLocation := opts.get leanHoG.searchCacheLocation.name leanHoG.searchCacheLocation.defValue
@@ -764,16 +764,16 @@ unsafe def queryDatabaseForExamples (queries : List ConstructedQuery) (queryHash
       results := ⟨graphName⟩ :: results
   return results
 
-syntax (name := searchHoG) "#search_hog " term : command
+syntax (name := searchHoG) "#search" term : command
 
 open ProofWidgets in
 @[command_elab searchHoG]
-unsafe def searchForExampleImpl : CommandElab
+unsafe def searchForExampleImpl : Command.CommandElab
   | stx@`(#search_hog $q ) => do
-    let qs ← liftTermElabM do
-      let qe : Expr ← elabTerm q none
-      let query ← mkAppM ``Queries.mk #[(← mkAppM ``List.map #[(← mkAppM ``HoGQuery.build #[]), qe])]
-      let qs : Queries ← evalExpr' Queries ``Queries query
+    let qs ← Command.liftTermElabM do
+      let qe : Expr ← Term.elabTerm q none
+      let query ← Meta.mkAppM ``Queries.mk #[(← Meta.mkAppM ``List.map #[(← Meta.mkAppM ``HoGQuery.build #[]), qe])]
+      let qs : Queries ← Meta.evalExpr' Queries ``Queries query
       return qs
     let opts ← getOptions
     let pythonExe := opts.get leanHoG.pythonExecutable.name leanHoG.pythonExecutable.defValue

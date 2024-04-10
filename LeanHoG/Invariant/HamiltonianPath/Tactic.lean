@@ -11,11 +11,11 @@ namespace LeanHoG
 
 open Lean Elab Qq
 
-syntax (name := computeHamiltonianPath) "#compute_hamiltonian_path " ident : command
+syntax (name := computeHamiltonianPath) "#check_traceable " ident : command
 
 @[command_elab computeHamiltonianPath]
 unsafe def computeHamiltonianPathImpl : Command.CommandElab
-  | `(#compute_hamiltonian_path $g) => Command.liftTermElabM do
+  | `(#check_traceable $g) => Command.liftTermElabM do
     let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
     let G ← Meta.evalExpr' Graph ``Graph graph
 
@@ -45,7 +45,7 @@ unsafe def computeHamiltonianPathImpl : Command.CommandElab
 
   | _ => throwUnsupportedSyntax
 
-syntax (name := showNoHamiltonianPath) "#show_no_hamiltonian_path " ident : command
+syntax (name := showNoHamiltonianPath) "#check_nontraceable " ident : command
 
 open LeanSAT Model in
 unsafe def showNoHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) : TermElabM (Name × Q(Prop)) := do
@@ -77,14 +77,14 @@ unsafe def showNoHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) : Term
       return (declName, type)
     | .error => throwError "SAT solver exited with error"
 
-/-- `#show_no_hamiltonian_path G` runs a SAT solver on the encoding of the Hamiltonian path problem
+/-- `#check_nontraceable G` runs a SAT solver on the encoding of the Hamiltonian path problem
     on the graph `G` and if the SAT solver says the problem is unsat it runs the produced proof
     through a verified proof checker cake_lpr. If the checker agrees with the proof, we add an axiom
     saying there exists no satisfying assignmment for the encoding.
 -/
 @[command_elab showNoHamiltonianPath]
 unsafe def showNoHamiltonianPathImpl : Command.CommandElab
-  | `(#show_no_hamiltonian_path $g ) => Command.liftTermElabM do
+  | `(#check_nontraceable$g ) => Command.liftTermElabM do
     let graphName := g.getId
     let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
     let (declName, type) ← showNoHamiltonianPathAux graphName graph
@@ -154,14 +154,14 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) :
 syntax (name := searchForHamiltonianPath) "search_for_hamiltonian_path " ident (" with" (ppSpace colGt ident))? : tactic
 
 open LeanSAT Model in
-/-- `search_for_hamiltonian_path G` runs a SAT solver on the encoding of the Hamiltonian path problem
-    on the graph `G` and if the SAT solver says the problem is unsat it runs the produced proof
+/-- `#check_nontraceable G` runs a SAT solver on the encoding of the Hamiltonian path problem
+    on the graph `G` and if the SAT solver says the problem is unsatisfiable it runs the produced proof
     through a verified proof checker cake_lpr. If the checker agrees with the proof, we add an axiom
     saying there exists no satisfying assignmment for the encoding. The tactic uses the new axiom to
     deduce that there is no Hamiltonian path in the graph by using theorem and adds it
     as a hypothesis to the current context.
 
-    Can also use `search_for_hamiltonian_path G with h` to save the hypothesis into the variable `h`.
+    Can also use `#check_nontraceable G with h` to save the hypothesis into the variable `h`.
 -/
 @[tactic searchForHamiltonianPath]
 unsafe def searchForHamiltonianPathImpl : Tactic.Tactic

@@ -6,5 +6,6 @@ lake-manifest.json
 widget/node_modules
 build
 Download/__pycache__
+Download/Invariant/__pycache__
 *.pyc
 .venv

@@ -1,3 +1,4 @@
+import Lean
 import LeanHoG.Util.IO
 
 def usage :=
@@ -13,7 +14,8 @@ def main (args : List String) : IO Unit := do
     IO.eprintln "Invalid parameters"
     IO.println usage
     return
-  let pythonExe ← IO.findPythonExecutable -- Hacky solution, can we make into user option?
+  let opts ← getOptions
+  let pythonExe ← opts.get leanHoG.pythonExecutable.name leanHoG.pythonExecutable.defValue
   let downloadLocation := "build/graphs"
   match args[0]!.toInt?, args[1]?.toIntOpt with
   | some a, some b =>
