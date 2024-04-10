@@ -8,6 +8,7 @@ import Lean
 import LeanSAT
 
 namespace LeanHoG
+namespace HamiltonianPath
 
 open Lean LeanSAT Encode VEncCNF Meta Model PropFun
 
@@ -299,4 +300,5 @@ def tryFindHamiltonianPath [Solver IO] (G : Graph) :
     else
       return none
 
+end HamiltonianPath
 end LeanHoG
