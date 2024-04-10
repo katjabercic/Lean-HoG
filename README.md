@@ -135,8 +135,10 @@ The supported invariants are those Lean-HoG currently implements. They include:
 * `edgeSize`
 * `minimumDegree`
 * `maximumDegree`
+* `numberOfConnectedComponents`
 * `traceable`
 * `bipartite`
+* `connectedGraph`
 
 #### Example
 

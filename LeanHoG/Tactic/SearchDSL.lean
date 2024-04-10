@@ -144,6 +144,7 @@ instance : ToString Invariant where
     | .NumericalInvariant n => toString n
     | .IntegralInvariant i => toString i
 
+/-- TODO: These should be loaded automatucally from HoG somehow. -/
 def BoolInvariant.toId : BoolInvariant → Nat
   | .Acyclic => 1
   | .Bipartite => 3
@@ -158,6 +159,7 @@ def BoolInvariant.toId : BoolInvariant → Nat
   | .Traceable => 40
   | .TwinFree => 46
 
+/-- TODO: These should be loaded automatucally from HoG somehow. -/
 def NumericalInvariant.toId : NumericalInvariant → Nat
   | .AlgebraicConnectivity => 19
   | .AverageDegree => 2
@@ -166,6 +168,7 @@ def NumericalInvariant.toId : NumericalInvariant → Nat
   | .SecondLargestEigenvalue => 23
   | .SmallestEigenvalue => 24
 
+/-- TODO: These should be loaded automatucally from HoG somehow. -/
 def IntegralInvariant.toId : IntegralInvariant → Nat
   | .ChromaticIndex => 20
   | .ChromaticNumber => 4

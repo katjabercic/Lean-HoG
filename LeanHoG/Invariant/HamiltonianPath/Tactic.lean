@@ -70,6 +70,11 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) :
 
   | .error => throwError "SAT solver exited with error"
 
+
+------------------------------------------
+-- Find Hamiltonian path command
+------------------------------------------
+
 syntax (name := checkTraceable) "#check_traceable " ident : command
 /-- `#check_nontraceable G` runs a SAT solver on the encoding of the Hamiltonian path problem
     on the graph `G` and if the SAT solver says the problem is unsat it runs the produced proof
@@ -88,6 +93,11 @@ unsafe def checkTraceableImpl : Command.CommandElab
     | .error => throwError "SAT solver exited with error"
 
   | _ => throwUnsupportedSyntax
+
+------------------------------------------
+-- Find Hamiltonian path tactic
+------------------------------------------
+-- TODO: Remove code duplication once I figure out how to do it corectly.
 
 syntax (name := checkTraceableTactic) "check_traceable " ident (" with" (ppSpace colGt ident))? : tactic
 open LeanSAT Model in
