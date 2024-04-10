@@ -13,10 +13,15 @@ structure Graph where
 @[reducible]
 def Graph.vertex (G : Graph) := Fin G.vertexSize
 
-@[reducible]
-def Graph.vertex_compare {G : Graph} (u v : G.vertex) := compare u v
-
+/-- The set of all the vertices -/
 def Graph.vertexSet (G : Graph) : Set G.vertex := { u : G.vertex | u = u }
+
+/-- A finite subset of vertices -/
+@[reducible]
+def Graph.vertexSubset (G : Graph) := Std.RBSet G.vertex compare
+
+/-- A map from vertices -/
+def Graph.vertexMap (G : Graph) (α : Type) : Type := Std.RBMap G.vertex α compare
 
 lemma Graph.vertexSetFinite (G : Graph) : Set.Finite G.vertexSet := by
   apply Iff.mp Set.finite_coe_iff
