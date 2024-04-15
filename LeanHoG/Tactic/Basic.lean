@@ -57,6 +57,13 @@ unsafe def downloadHoGImpl : Elab.Command.CommandElab
 -- Search tactic
 -----------------------------------------------------------------
 
+open Lean Qq in
+unsafe def solveBoolInvariantWith : BoolInvariant →
+  Meta.MetaM (Name → Q(Graph) → Name → Elab.Tactic.TacticM Unit)
+  | .Traceable => return checkTraceableTacticAux
+  | .Hamiltonian => return checkHamiltonianTacticAux
+  | inv => throwError s!"tactic for solving {inv} not implemented"
+
 syntax (name := findExample) "find_example" : tactic
 
 open Lean Qq Elab Tactic in
@@ -81,8 +88,10 @@ unsafe def findExampleImpl : Tactic.Tactic
       let exists_intro ← Term.mkConst ``Exists.intro
       try
         let enqs ← decomposeExistsQ goalType
-        let mentionsTracability := enqs.any (fun enq => enq.mentionsBoolInv .Traceable)
-        let mentionsHamiltonicity := enqs.any (fun enq => enq.mentionsBoolInv .Hamiltonian)
+        -- Find all the invariants the query mentions, for which we need special tactics
+        let mentions := List.foldl (fun ms inv =>
+          if enqs.any (fun enq => enq.mentionsBoolInv inv) then inv :: ms else ms
+        ) [] [.Traceable, .Hamiltonian]
         let hash := hash enqs
         let query := HoGQuery.build enqs
         let graphs ← liftCommandElabM (queryDatabaseForExamplesAux [query] hash)
@@ -112,12 +121,11 @@ unsafe def findExampleImpl : Tactic.Tactic
               goal.withContext do
                 let r ← Lean.Elab.Tactic.elabTermEnsuringType graphIdent goalType
                 goal.assign r
-                -- Now try to simp which will among other things look for instance for e.g. HamiltonianPath
-                if mentionsTracability then
-                  -- If we want to prove things about tracability we need to search for a Hamiltonian path
-                  checkTraceableTacticAux graphIdent.getId r .anonymous
-                if mentionsHamiltonicity then
-                  checkHamiltonianTacticAux graphIdent.getId r .anonymous
+                -- Now run the appropriate tactic for each kind of invariant we're trying to solve
+                for inv in mentions do
+                  let tac ← solveBoolInvariantWith inv
+                  tac graphIdent.getId r .anonymous
+                -- Run `simp` and `decide` on the new goal after using G as the existence target
                 let ctx ← mkSimpContext (← `(tactic|simp_all [LeanHoG.Graph.no_path_not_traceable, not_false_eq_true])) false
                 let (result?, _) ← Meta.simpAll (← getMainGoal) ctx.ctx (simprocs := ctx.simprocs)
                 match result? with
