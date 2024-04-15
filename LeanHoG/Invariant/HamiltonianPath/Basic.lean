@@ -106,30 +106,5 @@ example {α : Type} [DecidableEq α] (l : List α) (d : l.Nodup) : Finset.card (
 
 end HamiltonianPath
 
-@[simp] def Cycle.isHamiltonian {g : Graph} {u : g.vertex} (c : Cycle g u) : Bool :=
-  ∀ (v : g.vertex), List.contains c.cycle.vertices v
-
-class HamiltonianCycle (g : Graph)  where
-  u : g.vertex
-  cycle : Cycle g u
-  isHamiltonian : cycle.isHamiltonian = true
-
-instance {g : Graph} : Repr (HamiltonianCycle g) where
-  reprPrec p n := reprPrec p.cycle n
-
-instance {g : Graph} : Repr (HamiltonianCycle g) where
-  reprPrec p n := reprPrec p.2.cycle n
-
-@[simp] def Graph.isHamiltonian (g : Graph) : Prop :=
-  ∃ (u : g.vertex) (c : Cycle g u), c.isHamiltonian
-
-@[simp] def Graph.isNonHamiltonian (g : Graph) : Prop := ¬ g.isHamiltonian
-
-@[simp] def Graph.isNonHamiltonian' {g : Graph} : Prop :=
-  ∀ (u : g.vertex) (c : Cycle g u), ¬c.isHamiltonian
-
-theorem equivNonHamiltonianDefs (g : Graph) :
-  g.isNonHamiltonian ↔ g.isNonHamiltonian' :=
-  by simp
 
 end LeanHoG

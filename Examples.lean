@@ -4,6 +4,7 @@ import LeanHoG.Widgets
 import LeanHoG.Tactic.SearchDSL
 import LeanHoG.Tactic.Basic
 import LeanHoG.Invariant.HamiltonianPath.Tactic
+import LeanHoG.Invariant.HamiltonianCycle.Tactic
 
 namespace LeanHoG
 
@@ -95,6 +96,17 @@ load_graph hog_896 "build/graphs/896.json"
 #check_traceable hog_896
 #show_hamiltonian_path hog_896
 
+-------------------------------------------
+-- Hamiltonian cycles
+-------------------------------------------
+-- NOTE: Non-Hamiltonicity not yet implemented
+
+#check_hamiltonian Cycle7
+
+theorem foo : Cycle7.isHamiltonian := by
+  check_hamiltonian Cycle7
+  decide
+
 ---------------------------------------
 -- Tactics
 ---------------------------------------
@@ -113,7 +125,7 @@ load_graph hog_896 "build/graphs/896.json"
 
 -- set_option leanHoG.solverCmd "cadical"
 -- set_option leanHoG.proofCheckerCmd "cake_lpr"
-example : ∃ (G : Graph), G.traceable ∧ G.vertexSize > 3 ∧ (G.minimumDegree < G.vertexSize / 2) := by
+example : ∃ (G : Graph), G.isHamiltonian ∧ G.vertexSize > 3 ∧ (G.minimumDegree < G.vertexSize / 2) := by
   find_example
 
 end LeanHoG

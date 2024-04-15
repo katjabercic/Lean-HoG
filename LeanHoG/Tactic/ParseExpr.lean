@@ -3,6 +3,7 @@ import LeanHoG.Graph
 import LeanHoG.Tactic.SearchDSL
 import LeanHoG.Tactic.Options
 import LeanHoG.Invariant.HamiltonianPath.Basic
+import LeanHoG.Invariant.HamiltonianCycle.Basic
 import Qq
 
 import Aesop.Util.Basic

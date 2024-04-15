@@ -25,7 +25,7 @@ inductive BoolInvariant where
   | Regular
   | Traceable
   | TwinFree
-deriving Repr, Hashable
+deriving Repr, Hashable, DecidableEq
 
 instance : ToString BoolInvariant where
   toString := fun i =>
@@ -50,7 +50,7 @@ inductive NumericalInvariant where
   | LaplacianLargestEigenvalue
   | SecondLargestEigenvalue
   | SmallestEigenvalue
-deriving Repr, Hashable
+deriving Repr, Hashable, DecidableEq
 
 instance : ToString NumericalInvariant where
   toString := fun i =>
@@ -343,12 +343,11 @@ instance : ToString HoGEnquiry where
     | .IntegralEnquiry i => toString i
     | .FormulaEnquiry f => toString f
 
-def HoGEnquiry.mentionsTracability : HoGEnquiry → Bool
-  | .BoolEnquiry ⟨.Traceable, _⟩ => true
-  | .BoolEnquiry _ => false
-  | .NumericalEnquiry _ => false
-  | .IntegralEnquiry _ => false
-  | .FormulaEnquiry _ => false
+def HoGEnquiry.mentionsBoolInv : HoGEnquiry → BoolInvariant → Bool
+  | .BoolEnquiry ⟨inv, _⟩, inv' => inv = inv'
+  | .NumericalEnquiry _, _ => false
+  | .IntegralEnquiry _, _ => false
+  | .FormulaEnquiry _, _ => false
 
 structure InvariantQuery where
   invariantId : Nat

@@ -13,7 +13,7 @@ def hamiltonianPathOfData (G : Q(Graph)) (D : HamiltonianPathData) : Q(Hamiltoni
   let rec fold (t : Q(Graph.vertex $G)) :
     List Q(Graph.vertex $G) → ((s : Q(Graph.vertex $G)) ×' Q(Walk $G $s $t)) := fun vs =>
     match vs with
-    | [] => panic! "Shouldn't be here"
+    | [] => panic! "given empty path, cannot construct Hamiltonian path"
     | [v] =>
       let h : Q($v = $t) := (q(Eq.refl $v) : Lean.Expr)
       ⟨v, q($h ▸ .here $v)⟩

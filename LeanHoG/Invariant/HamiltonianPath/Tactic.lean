@@ -11,9 +11,9 @@ namespace LeanHoG
 
 open Lean Elab Qq
 
-open LeanSAT Model in
-unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) :
-  TermElabM (Expr × Expr × Solver.Res) := do
+open LeanSAT Model HamiltonianPath in
+unsafe def searchForHamiltonianPathAux (graph : Q(Graph)) :
+  TermElabM (Option Expr) := do
   let G ← Meta.evalExpr' Graph ``Graph graph
   let enc := (hamiltonianPathCNF G).val
   let opts ← getOptions
@@ -34,42 +34,51 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) :
         | some true => path := path.set! j i
         | some false => continue
     let hpQ := hamiltonianPathOfData graph ⟨path.toList⟩
-    -- Add a Hamiltonian path instance from the constructed path
-    let hamiltonianPathName := certificateName graphName "HamiltonianPathI"
-    Lean.addAndCompile <| .defnDecl {
-      name := hamiltonianPathName
-      levelParams := []
-      type := q(HamiltonianPath $graph)
-      value := hpQ
-      hints := .regular 0
-      safety := .safe
-    }
-    Lean.Meta.addInstance hamiltonianPathName .scoped 42
-    let existsHamPath ← Meta.mkAppM ``LeanHoG.HamiltonianPath.path_of_cert #[]
-    let existsType := q(Graph.traceable $graph)
-    return (existsType, existsHamPath, res)
+    return hpQ
 
-  | .unsat =>
-    -- The formula is UNSAT, add an axiom saying so
-    let declName : Name := .str graphName "noHamiltonianPathCertificateExists"
-    let type : Q(Prop) := q(¬ (∃ (τ : PropAssignment (Var (Graph.vertexSize $graph))), τ |> hamiltonianPathConstraints $graph))
-    let decl := Declaration.axiomDecl {
-      name        := declName,
-      levelParams := [],
-      type        := type,
-      isUnsafe    := false
-    }
-    trace[Elab.axiom] "{declName} : {type}"
-    Term.ensureNoUnassignedMVars decl
-    addDecl decl
-    logWarning m!"added axiom {declName} : {type}"
-    let noExistsCert ← Qq.elabTermEnsuringTypeQ (mkIdent declName) type
-    let noExistsHamPath ← Meta.mkAppM ``LeanHoG.no_assignment_implies_no_hamiltonian_path' #[noExistsCert]
-    let noExistsType := q(¬ ∃ (u v : Graph.vertex $graph) (p : Path $graph u v), p.isHamiltonian)
-    return (noExistsType, noExistsHamPath, res)
+  | .unsat => return none
 
   | .error => throwError "SAT solver exited with error"
 
+open LeanSAT Model HamiltonianPath in
+unsafe def checkHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) : TermElabM Bool := do
+  -- Check if there already exists an instance of a Hamiltonian cycle for g
+  let inst ← Qq.trySynthInstanceQ q(HamiltonianPath $graph)
+  match inst with
+  | .some _ =>
+    logInfo "Hamiltonian path found"
+    return true
+  | _ =>
+    let hpQOpt ← searchForHamiltonianPathAux graph
+    match hpQOpt with
+    | some hpQ =>
+      let hamiltonianPathName := certificateName graphName "HamiltonianPathI"
+      Lean.addAndCompile <| .defnDecl {
+        name := hamiltonianPathName
+        levelParams := []
+        type := q(HamiltonianPath $graph)
+        value := hpQ
+        hints := .regular 0
+        safety := .safe
+      }
+      Lean.Meta.addInstance hamiltonianPathName .scoped 42
+      logInfo "Hamiltonian cycle found"
+      return true
+    | none => -- Graph is non Hamiltonian
+      logInfo s!"Hamiltonian path not found after exhaustive search"
+      let declName : Name := .str graphName "noHamiltonianPathCertificateExists"
+      let type : Q(Prop) := q(¬ (∃ (τ : PropAssignment (Var (Graph.vertexSize $graph))), τ |> hamiltonianPathConstraints $graph))
+      let decl := Declaration.axiomDecl {
+        name        := declName,
+        levelParams := [],
+        type        := type,
+        isUnsafe    := false
+      }
+      trace[Elab.axiom] "{declName} : {type}"
+      Term.ensureNoUnassignedMVars decl
+      addDecl decl
+      logWarning m!"added axiom {declName} : {type}"
+      return false
 
 ------------------------------------------
 -- Find Hamiltonian path command
@@ -86,11 +95,7 @@ unsafe def checkTraceableImpl : Command.CommandElab
   | `(#check_traceable $g) => Command.liftTermElabM do
     let graphName := g.getId
     let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
-    let (declName, _, res) ← searchForHamiltonianPathAux graphName graph
-    match res with
-    | .sat _ => logInfo m!"found Hamiltonian path {declName}"
-    | .unsat => logInfo m!"no Hamiltonian path found after exhaustive search"
-    | .error => throwError "SAT solver exited with error"
+    let _ ← checkHamiltonianPathAux graphName graph
 
   | _ => throwUnsupportedSyntax
 
@@ -99,8 +104,30 @@ unsafe def checkTraceableImpl : Command.CommandElab
 ------------------------------------------
 -- TODO: Remove code duplication once I figure out how to do it corectly.
 
+open LeanSAT Model HamiltonianPath in
+unsafe def checkTraceableTacticAux (graphName : Name) (graph : Q(Graph)) (hypName : Name) :
+  Tactic.TacticM Unit := do
+  let isTraceable ← checkHamiltonianPathAux graphName graph
+  if isTraceable then
+    let existsHamPath ← Meta.mkAppM ``LeanHoG.HamiltonianPath.path_of_cert #[]
+    let existsType := q(Graph.traceable $graph)
+    Tactic.liftMetaTactic fun mvarId => do
+      let mvarIdNew ← mvarId.assert hypName existsHamPath existsType
+      let (_, mvarIdNew) ← mvarIdNew.intro1P
+      return [mvarIdNew]
+  else
+    let type : Q(Prop) := q(¬ (∃ (τ : PropAssignment (Var (Graph.vertexSize $graph))), τ |> hamiltonianPathConstraints $graph))
+    let declName : Name := .str graphName "noHamiltonianPathCertificateExists"
+    let noExistsCert ← Qq.elabTermEnsuringTypeQ (mkIdent declName) type
+    let noExistsHamPath ← Meta.mkAppM ``LeanHoG.HamiltonianPath.no_assignment_implies_no_hamiltonian_path' #[noExistsCert]
+    let noExistsType := q(¬ ∃ (u v : Graph.vertex $graph) (p : Path $graph u v), p.isHamiltonian)
+    Tactic.liftMetaTactic fun mvarId => do
+      let mvarIdNew ← mvarId.assert hypName noExistsType noExistsHamPath
+      let (_, mvarIdNew) ← mvarIdNew.intro1P
+      return [mvarIdNew]
+
 syntax (name := checkTraceableTactic) "check_traceable " ident (" with" (ppSpace colGt ident))? : tactic
-open LeanSAT Model in
+open LeanSAT Model HamiltonianPath in
 /-- `#check_traceable G` runs a SAT solver on the encoding of the Hamiltonian path problem
     on the graph `G` and if the SAT solver says the problem is unsatisfiable it runs the produced proof
     through a verified proof checker cake_lpr. If the checker agrees with the proof, we add an axiom
@@ -116,21 +143,13 @@ unsafe def checkTraceableTacticImpl : Tactic.Tactic
     Tactic.withMainContext do
       let graphName := g.getId
       let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
-      let (val, type, _) ← searchForHamiltonianPathAux graphName graph
-      Tactic.liftMetaTactic fun mvarId => do
-        let mvarIdNew ← mvarId.assert .anonymous val type
-        let (_, mvarIdNew) ← mvarIdNew.intro1P
-        return [mvarIdNew]
+      checkTraceableTacticAux graphName graph .anonymous
 
   | `(tactic|check_traceable $g with $ident) =>
     Tactic.withMainContext do
       let graphName := g.getId
       let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
-      let (val, type, _) ← searchForHamiltonianPathAux graphName graph
-      Tactic.liftMetaTactic fun mvarId => do
-        let mvarIdNew ← mvarId.assert ident.getId val type
-        let (_, mvarIdNew) ← mvarIdNew.intro1P
-        return [mvarIdNew]
+      checkTraceableTacticAux graphName graph ident.getId
 
   | _ => throwUnsupportedSyntax
 
