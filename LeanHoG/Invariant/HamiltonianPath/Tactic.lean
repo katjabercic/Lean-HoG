@@ -11,7 +11,7 @@ namespace LeanHoG
 
 open Lean Elab Qq
 
-open LeanSAT Model in
+open LeanSAT Model HamiltonianPath in
 unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) :
   TermElabM (Expr × Expr × Solver.Res) := do
   let G ← Meta.evalExpr' Graph ``Graph graph
@@ -64,7 +64,7 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) :
     addDecl decl
     logWarning m!"added axiom {declName} : {type}"
     let noExistsCert ← Qq.elabTermEnsuringTypeQ (mkIdent declName) type
-    let noExistsHamPath ← Meta.mkAppM ``LeanHoG.no_assignment_implies_no_hamiltonian_path' #[noExistsCert]
+    let noExistsHamPath ← Meta.mkAppM ``LeanHoG.HamiltonianPath.no_assignment_implies_no_hamiltonian_path' #[noExistsCert]
     let noExistsType := q(¬ ∃ (u v : Graph.vertex $graph) (p : Path $graph u v), p.isHamiltonian)
     return (noExistsType, noExistsHamPath, res)
 

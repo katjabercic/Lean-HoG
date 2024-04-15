@@ -32,14 +32,16 @@ def hamiltonianCycleOfData (G : Q(Graph)) (D : HamiltonianCycleData) : Q(Hamilto
   | some t =>
     let ⟨s, w⟩ : ((s : Q(Graph.vertex $G)) ×' Q(Walk $G $s $t)) := fold t vertices
     -- Check that w starts and end in the same vertex
-    let isClosed : Q($s = $t) := (q(Eq.refl true) : Lean.Expr)
+    -- Note: Have to use definitional equality instead of propositional
+    -- otherwise the types aren't correct.
+    have _isClosed : $s =Q $t := ⟨⟩
     -- Declare w to actually be a closed walk, we know this from above
-    let cw : Q(ClosedWalk $G $s) := w
+    have cw : Q(ClosedWalk $G $s) := w
+    have _eq : $cw =Q $w := ⟨⟩
     -- Check that it is a cycle, i.e. no repeating vertices
-    sorry
-    -- let isCycle : Q(decide (ClosedWalk.isCycle $cw) = true) := (q(Eq.refl true) : Lean.Expr)
-    -- let c : Q(Cycle $G $s) := q(@Cycle.mk $G $s $cw (of_decide_eq_true $isCycle))
-    -- let isHamiltonian : Q(decide (Cycle.isHamiltonian $c) = true) := (q(Eq.refl true) : Lean.Expr)
-    -- let hc : Q(HamiltonianCycle $G) :=
-    --   q(@HamiltonianCycle.mk $G $s (Cycle.mk $cw (of_decide_eq_true (_))) (of_decide_eq_true $isHamiltonian))
-    -- hc
+    have isCycle : Q(decide (ClosedWalk.isCycle $cw) = true) := (q(Eq.refl true) : Lean.Expr)
+    let c : Q(Cycle $G $s) := q(@Cycle.mk $G $s $cw (of_decide_eq_true ($isCycle)))
+    have isHamiltonian : Q(decide (Cycle.isHamiltonian $c) = true) := (q(Eq.refl true) : Lean.Expr)
+    have hc : Q(HamiltonianCycle $G) :=
+      q(@HamiltonianCycle.mk $G $s (Cycle.mk $cw (of_decide_eq_true ($isCycle))) (of_decide_eq_true $isHamiltonian))
+    hc

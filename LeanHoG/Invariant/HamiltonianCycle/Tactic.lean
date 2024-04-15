@@ -13,53 +13,67 @@ namespace LeanHoG
 open HamiltonianCycle Lean Elab Qq
 
 open LeanSAT Model in
-unsafe def searchForHamiltonianCycleAux (graphName : Name) (graph : Q(Graph)) :
-  TermElabM (Expr × Expr × Solver.Res) := do
+unsafe def searchForHamiltonianCycleAux (graph : Q(Graph)) :
+  TermElabM (Option Expr) := do
   let G ← Meta.evalExpr' Graph ``Graph graph
-  let enc := (hamiltonianCycleCNF G).val
-  let opts ← getOptions
-  let cadicalExe := opts.get leanHoG.solverCmd.name leanHoG.solverCmd.defValue
-  let cake_lprExr := opts.get leanHoG.proofCheckerCmd.name leanHoG.proofCheckerCmd.defValue
-  let solver := SolverWithCakeLpr.SolverWithCakeLpr cadicalExe #["--no-binary", "--lrat=true"] cake_lprExr
-  let cnf := Encode.EncCNF.toICnf enc
-  let (_, s) := Encode.EncCNF.run enc
-  let res ← solver.solve cnf
-  match res with
-  | .sat assn =>
-    -- Build a Hamiltonian cycle from the solution given by the SAT solver
-    let mut cycle : Array Nat := Array.mkArray G.vertexSize 0
-    for i in List.fins G.vertexSize do
-      for j in List.fins G.vertexSize do
-        match assn.find? (s.vMap (Var.mk i j))  with
-        | none => throwError "invalid index ({i},{j})"
-        | some true => cycle := cycle.set! j i
-        | some false => continue
-    let hpQ := hamiltonianCycleOfData graph ⟨cycle.toList⟩
-    -- Add a Hamiltonian cycle instance from the constructed cycle
-    let hamiltonianCycleName := certificateName graphName "HamiltonianCycleI"
-    Lean.addAndCompile <| .defnDecl {
-      name := hamiltonianCycleName
-      levelParams := []
-      type := q(HamiltonianCycle $graph)
-      value := hpQ
-      hints := .regular 0
-      safety := .safe
-    }
-    Lean.Meta.addInstance hamiltonianCycleName .scoped 42
-    let existsHamCycle ← Meta.mkAppM ``LeanHoG.HamiltonianCycle.cycle_of_cert #[]
-    let existsType := q(Graph.isHamiltonian $graph)
-    return (existsType, existsHamCycle, res)
-
-  | .unsat =>
-    -- The formula is UNSAT, add an axiom saying so
-    throwError "non-Hamiltonicity not yet implemented"
-
-  | .error => throwError "SAT solver exited with error"
+  if h : 0 < G.vertexSize then
+    let enc := (hamiltonianCycleCNF G h).val
+    let opts ← getOptions
+    let solverExe := opts.get leanHoG.solverCmd.name leanHoG.solverCmd.defValue
+    let checkerExe := opts.get leanHoG.proofCheckerCmd.name leanHoG.proofCheckerCmd.defValue
+    let solver := SolverWithCakeLpr.SolverWithCakeLpr solverExe #["--no-binary", "--lrat=true"] checkerExe
+    let cnf := Encode.EncCNF.toICnf enc
+    let (_, s) := Encode.EncCNF.run enc
+    let res ← solver.solve cnf
+    match res with
+    | .sat assn =>
+      -- Build a Hamiltonian cycle from the solution given by the SAT solver
+      let mut cycle : Array Nat := Array.mkArray (G.vertexSize+1) 0
+      for i in List.fins G.vertexSize do
+        for j in List.fins (G.vertexSize+1) do
+          match assn.find? (s.vMap (Var.mk i j))  with
+          | none => throwError "invalid index ({i},{j})"
+          | some true => cycle := cycle.set! j i
+          | some false => continue
+      let hpQ := hamiltonianCycleOfData graph ⟨cycle.toList⟩
+      IO.println s!"{cycle}"
+      return some hpQ
+    | .unsat =>
+      -- TODO: Not yet implemented
+      return none
+    | .error => throwError "SAT solver exited with error"
+  else
+    throwError "cannot construct Hamiltonian cycle for empty graph"
 
 
 ------------------------------------------
 -- Find Hamiltonian cycle command
 ------------------------------------------
+
+unsafe def checkHamiltonianCycleAux (graphName : Name) (graph : Q(Graph)) : TermElabM Unit := do
+  -- Check if there already exists an instance of a Hamiltonian cycle for g
+  let inst ← Qq.trySynthInstanceQ q(HamiltonianCycle $graph)
+  match inst with
+  | .some _ =>
+    logInfo "Hamiltonian cycle found"
+    pure ()
+  | _ =>
+    let hpQOpt ← searchForHamiltonianCycleAux graph
+    match hpQOpt with
+    | some hpQ =>
+      let hamiltonianCycleName := certificateName graphName "HamiltonianCycleI"
+      Lean.addAndCompile <| .defnDecl {
+        name := hamiltonianCycleName
+        levelParams := []
+        type := q(HamiltonianCycle $graph)
+        value := hpQ
+        hints := .regular 0
+        safety := .safe
+      }
+      Lean.Meta.addInstance hamiltonianCycleName .scoped 42
+      logInfo "Hamiltonian cycle found"
+    | none =>
+      logWarning s!"Hamiltonian cycle not found after exhaustive search"
 
 syntax (name := checkHamiltonian) "#check_hamiltonian " ident : command
 /-- `#check_hamiltonian G` runs a SAT solver on the encoding of the Hamiltonian cycle problem
@@ -72,11 +86,7 @@ unsafe def checkHamiltonianImpl : Command.CommandElab
   | `(#check_hamiltonian $g) => Command.liftTermElabM do
     let graphName := g.getId
     let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
-    let (declName, _, res) ← searchForHamiltonianCycleAux graphName graph
-    match res with
-    | .sat _ => logInfo m!"found Hamiltonian cycle {declName}"
-    | .unsat => logInfo m!"no Hamiltonian cycle found after exhaustive search"
-    | .error => throwError "SAT solver exited with error"
+    checkHamiltonianCycleAux graphName graph
 
   | _ => throwUnsupportedSyntax
 
@@ -93,8 +103,6 @@ open LeanSAT Model in
     saying there exists no satisfying assignmment for the encoding. The tactic uses the new axiom to
     deduce that there is no Hamiltonian cycle in the graph by using theorem and adds it
     as a hypothesis to the current context.
-
-    Can also use `#check_hamiltonian G with h` to save the hypothesis into the variable `h`.
 -/
 @[tactic checkHamiltonianTactic]
 unsafe def checkHamiltonianTacticImpl : Tactic.Tactic
@@ -102,21 +110,7 @@ unsafe def checkHamiltonianTacticImpl : Tactic.Tactic
     Tactic.withMainContext do
       let graphName := g.getId
       let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
-      let (val, type, _) ← searchForHamiltonianCycleAux graphName graph
-      Tactic.liftMetaTactic fun mvarId => do
-        let mvarIdNew ← mvarId.assert .anonymous val type
-        let (_, mvarIdNew) ← mvarIdNew.intro1P
-        return [mvarIdNew]
-
-  | `(tactic|check_hamiltonian $g with $ident) =>
-    Tactic.withMainContext do
-      let graphName := g.getId
-      let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
-      let (val, type, _) ← searchForHamiltonianCycleAux graphName graph
-      Tactic.liftMetaTactic fun mvarId => do
-        let mvarIdNew ← mvarId.assert ident.getId val type
-        let (_, mvarIdNew) ← mvarIdNew.intro1P
-        return [mvarIdNew]
+      checkHamiltonianCycleAux graphName graph
 
   | _ => throwUnsupportedSyntax
 

@@ -4,6 +4,7 @@ import LeanHoG.Widgets
 import LeanHoG.Tactic.SearchDSL
 import LeanHoG.Tactic.Basic
 import LeanHoG.Invariant.HamiltonianPath.Tactic
+import LeanHoG.Invariant.HamiltonianCycle.Tactic
 
 namespace LeanHoG
 
@@ -94,6 +95,17 @@ load_graph hog_896 "build/graphs/896.json"
 #show hog_896
 #check_traceable hog_896
 #show_hamiltonian_path hog_896
+
+-------------------------------------------
+-- Hamiltonian cycles
+-------------------------------------------
+-- NOTE: Non-Hamiltonicity not yet implemented
+
+#check_hamiltonian Cycle7
+
+theorem foo : Cycle7.isHamiltonian := by
+  check_hamiltonian Cycle7
+  decide
 
 ---------------------------------------
 -- Tactics
