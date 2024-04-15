@@ -9,6 +9,7 @@ import LeanHoG.Tactic.Options
 import LeanHoG.Tactic.ParseExpr
 import LeanHoG.Invariant.HamiltonianPath.Basic
 import LeanHoG.Invariant.HamiltonianPath.Tactic
+import LeanHoG.Invariant.HamiltonianCycle.Tactic
 
 namespace LeanHoG
 
@@ -80,7 +81,8 @@ unsafe def findExampleImpl : Tactic.Tactic
       let exists_intro ← Term.mkConst ``Exists.intro
       try
         let enqs ← decomposeExistsQ goalType
-        let mentionsTracability := enqs.any (fun enq => enq.mentionsTracability)
+        let mentionsTracability := enqs.any (fun enq => enq.mentionsBoolInv .Traceable)
+        let mentionsHamiltonicity := enqs.any (fun enq => enq.mentionsBoolInv .Hamiltonian)
         let hash := hash enqs
         let query := HoGQuery.build enqs
         let graphs ← liftCommandElabM (queryDatabaseForExamplesAux [query] hash)
@@ -113,34 +115,16 @@ unsafe def findExampleImpl : Tactic.Tactic
                 -- Now try to simp which will among other things look for instance for e.g. HamiltonianPath
                 if mentionsTracability then
                   -- If we want to prove things about tracability we need to search for a Hamiltonian path
-                  let (val, type, res) ← LeanHoG.searchForHamiltonianPathAux graphIdent.getId r
-                  match res with
-                  | .unsat =>
-                    Tactic.liftMetaTactic fun mvarId => do
-                      let mvarIdNew ← mvarId.assert .anonymous val type
-                      let (_, mvarIdNew) ← mvarIdNew.intro1P
-                      return [mvarIdNew]
-                    let ctx ← mkSimpContext (← `(tactic|simp_all only [LeanHoG.Graph.no_path_not_traceable, not_false_eq_true])) false
-                    let (result?, _) ← Meta.simpAll (← getMainGoal) ctx.ctx (simprocs := ctx.simprocs)
-                    match result? with
-                    | none => replaceMainGoal []
-                    | some mvarId => replaceMainGoal [mvarId]
-                    Tactic.evalDecide stx
-                  | _ =>
-                    let ctx ← mkSimpContext (← `(tactic|simp_all only [LeanHoG.Graph.no_path_not_traceable, not_false_eq_true])) false
-                    let (result?, _) ← Meta.simpAll (← getMainGoal) ctx.ctx (simprocs := ctx.simprocs)
-                    match result? with
-                    | none => replaceMainGoal []
-                    | some mvarId => replaceMainGoal [mvarId]
-                    Tactic.evalDecide stx
-                else
-                  let ctx ← mkSimpContext (← `(tactic|simp_all)) false
-                  let (result?, _) ← Meta.simpAll (← getMainGoal) ctx.ctx (simprocs := ctx.simprocs)
-                  match result? with
-                  | none => replaceMainGoal []
-                  | some mvarId =>
-                    replaceMainGoal [mvarId]
-                    Tactic.evalDecide stx
+                  checkTraceableTacticAux graphIdent.getId r .anonymous
+                if mentionsHamiltonicity then
+                  checkHamiltonianTacticAux graphIdent.getId r .anonymous
+                let ctx ← mkSimpContext (← `(tactic|simp_all [LeanHoG.Graph.no_path_not_traceable, not_false_eq_true])) false
+                let (result?, _) ← Meta.simpAll (← getMainGoal) ctx.ctx (simprocs := ctx.simprocs)
+                match result? with
+                | none => replaceMainGoal []
+                | some mvarId =>
+                  replaceMainGoal [mvarId]
+                  Tactic.evalDecide stx
                 Lean.logInfo s!"Closed goal using {graphIdent.getId}"
               -- Visualize the graph we used to close the goal
               -- TODO: Make this an option

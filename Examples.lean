@@ -125,7 +125,7 @@ theorem foo : Cycle7.isHamiltonian := by
 
 -- set_option leanHoG.solverCmd "cadical"
 -- set_option leanHoG.proofCheckerCmd "cake_lpr"
-example : ∃ (G : Graph), G.traceable ∧ G.vertexSize > 3 ∧ (G.minimumDegree < G.vertexSize / 2) := by
+example : ∃ (G : Graph), G.isHamiltonian ∧ G.vertexSize > 3 ∧ (G.minimumDegree < G.vertexSize / 2) := by
   find_example
 
 end LeanHoG

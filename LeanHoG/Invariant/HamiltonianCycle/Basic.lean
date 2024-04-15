@@ -12,7 +12,7 @@ class HamiltonianCycle (g : Graph)  where
   cycle : Cycle g u
   isHamiltonian : cycle.isHamiltonian = true
 
-@[simp] def Graph.isHamiltonian (g : Graph) : Prop :=
+def Graph.isHamiltonian (g : Graph) : Prop :=
   ∃ (u : g.vertex) (c : Cycle g u), c.isHamiltonian
 
 @[simp] def Graph.isNonHamiltonian (g : Graph) : Prop := ¬ g.isHamiltonian
@@ -39,7 +39,7 @@ instance {G : Graph} [HamiltonianCycle G] : Decidable (G.isHamiltonian) :=
 
 theorem equivNonHamiltonianDefs (g : Graph) :
   g.isNonHamiltonian ↔ g.isNonHamiltonian' :=
-  by simp
+  by simp [Graph.isHamiltonian]
 
 end HamiltonianCycle
 end LeanHoG
