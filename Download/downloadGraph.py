@@ -9,10 +9,17 @@ from jsonEncoder import GraphEncoder
 
 def download_graph(destDir : str, id : int):
     print(f'Downloading graph with ID {id}.')
-    with requests.get(f'https://houseofgraphs.org/api/graphs/{id}') as response:
+    graph_url = f'https://houseofgraphs.org/api/graphs/{id}'
+    with requests.get(graph_url) as response:
         if not response:
             sys.stderr.write(f"failed to download graph {id}")
-        graph = Graph(id, response.json())
+        invariants = None
+        with requests.get(f'{graph_url}/invariants') as response_inv:
+            if response_inv:
+                invariants = response_inv.json()
+            else:
+                sys.stderr.write(f"failed to download invariants for graph {id}")
+        graph = Graph(id, response.json(), invariants)
         with open(os.path.join(destDir, "{0}.json".format(id)), 'w') as fh:
             json.dump(graph, fh, cls=GraphEncoder)
             print(f"\rID {id} downloaded.", end=None)

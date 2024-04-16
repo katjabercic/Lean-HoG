@@ -1,19 +1,23 @@
 import json
 from typing import List, Set, Dict, Iterable
 
+from invariants import Invariants
+
 class Graph():
     """An object representing a single HoG graph"""
     HoG_id : str
     vertex_size : int
     edges : Set[List[int]]
     adjacency : Dict[int, Set[int]]
+    invariants : Invariants
 
-    def __init__(self, id : str, data : json):
+    def __init__(self, id : str, data : json, invariants_data : json):
         self.HoG_id = id
         self.adjacency = Graph._parse_adjacency_list(data['adjacencyList'])
         self.vertex_size = len(self.adjacency)
         self.edges = set(Graph._to_edge(int(u), int(v)) for u in self.adjacency for v in self.adjacency[u])
-    
+        self.invariants = Invariants(invariants_data)
+
     def vertices(self):
         """An iterator over the vertices of the graph."""
         return range(0, self.vertex_size)

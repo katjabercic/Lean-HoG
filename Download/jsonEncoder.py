@@ -12,7 +12,8 @@ class GraphEncoder(json.JSONEncoder):
                 "hogId": graph.HoG_id,
                 "graph": graph.to_json(),
                 "connectedComponents": ConnectedComponentsCertificate(graph).to_json(),
-                "neighborhoodMap": NeighborhoodMap(graph).to_json()
+                "neighborhoodMap": NeighborhoodMap(graph).to_json(),
+                "rawHoG": graph.invariants.to_json()
             }
             return g
         else:
