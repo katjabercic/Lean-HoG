@@ -6,6 +6,8 @@ import LeanHoG.Invariant.Bipartite.Certificate
 import LeanHoG.Invariant.ConnectedComponents.Certificate
 import LeanHoG.Invariant.NeighborhoodMap.Certificate
 
+import LeanHoG.RawHoG
+
 import LeanHoG.Certificate
 import LeanHoG.JsonData
 
@@ -43,6 +45,22 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
   }
   setReducibleAttribute graphName
   have graph : Q(Graph) := mkConst graphName []
+
+  match jsonData.rawHoG? with
+  | .none => pure ()
+  | .some data =>
+    have dataQ : Q(RawHoGData) := ToExpr.toExpr data
+    let rawHoGName := certificateName graphName "RawHoGI"
+    -- let rawHoGQ : Q(ConnectedComponentsCertificate $graph) := connectedComponentsCertificateOfData graph data
+    Elab.Command.liftCoreM <| addAndCompile <| .defnDecl {
+      name := rawHoGName
+      levelParams := []
+      type := q(RawHoG $graph)
+      value := q(@RawHoG.mk $graph $(dataQ))
+      hints := .regular 0
+      safety := .safe
+    }
+    Elab.Command.liftTermElabM <| Meta.addInstance rawHoGName .scoped 42
 
   match jsonData.connectedComponents? with
   | .none => pure ()
