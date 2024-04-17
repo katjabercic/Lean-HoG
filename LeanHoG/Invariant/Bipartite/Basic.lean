@@ -1,4 +1,5 @@
 import LeanHoG.Graph
+import LeanHoG.RawHoG
 import LeanHoG.VertexColoring
 
 namespace LeanHoG
@@ -10,6 +11,10 @@ namespace LeanHoG
 instance (G : Graph): Decidable G.bipartite := by
   simp
   infer_instance
+
+/-- check whether the graph is bipartite matches the value in the database -/
+def Graph.checkHoGbipartite (G : Graph) [R : RawHoG G] : Bool :=
+  R.bipartite? = decide G.bipartite
 
 /-- A graph is bipartite if it has a bipartite certificate.  -/
 @[default_instance]

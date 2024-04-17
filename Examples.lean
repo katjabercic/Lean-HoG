@@ -69,6 +69,12 @@ load_graph Hanoi "examples/Hanoi2Disks.json"
 #download Petersen 660
 #show Petersen
 #eval Petersen.numberOfConnectedComponents
+-- check database values for the Petersen graph
+#eval Petersen.checkHoGnumberOfVertices
+#eval Petersen.checkHoGnumberOfEdges
+#eval Petersen.checkHoGbipartite
+#eval Petersen.checkHoGconnectedComponents
+#eval Petersen.checkHoGconnected
 
 -- Download the Wheel graph from HoG
 #download Wheel 204

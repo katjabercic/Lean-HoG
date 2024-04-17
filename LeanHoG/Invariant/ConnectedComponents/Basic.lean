@@ -5,6 +5,8 @@ import LeanHoG.Graph
 import Qq
 import Mathlib.Tactic.Linarith
 
+import LeanHoG.RawHoG
+
 namespace LeanHoG
 
 /-- Verices u and v are connected if they are related by the equivalence
@@ -55,6 +57,14 @@ class ConnectedComponents (G : Graph) : Type :=
 
 def Graph.numberOfConnectedComponents (G : Graph) [C : ConnectedComponents G] : Nat := C.val
 def Graph.component (G : Graph) [C : ConnectedComponents G] (v : G.vertex) : Nat := C.component v
+
+/-- check that the number of components in the graph matches the value in the database -/
+def Graph.checkHoGconnectedComponents (G : Graph) [R : RawHoG G] [C : ConnectedComponents G] : Bool :=
+  R.numberOfComponents? = C.val
+
+/-- check whether the graph is connected matches the value in the database -/
+def Graph.checkHoGconnected (G : Graph) [R : RawHoG G] [C : ConnectedComponents G] : Bool :=
+  R.connected? = decide (C.val = 1)
 
 /-- A certificate for connected components -/
 class ConnectedComponentsCertificate (G : Graph) : Type :=

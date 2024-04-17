@@ -1,29 +1,31 @@
 import json
-from typing import Dict, Set, Union
+from typing import Dict, Union
 
 
 class Invariant():
 
     id : int
     name : str
+    fieldName : str
     value : Union[bool, int, float]
     
+    def _setFieldName(self):
+        s = self.name.title()
+        s = s.replace(' ', '')
+        s = s.replace('-', '')
+        # s should not be empty
+        self.fieldName = s[0].lower() + s[1:]
+
     def __init__(self, id : int, name : str, typeName : str, value : float):
         self.id = id
         self.name = name
+        self._setFieldName()
         if typeName == "b":
             self.value = bool(value)
         elif typeName == "i":
             self.value = int(value)
         else:
             self.value = value
-
-    def to_json(self):
-        return {
-            "invariantId" : self.id,
-            "invariantName" : self.name,
-            "invariantValue" : self.value
-        }
 
 
 class Invariants():
@@ -49,6 +51,6 @@ class Invariants():
         return raw_invariant_values
     
     def to_json(self):
-        return { e.id: e.to_json() for e in self.invariant_values.values() }
+        return { e.fieldName: e.value for e in self.invariant_values.values() }
                 
 

@@ -51,7 +51,6 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
   | .some data =>
     have dataQ : Q(RawHoGData) := ToExpr.toExpr data
     let rawHoGName := certificateName graphName "RawHoGI"
-    -- let rawHoGQ : Q(ConnectedComponentsCertificate $graph) := connectedComponentsCertificateOfData graph data
     Elab.Command.liftCoreM <| addAndCompile <| .defnDecl {
       name := rawHoGName
       levelParams := []

@@ -17,7 +17,6 @@ structure RawHoGData : Type where
   cliqueNumber? : Option Nat
   connected? : Option Bool
   degeneracy? : Option Nat
-  density? : Option Nat
   diameter? : Option Nat
   dominationNumber? : Option Nat
   edgeConnectivity? : Option Nat
@@ -55,5 +54,14 @@ deriving Lean.FromJson, Lean.ToExpr
 
 
 class RawHoG (G : Graph) extends RawHoGData
+
+
+/-- check that the number of vertices in the graph matches the value in the database -/
+def Graph.checkHoGnumberOfVertices (G : Graph) [R : RawHoG G] : Bool :=
+  R.numberOfVertices? = G.vertexSize
+
+/-- check that the number of edges in the graph matches the value in the database -/
+def Graph.checkHoGnumberOfEdges (G : Graph) [R : RawHoG G] : Bool :=
+  R.numberOfEdges? = G.edgeSize
 
 end LeanHoG
