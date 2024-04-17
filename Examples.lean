@@ -8,7 +8,7 @@ import LeanHoG.Invariant.HamiltonianPath.Tactic
 namespace LeanHoG
 
 -- You may have to change this
-set_option leanHoG.pythonExecutable "python"
+set_option leanHoG.pythonExecutable "/Users/katja/Git/Lean-HoG/.venv/bin/python"
 
 
 -- Loading graphs, visualizing them, and checking their properties
@@ -43,8 +43,10 @@ load_graph ThreeFour "examples/cycle3-cycle4.json"
 #eval ThreeFour.connectedGraph
 #eval ThreeFour.numberOfConnectedComponents
 
-
--- Checking bipartiteness with and without certificates
+-----------------------------------------
+-- Checking bipartiteness
+-- with and without certificates
+-----------------------------------------
 
 -- The next two graphs have respectively 15 and 16 edges.
 -- Uncomment the next lines to see the time Lean needs to decide bipartitness without a certificate
@@ -59,16 +61,16 @@ load_graph Poussin "examples/Poussin.json"
 load_graph Hanoi "examples/Hanoi2Disks.json"
 -- #eval Hanoi.bipartite
 
+-----------------------------------------
+-- Downloading and searching for graphs
+-----------------------------------------
 
--- Loading and searching for graphs from the House of Graphs
-
--- Load the Petersen graph from HoG
--- First run `lake exe download 660`
+-- Download the Petersen graph from HoG
 #download Petersen 660
 #show Petersen
 #eval Petersen.numberOfConnectedComponents
 
--- Alternatively, download graphs directly from HoG
+-- Download the Wheel graph from HoG
 #download Wheel 204
 #check Wheel
 #show Wheel
