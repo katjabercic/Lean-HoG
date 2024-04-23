@@ -12,16 +12,14 @@ import LeanHoG.Invariant.HamiltonianPath.Tactic
 
 namespace LeanHoG
 
-open Lean Meta Elab Tactic
-
 -----------------------------------------------------------------
 -- Download graph command
 -----------------------------------------------------------------
 
-syntax (name := downloadHoGGraph) "#download_hog_graph " ident ppSpace term : command
+syntax (name := downloadHoG) "#download" ident ppSpace term : command
 
-open Lean Qq Elab in
-/-- `#download_hog_graph <name> <hog_id>` downloads the graphs with House of Graphs
+open Lean Qq in
+/-- `#download <name> <hog_id>` downloads the graphs with House of Graphs
     ID `<hog_id>` and loads it into the veriable `<name>`.
 
     Note: The graph is downloaded into the folder defined by the user option
@@ -32,10 +30,10 @@ open Lean Qq Elab in
 
     Note: The python environment is expected to have the `requests` library installed.
  -/
-@[command_elab downloadHoGGraph]
-unsafe def downloadHoGGraphImpl : Command.CommandElab
-  | `(#download_hog_graph $name $id) =>  do
-    let n ← Command.liftTermElabM do
+@[command_elab downloadHoG]
+unsafe def downloadHoGImpl : Elab.Command.CommandElab
+  | `(#download $name $id) =>  do
+    let n ← Elab.Command.liftTermElabM do
       let qn : Q(Nat) ← (elabTermEnsuringTypeQ id q(Nat))
       evaluateNat qn
     let opts ← getOptions
@@ -52,16 +50,16 @@ unsafe def downloadHoGGraphImpl : Command.CommandElab
     loadGraphAux name.getId jsonData
     logInfo s!"loaded graph hog_{n} into {name.getId}"
 
-  | _ => throwUnsupportedSyntax
+  | _ => Elab.throwUnsupportedSyntax
 
 -----------------------------------------------------------------
 -- Search tactic
 -----------------------------------------------------------------
 
-syntax (name := searchForExampleInHoG) "search_for_example" : tactic
+syntax (name := findExample) "find_example" : tactic
 
 open Lean Qq Elab Tactic in
-/-- `search_for_example` works on goals of the form `∃ (G : Graph), P G`, where
+/-- `find_example` works on goals of the form `∃ (G : Graph), P G`, where
     `P` is a limited propositional formula on `G` which consists of conjunction,
     disjunctions and comparisons of invariants of G, i.e. the kinds of queries
     HoG is able to answer.
@@ -69,12 +67,11 @@ open Lean Qq Elab Tactic in
     Note: The tactic constructs a query and sends it to the HoG database.
 
     Example goal the tactic works on:
-    ∃ (G : Graph), G.isTraceable ∧ G.vertexSize > 3 ∧
-    (G.minimumDegree < G.vertexSize / 2)
+    `∃ (G : Graph), G.traceable ∧ G.vertexSize > 3 ∧ (G.minimumDegree < G.vertexSize / 2)`
 -/
-@[tactic searchForExampleInHoG]
-unsafe def searchForExampleInHoGImpl : Tactic.Tactic
-  | stx@`(tactic|search_for_example) =>
+@[tactic findExample]
+unsafe def findExampleImpl : Tactic.Tactic
+  | stx@`(tactic|find_example) =>
     Tactic.withMainContext do
       let goal ← Tactic.getMainGoal
       let goalDecl ← goal.getDecl
@@ -86,9 +83,19 @@ unsafe def searchForExampleInHoGImpl : Tactic.Tactic
         let mentionsTracability := enqs.any (fun enq => enq.mentionsTracability)
         let hash := hash enqs
         let query := HoGQuery.build enqs
-        let graphs ← liftCommandElabM (queryDatabaseForExamples [query] hash)
+        let graphs ← liftCommandElabM (queryDatabaseForExamplesAux [query] hash)
         if h : graphs.length > 0 then
+          -- We now have to load one of the results into the context
+          -- TODO: Currently we globaly load the graph, should just load it into the local context
           let ⟨graphId⟩ := graphs[0]'(by simp_all only [not_lt_zero'])
+          let opts ← getOptions
+          let downloadLocation := opts.get leanHoG.graphDownloadLocation.name leanHoG.graphDownloadLocation.defValue
+          let graphLoc := System.mkFilePath [downloadLocation, s!"{graphId}.json"]
+          let graphIdent := mkIdent (Name.mkSimple s!"hog_{graphId}")
+          let jsonData ← loadJSONData JSONData graphLoc
+          liftCommandElabM (loadGraphAux graphIdent.getId jsonData)
+
+          -- Now try to use the loaded graph to close the goal
           let mvarIds' ← Lean.MVarId.apply goal exists_intro
           Tactic.replaceMainGoal mvarIds'
           let newGoals ← Tactic.getGoals
@@ -101,12 +108,12 @@ unsafe def searchForExampleInHoGImpl : Tactic.Tactic
               goal.checkNotAssigned `search_for_counterexample
               -- try to close the goal with the found graph
               goal.withContext do
-                let r ← Lean.Elab.Tactic.elabTermEnsuringType graphId goalType
+                let r ← Lean.Elab.Tactic.elabTermEnsuringType graphIdent goalType
                 goal.assign r
                 -- Now try to simp which will among other things look for instance for e.g. HamiltonianPath
                 if mentionsTracability then
                   -- If we want to prove things about tracability we need to search for a Hamiltonian path
-                  let (val, type, res) ← LeanHoG.searchForHamiltonianPathAux graphId.getId r
+                  let (val, type, res) ← LeanHoG.searchForHamiltonianPathAux graphIdent.getId r
                   match res with
                   | .unsat =>
                     Tactic.liftMetaTactic fun mvarId => do
@@ -114,31 +121,31 @@ unsafe def searchForExampleInHoGImpl : Tactic.Tactic
                       let (_, mvarIdNew) ← mvarIdNew.intro1P
                       return [mvarIdNew]
                     let ctx ← mkSimpContext (← `(tactic|simp_all only [LeanHoG.Graph.no_path_not_traceable, not_false_eq_true])) false
-                    let (result?, _) ← simpAll (← getMainGoal) ctx.ctx (simprocs := ctx.simprocs)
+                    let (result?, _) ← Meta.simpAll (← getMainGoal) ctx.ctx (simprocs := ctx.simprocs)
                     match result? with
                     | none => replaceMainGoal []
                     | some mvarId => replaceMainGoal [mvarId]
                     Tactic.evalDecide stx
                   | _ =>
                     let ctx ← mkSimpContext (← `(tactic|simp_all only [LeanHoG.Graph.no_path_not_traceable, not_false_eq_true])) false
-                    let (result?, _) ← simpAll (← getMainGoal) ctx.ctx (simprocs := ctx.simprocs)
+                    let (result?, _) ← Meta.simpAll (← getMainGoal) ctx.ctx (simprocs := ctx.simprocs)
                     match result? with
                     | none => replaceMainGoal []
                     | some mvarId => replaceMainGoal [mvarId]
                     Tactic.evalDecide stx
                 else
                   let ctx ← mkSimpContext (← `(tactic|simp_all)) false
-                  let (result?, _) ← simpAll (← getMainGoal) ctx.ctx (simprocs := ctx.simprocs)
+                  let (result?, _) ← Meta.simpAll (← getMainGoal) ctx.ctx (simprocs := ctx.simprocs)
                   match result? with
                   | none => replaceMainGoal []
                   | some mvarId =>
                     replaceMainGoal [mvarId]
                     Tactic.evalDecide stx
-                Lean.logInfo s!"Closed goal using {graphId.getId}"
+                Lean.logInfo s!"Closed goal using {graphIdent.getId}"
               -- Visualize the graph we used to close the goal
               -- TODO: Make this an option
               let wi : Expr ←
-                Widget.elabWidgetInstanceSpecAux (mkIdent `visualize) (← ``((Graph.toVisualizationFormat $graphId)))
+                Widget.elabWidgetInstanceSpecAux (mkIdent `visualize) (← ``((Graph.toVisualizationFormat $graphIdent)))
               let wi ← Widget.evalWidgetInstance wi
               Widget.savePanelWidgetInfo wi.javascriptHash wi.props stx
             else

@@ -10,11 +10,11 @@ import Std.Data.List.Basic
 
 namespace LeanHoG
 
-open Lean Meta Qq
+open Lean Qq
 
 /-- Evaluate an expression into a Nat -/
 unsafe def evaluateNat (e : Q(Nat)) : MetaM Nat := do
-  let n ← evalExpr' Nat ``Nat e
+  let n ← Meta.evalExpr' Nat ``Nat e
   return n
 
 def decomposeIntegralInvQ (e : Q(Graph → Nat)) : MetaM IntegralInvariant := do
@@ -27,8 +27,8 @@ def decomposeIntegralInvQ (e : Q(Graph → Nat)) : MetaM IntegralInvariant := do
 def decomposeBoolInvQ (e : Q(Graph → Prop)) : MetaM (BoolInvariant × Bool) := do
   match e with
   | ~q(fun G => Graph.isHamiltonian G) => return (BoolInvariant.Hamiltonian, true)
-  | ~q(fun G => Graph.isTraceable G) => return (BoolInvariant.Traceable, true)
-  | ~q(fun G => ¬ Graph.isTraceable G) => return (BoolInvariant.Traceable, false)
+  | ~q(fun G => Graph.traceable G) => return (BoolInvariant.Traceable, true)
+  | ~q(fun G => ¬ Graph.traceable G) => return (BoolInvariant.Traceable, false)
   | ~q(fun G => Graph.bipartite G) => return (BoolInvariant.Bipartite, true)
   | ~q(fun G => ¬ Graph.bipartite G) => return (BoolInvariant.Bipartite, false)
   | _ => throwError s!"cannot decompose Boolean invariant, got {e}"

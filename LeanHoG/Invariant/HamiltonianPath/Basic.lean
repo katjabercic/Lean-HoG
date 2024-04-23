@@ -13,13 +13,13 @@ instance {G : Graph} {u v : G.vertex} {p : Path G u v} :
   simp
   infer_instance
 
-def Graph.isTraceable (G : Graph) : Prop :=
+def Graph.traceable (G : Graph) : Prop :=
   ∃ (u v : G.vertex) (p : Path G u v), p.isHamiltonian
 
 lemma Graph.no_path_not_traceable {G : Graph}
   {h : ¬ ∃ (u v : G.vertex) (p : Path G u v), p.isHamiltonian} :
-  ¬ G.isTraceable := by
-  simp only [Graph.isTraceable]
+  ¬ G.traceable := by
+  simp only [Graph.traceable]
   intro h'
   apply h h'
 
@@ -39,15 +39,15 @@ instance {G : Graph} : Repr (HamiltonianPath G) where
 instance {G : Graph} : ToString (HamiltonianPath G) where
   toString p := toString p.path
 
-@[simp] theorem path_of_cert {G : Graph} [hp : HamiltonianPath G] : G.isTraceable := by
+@[simp] theorem path_of_cert {G : Graph} [hp : HamiltonianPath G] : G.traceable := by
   let ⟨u, v, p, cond⟩ := hp
-  simp [Graph.isTraceable]
+  simp [Graph.traceable]
   apply Exists.intro u
   apply Exists.intro v
   apply Exists.intro p
   apply cond
 
-instance {G : Graph} [HamiltonianPath G] : Decidable (G.isTraceable) :=
+instance {G : Graph} [HamiltonianPath G] : Decidable (G.traceable) :=
   .isTrue path_of_cert
 
 @[simp] def vertices {G : Graph} : HamiltonianPath G → List G.vertex :=

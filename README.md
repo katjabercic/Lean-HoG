@@ -1,6 +1,6 @@
 # Lean-HoG
 
-A library for computational graph theory in [Lean 4](https://leanprover.github.io), with emphasis on verification of large datasets of graphs; in particular the [House of Graphs](https://houseofgraphs.org).
+A library for computational graph theory in [Lean 4](https://leanprover.github.io), with emphasis on verification of large datasets of graphs; in particular the [House of Graphs](https://houseofgraphs.org) (HoG).
 
 ## Prerequisites
 
@@ -11,11 +11,24 @@ You need the following software:
 * **[Node.js and `npm` cli](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)**. 
 * **[Python](https://www.python.org)** version 3, with the [requests](https://pypi.org/project/requests/)  library, which you can install with `pip3 install requests`.
 
+
 On MacOS you can use [Homebrew](https://brew.sh) to install Visual Studio Code and `Node.js` with
 ```
 brew install npm
 brew install --cask visual-studio-code
 ```
+
+### SAT solving
+
+For using the SAT solving facilities of the library (e.g. computing Hamiltonian paths) you need the following:
+
+* A modern SAT solver capable of producing proofs of unsatisfiability, 
+  we recommend **[CaDiCaL](https://github.com/arminbiere/cadical)**.
+* A SAT proof checker, we recommend the formally verified checker **[cake_lpr](https://github.com/tanyongkiam/cake_lpr)**.
+
+Once you have installed the SAT solver and a proof checker, you should set in Lean
+* `leanHoG.solverCmd` to the location of the SAT solver executable.
+* `leanHoG.proofCheckerCmd` to the location of the SAT proof checker.
 
 ## Installation
 
@@ -28,22 +41,33 @@ To install all the dependencies and compile Lean-HoG, run these commands from wi
 
 ## Usage
 
+The library uses Python to interact with the HoG database and process the data
+before it's imported in Lean.
+To make Lean aware of the location of your Python executable set
+```
+set_option leanHoG.pythonExecutable <path-to-python>
+```
+
 Open the file [`Examples.lean`](Examples.lean) to check whether the example graphs load successfully.
 
 ### Downloading graphs
 
-To download graphs from the [House of Graphs](https://houseofgraphs.org/) (HoG) website run
-* `lake exe download <id>` to download the graph with the ID `<id>`,
-* `lake exe download <min-id> <max-id>` to download graphs whose IDs are in the range from `<min-id>` to `<max-id>`,
+To download graphs from the [House of Graphs](https://houseofgraphs.org/) (HoG) you can
+use the `#download <graphName> <hog_id>` command. 
+It downloads the graphs with House of Graphs ID `hog_id` and loads it into the variable `graphName`.
 
-The JSON files with the graps are downloaded into `build/graphs`.
-
-To use a downloaded graph with ID `<id>` in Lean, use the command
-```lean
-load_graph <graphName> "build/graphs/<ID>"
-```
-This will load the graph into the variable `<graphName>`.
 You can check that it loaded it with `#check <graphName>`.
+
+**Note**: To download the graph it uses an external python script. The location of the python executable is provided by the user option `leanHoG.pythonExecutable`.
+
+**Note**: The python environment is expected to have the requests library installed.
+
+#### Example
+```lean
+#download Petersen 660
+#check Petersen
+```
+
 
 ### Visualization widget
 
@@ -53,22 +77,25 @@ which work by running Javascript in the Infoview.
 The visualization uses the [cytoscape.js](https://js.cytoscape.org/) javascript library.
 
 
-Try them out by opening the `Examples.lean` file and clicking on the line `#visualizeGraph Cycle7`. In the info view you should now see something like this:
+Try them out by opening the `Examples.lean` file and clicking on the line `#show Cycle7`. In the info view you should now see something like this:
 ![image](https://github.com/katjabercic/Lean-HoG/assets/6967728/f4ee94ab-4d31-4192-ac80-7e35323e5c4b)
 
 ### Search the House of Graphs from Lean
 
-You can query the House of Graphs database from within Lean via the command `#search_hog`.
+You can query the House of Graphs database from within Lean via the command `#search`.
 To use it you have to construct a valid `hog_query` and enclose it into
 `hog{ }` syntax. It has the following syntax:
 ```
-hog_query q ::= boolean_invariant = b | numerical_invariant op x | ( q ) | q ∧ q | q ∨ q
+hog_query q ::= boolean_invariant = b | numerical_invariant op x | query_formula op query_formula | ( q ) | q ∧ q | q ∨ q
 ```
 where `b` is a boolean value, `x` is a numerical value
-(`Int` for invariants with integral values, `Float` for invariants with continous values)
-and
+(`Int` for invariants with integral values, `Float` for invariants with continous values),
 ```
 op ::= < | <= | > | >= | =
+```
+and 
+```
+query_formula f ::= x | numerical_invariant | f + f | f - f | f / f | f * f
 ```
 The list of available invariants can be found in the [House of Graphs documentation](https://houseofgraphs.org/help#invariants).
 The invariants use [lower camel case](https://en.wikipedia.org/wiki/Camel_case).
@@ -98,6 +125,34 @@ The solutions point to the relevant page on the House of Graphs for each graph.
 The graphs are also available in Lean, which you can check with e.g.
 ```lean
 #check hog_302
+```
+
+### Search tactic
+
+The library provides a tactic `find_example`,
+which uses the search feature to close certain goals of the form
+`∃ (G : Graph), P G` for Boolean predicates `P`.
+The predicate `P` must be a conjunction of comparisons of invariants with
+either invariants or numbers.
+The supported invariants are those Lean-HoG currently implements. They include:
+* `vertex size`
+* `edge size`
+* `minimum degree`
+* `maximum degree`
+* `number of connected components`
+* `traceable`
+* `non traceable`
+* `bipartite`
+* `non bipartite`
+* `connected`
+* `Hamiltonian`
+
+#### Example
+
+```lean
+example : ∃ (G : Graph), G.traceable ∧ G.vertexSize > 3 ∧ 
+  (G.minimumDegree < G.vertexSize / 2) := by
+  find_example
 ```
 
 ## Raw data format

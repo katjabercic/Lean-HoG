@@ -106,7 +106,7 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
 
 
 
-/-- Load a graph with the given Lean identifier from the given file. -/
+/-- `load_graph <ID> <file>` loads a graph into the given Lean identifier `ID` from the given file. -/
 @[command_elab loadGraph]
 unsafe def loadGraphImpl : Elab.Command.CommandElab
   | `(load_graph $graphName $fileName) => do

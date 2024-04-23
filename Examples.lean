@@ -7,13 +7,14 @@ import LeanHoG.Invariant.HamiltonianPath.Tactic
 
 namespace LeanHoG
 
+-- You may have to change this
+set_option leanHoG.pythonExecutable "python"
+
+
 -- Loading graphs, visualizing them, and checking their properties
 
-/-
-In the examples, some invariant certificates are omitted on purpose.
-Below, they are marked with a comment. In some cases, the kernel can
-compute the invariant values, but not in all of them.
--/
+-- In the examples, some invariant certificates are omitted on purpose.
+-- Below, they are marked with a comment.
 
 -- The discrete graph on two vertices
 load_graph Two "examples/two.json"
@@ -28,7 +29,7 @@ load_graph Path1 "examples/path1.json"
 
 -- The cycle on 7 vertices
 load_graph Cycle7 "examples/cycle7.json"
-#visualizeGraph Cycle7
+#show Cycle7
 #eval Cycle7.bipartite -- works despite missing certificate
 #eval Cycle7.connectedGraph
 
@@ -42,45 +43,61 @@ load_graph ThreeFour "examples/cycle3-cycle4.json"
 #eval ThreeFour.connectedGraph
 #eval ThreeFour.numberOfConnectedComponents
 
+
+-- Checking bipartiteness with and without certificates
+
 -- The next two graphs have respectively 15 and 16 edges.
 -- Uncomment the next lines to see the time Lean needs to decide bipartitness without a certificate
-/-
-load_graph PoussinNoCertificates "examples/Poussin-no-certificates.json"
-#eval PoussinNoCertificates.bipartite
--/
-
-/-
-load_graph HanoiNoCertificates "examples/Hanoi2Disks-no-certificates.json"
-#eval HanoiNoCertificates.bipartite
--/
+-- load_graph PoussinNoCertificates "examples/Poussin-no-certificates.json"
+-- #eval PoussinNoCertificates.bipartite
+-- load_graph HanoiNoCertificates "examples/Hanoi2Disks-no-certificates.json"
+-- #eval HanoiNoCertificates.bipartite
 
 -- Using a certificate provides a significant speed up.
 load_graph Poussin "examples/Poussin.json"
-#eval Poussin.bipartite
-
+-- #eval Poussin.bipartite
 load_graph Hanoi "examples/Hanoi2Disks.json"
 -- #eval Hanoi.bipartite
 
--- Load the Petersen graph from the House of Graphs
-load_graph Petersen "build/graphs/660.json"
-#visualizeGraph Petersen
+
+-- Loading and searching for graphs from the House of Graphs
+
+-- Load the Petersen graph from HoG
+-- First run `lake exe download 660`
+#download Petersen 660
+#show Petersen
 #eval Petersen.numberOfConnectedComponents
 
--- We can download graphs directly from HoG
-#download_hog_graph Wheel 204
-#eval Graph.bipartite Wheel
-example : Graph.bipartite Wheel = false := by
-  decide
-
-
--- We can use a command to compute a Hamiltonian path and add it as an instance
-
--- #compute_hamiltonian_path Wheel
--- #check Wheel.HamiltonianPathI
+-- Alternatively, download graphs directly from HoG
+#download Wheel 204
+#check Wheel
+#show Wheel
 
 -- Search the HoG database directly from Lean
+#search hog{ bipartite = true ∧ (numberOfEdges = 2 ∨ numberOfVertices < 6) }
+load_graph hog_904 "build/graphs/904.json"
+#show hog_904
 -- Uncomment the line below to initiate the search
--- #search_hog hog{ bipartite = true ∧ (numberOfEdges = 2 ∨ numberOfVertices < 6) }
+-- #search hog{ traceable = true ∧ numberOfVertices > 3 ∧ minimumDegree < numberOfVertices / 2}
+
+-----------------------------------------
+-- Hamiltonian paths
+-----------------------------------------
+
+-- We can use a command to compute a Hamiltonian path and add it as an instance
+#check_traceable Wheel
+#show_hamiltonian_path Wheel
+
+-- We can also show that there is no Hamiltonian path is some graphs
+#search hog{ traceable = false ∧ numberOfEdges = 2}
+load_graph hog_896 "build/graphs/896.json"
+#show hog_896
+#check_traceable hog_896
+#show_hamiltonian_path hog_896
+
+---------------------------------------
+-- Tactics
+---------------------------------------
 
 -- Tactic to close goals of the form ∃ G, P G
 -- Not all P are supported, only propositions using invariants defined
@@ -91,13 +108,12 @@ example : Graph.bipartite Wheel = false := by
 -- LRAT proofs of unsat. We recommend CaDiCal 1.9.5+ (https://github.com/arminbiere/cadical)
 -- and cake_lpr (https://github.com/tanyongkiam/cake_lpr).
 -- We set the location of the solver and proof checker with user options
--- `leanHoG.solverCmd` and `leanHoG.cake_lprCmd`.
+-- `leanHoG.solverCmd` and `leanHoG.proofCheckerCmd`.
 -- Uncomment lines below to run the tactic
 
 -- set_option leanHoG.solverCmd "cadical"
--- set_option leanHoG.cake_lprCmd "cake_lpr"
-
-example : ∃ (G : Graph), G.vertexSize = 4 ∧ G.bipartite := by
-  search_for_example
+-- set_option leanHoG.proofCheckerCmd "cake_lpr"
+example : ∃ (G : Graph), G.traceable ∧ G.vertexSize > 3 ∧ (G.minimumDegree < G.vertexSize / 2) := by
+  find_example
 
 end LeanHoG

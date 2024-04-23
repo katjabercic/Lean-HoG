@@ -4,14 +4,13 @@ import Lean.Data.Json.Basic
 import LeanHoG.LoadGraph
 import LeanHoG.Widgets
 import LeanHoG.Tactic.Options
-import LeanHoG.Util.IO
 
 import ProofWidgets.Component.HtmlDisplay
 
 namespace LeanHoG
 
 open scoped ProofWidgets.Jsx
-open Lean Widget Elab Command Term Meta Qq
+open Lean Elab Qq
 
 inductive BoolInvariant where
   | Acyclic
@@ -145,6 +144,7 @@ instance : ToString Invariant where
     | .NumericalInvariant n => toString n
     | .IntegralInvariant i => toString i
 
+/-- TODO: These should be loaded automatucally from HoG somehow. -/
 def BoolInvariant.toId : BoolInvariant → Nat
   | .Acyclic => 1
   | .Bipartite => 3
@@ -159,6 +159,7 @@ def BoolInvariant.toId : BoolInvariant → Nat
   | .Traceable => 40
   | .TwinFree => 46
 
+/-- TODO: These should be loaded automatucally from HoG somehow. -/
 def NumericalInvariant.toId : NumericalInvariant → Nat
   | .AlgebraicConnectivity => 19
   | .AverageDegree => 2
@@ -167,6 +168,7 @@ def NumericalInvariant.toId : NumericalInvariant → Nat
   | .SecondLargestEigenvalue => 23
   | .SmallestEigenvalue => 24
 
+/-- TODO: These should be loaded automatucally from HoG somehow. -/
 def IntegralInvariant.toId : IntegralInvariant → Nat
   | .ChromaticIndex => 20
   | .ChromaticNumber => 4
@@ -733,91 +735,86 @@ def putInDiv : List DivWithLink → Html := fun hs =>
   .element "div" #[] (hs.toArray.map DivWithLink.toHtml)
 
 structure QueryResult where
-  graphId : Ident
+  graphId : Nat
 
-unsafe def queryDatabaseForExamples (queries : List ConstructedQuery) (queryHash : UInt64) :
-  CommandElabM (List QueryResult) := do
+def buildLinks (results : List QueryResult) : List DivWithLink :=
+    results.map fun res =>
+      let houseofgraphsLink := s!"https://houseofgraphs.org/graphs/{res.graphId}"
+      let graphWLink : DivWithLink := ⟨"Found solution ", houseofgraphsLink, s!"hog_{res.graphId}"⟩
+      graphWLink
+
+unsafe def queryDatabaseForExamplesAux (queries : List ConstructedQuery) (queryHash : UInt64) :
+  Command.CommandElabM (List QueryResult) := do
   let opts ← getOptions
   let pythonExe := opts.get leanHoG.pythonExecutable.name leanHoG.pythonExecutable.defValue
-  let downloadLocation := opts.get leanHoG.searchCacheLocation.name leanHoG.searchCacheLocation.defValue
+  let searchCacheLoc := opts.get leanHoG.searchCacheLocation.name leanHoG.searchCacheLocation.defValue
   for q in queries do
     let output ← IO.Process.output {
       cmd := pythonExe
-      args := #["Download/searchHoG.py", downloadLocation, s!"{q.query}", s!"{queryHash}"]
+      args := #["Download/searchHoG.py", searchCacheLoc, s!"{q.query}", s!"{queryHash}"]
     }
     if output.exitCode ≠ 0 then
       throwError f!"failed to download graphs: {output.stderr}"
 
-  let path : System.FilePath := System.mkFilePath ["build", "search_results", s!"{queryHash}"]
+  let path := System.mkFilePath [searchCacheLoc, s!"{queryHash}"]
   let contents ← path.readDir
-  let resultsList := contents.toList
-  let mut graphId := ""
   let mut results := []
-  for result in resultsList do
+  let graphsLocation := opts.get leanHoG.graphDownloadLocation.name leanHoG.graphDownloadLocation.defValue
+  for result in contents.toList do
+    -- Copy each result into the graphs folder
+    let fileContent ← IO.FS.readFile result.path
     let path := result.path
     let jsonData ← loadJSONData JSONData path
     match jsonData.hogId with
     | none => throwError m!"Result did not have HoG ID"
-    | some id => graphId := s!"hog_{id}"
-      let graphName := mkIdent (Name.mkSimple graphId)
-      let _ ← loadGraphAux graphName.getId jsonData
-      results := ⟨graphName⟩ :: results
+    | some id =>
+      let saveLoc := System.mkFilePath [graphsLocation, s!"{id}.json"]
+      IO.FS.writeFile saveLoc fileContent
+      results := ⟨id⟩ :: results
   return results
 
-syntax (name := searchHoG) "#search_hog " term : command
+syntax (name := searchHoG) "#search" term : command
 
 open ProofWidgets in
+/-- `#search hog{ <hog-query> }` searches the HoG database for graphs satisfying
+    the given query. The graphs returned by HoG are stored in the graph download
+    location defined by the user option `leanHog.graphDownloadLocation`.
+    The syntax for the query is
+
+    `hog_query q ::= boolean_invariant = b | numerical_invariant op x | query_formula op query_formula | ( q ) | q ∧ q | q ∨ q`
+
+    where `b` is a boolean value, `x` is a numerical value
+    (`Int` for invariants with integral values, `Float` for invariants with continous values),
+
+    `op ::= < | <= | > | >= | =`
+
+    and
+
+    `query_formula f ::= x | numerical_invariant | f + f | f - f | f / f | f * f`
+
+    The list of available invariants can be found in the [House of Graphs documentation](https://houseofgraphs.org/help#invariants).
+    The invariants use [lower camel case](https://en.wikipedia.org/wiki/Camel_case).
+
+    The search results are cached after the first search.
+
+    ### Example:
+
+    `#search hog{ bipartite = true ∧ (numberOfEdges = 2 ∨ numberOfVertices < 6) }`
+-/
 @[command_elab searchHoG]
-unsafe def searchForExampleImpl : CommandElab
-  | stx@`(#search_hog $q ) => do
-    let qs ← liftTermElabM do
-      let qe : Expr ← elabTerm q none
-      let query ← mkAppM ``Queries.mk #[(← mkAppM ``List.map #[(← mkAppM ``HoGQuery.build #[]), qe])]
-      let qs : Queries ← evalExpr' Queries ``Queries query
+unsafe def searchForExampleImpl : Command.CommandElab
+  | stx@`(#search $q ) => do
+    let qs ← Command.liftTermElabM do
+      let qe : Expr ← Term.elabTerm q none
+      let query ← Meta.mkAppM ``Queries.mk #[(← Meta.mkAppM ``List.map #[(← Meta.mkAppM ``HoGQuery.build #[]), qe])]
+      let qs : Queries ← Meta.evalExpr' Queries ``Queries query
       return qs
-    let opts ← getOptions
-    let pythonExe := opts.get leanHoG.pythonExecutable.name leanHoG.pythonExecutable.defValue
-    let downloadLocation := opts.get leanHoG.searchCacheLocation.name leanHoG.searchCacheLocation.defValue
-    for q in qs.queries do
-      let output ← IO.Process.output {
-        cmd := pythonExe
-        args := #["Download/searchHoG.py", downloadLocation, s!"{q.query}", s!"{qs.hash}"]
-      }
-      if output.exitCode ≠ 0 then
-        IO.eprintln f!"failed to download graphs: {output.stderr}"
-        return
-    -- IO.println s!"{qs.hash}"
 
-    let path : System.FilePath := System.mkFilePath ["build", "search_results", s!"{qs.hash}"]
-    let contents ← path.readDir
-    let resultsList := contents.toList
-    let mut i := 1
-    let mut ids := []
-    let mut graphId := ""
-    let mut links := []
-    for result in resultsList do
-      let path := result.path
-      let jsonData ← loadJSONData JSONData path
-      match jsonData.hogId with
-      | none =>
-        graphId := s!"result_{i}"
-        i := i + 1
-        let graphWLink : DivWithLink := ⟨s!"Found solution {graphId}", "", ""⟩
-        links := graphWLink :: links
-      | some id =>
-        graphId := s!"hog_{id}"
-        ids := id :: ids
-        let houseofgraphsLink := s!"https://houseofgraphs.org/graphs/{id}"
-        let graphWLink : DivWithLink := ⟨"Found solution ", houseofgraphsLink, graphId⟩
-        links := graphWLink :: links
-      let graphName := mkIdent (Name.mkSimple graphId)
-      let _ ← loadGraphAux graphName.getId jsonData
-
+    let results ← queryDatabaseForExamplesAux qs.queries qs.hash
+    let links := buildLinks results
     let text : DivWithLink := ⟨s!"Found {links.length} graphs satisfying given query", "", ""⟩
-    links := text :: links
+    let links := text :: buildLinks results
     Widget.savePanelWidgetInfo (hash HtmlDisplayPanel.javascript)
       (return json% { html: $(← Server.RpcEncodable.rpcEncode (putInDiv links)) }) stx
 
   | _ => throwUnsupportedSyntax
-
--- #search_hog hog{ bipartite = true ∧ (numberOfEdges = 1 ∨ numberOfVertices < 6) }

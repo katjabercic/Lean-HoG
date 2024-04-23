@@ -8,8 +8,7 @@
     "clean": "rm ../build/js/* 2> /dev/null",
     "build-esbuild": "node build.mjs",
     "build-rollup": "npx rollup --config --bundleConfigAsCjs",
-    "copy-html": "cp index.html ../build/js/index.html",
-    "build": "npm run build-rollup && npm run copy-html",
+    "build": "npm run build-rollup",
     "clean-and-build": "npm run clean; npm run build"
   },
   "author": "",
