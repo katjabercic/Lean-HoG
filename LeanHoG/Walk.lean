@@ -8,52 +8,52 @@ import Mathlib.Lean.Json
 namespace LeanHoG
 
 /-- A walk is a sequence of adjacent vertices, it may intersect itself -/
-inductive Walk (g : Graph) : g.vertex → g.vertex → Type
-  | here (v : g.vertex) : Walk g v v
-  | step {s t u : g.vertex} : g.adjacent s t → Walk g t u →  Walk g s u
+inductive Walk (G : Graph) : G.vertex → G.vertex → Type
+  | here (v : G.vertex) : Walk G v v
+  | step {s t u : G.vertex} : G.adjacent s t → Walk G t u →  Walk G s u
 
 namespace Walk
 
-def toString {g : Graph} {s t : g.vertex} : Walk g s t → String
+def toString {G : Graph} {s t : G.vertex} : Walk G s t → String
   | here s  => s!"{s}"
   | step e w => s!"{s} -> {w.toString}"
 
-instance walkToString {g : Graph} {s t : g.vertex} : ToString (Walk g s t) where
+instance walkToString {G : Graph} {s t : G.vertex} : ToString (Walk G s t) where
   toString := toString
 
-instance reprWalk {g : Graph} {u v : g.vertex} : Repr (Walk g u v) where
+instance reprWalk {G : Graph} {u v : G.vertex} : Repr (Walk G u v) where
   reprPrec w _ := w.toString
 
-instance {g : Graph} {u v : g.vertex} {_ : Walk g u v} : Inhabited g.vertex where
+instance {G : Graph} {u v : G.vertex} {_ : Walk G u v} : Inhabited G.vertex where
   default := u
 
-def isTrivial {g : Graph} {u v : g.vertex} : Walk g u v → Bool
+def isTrivial {G : Graph} {u v : G.vertex} : Walk G u v → Bool
   | here _ => true
   | step _ _ => false
 
-def isNontrivial {g : Graph} {s t : g.vertex} : Walk g s t → Prop
+def isNontrivial {G : Graph} {s t : G.vertex} : Walk G s t → Prop
   | here s => False
   | step _ _ => True
 
-def notInWalk {g : Graph} {u v a b : g.vertex} : Walk g u v → g.adjacent a b → Bool
+def notInWalk {G : Graph} {u v a b : G.vertex} : Walk G u v → G.adjacent a b → Bool
   | here s , e => true
   | step (t := t) _ p, e => (a != u || b != t) && (a != t || b != u) && notInWalk p e
 
 macro p:term "↑" : term => `(reverse $p)
 
-def edgeWalk {g : Graph} {s t : g.vertex} (e : g.adjacent s t) : Walk g s t :=
+def edgeWalk {G : Graph} {s t : G.vertex} (e : G.adjacent s t) : Walk G s t :=
   step e (here t)
 
 -- Definition from https://mathworld.wolfram.com/GraphPath.html
 @[simp]
-def length {g : Graph} {s t : g.vertex} : Walk g s t → ℕ
+def length {G : Graph} {s t : G.vertex} : Walk G s t → ℕ
   | here s => 0
   | step _ p' => length p' + 1
 
 -- The easy direction, just apply induction on the structure of path
-lemma pathImpliesConnected {g : Graph} {s t : g.vertex} : Walk g s t → g.connected s t
-  | here s => g.connected_of_eq s s (Eq.refl s)
-  | step e p' => g.connected_trans _ _ _ (g.connected_of_adjacent e) (pathImpliesConnected p')
+lemma pathImpliesConnected {G : Graph} {s t : G.vertex} : Walk G s t → G.connected s t
+  | here s => G.connected_of_eq s s (Eq.refl s)
+  | step e p' => G.connected_trans _ _ _ (G.connected_of_adjacent e) (pathImpliesConnected p')
 
 theorem strongInduction
   (α : Type)
@@ -73,80 +73,80 @@ theorem strongInduction
   exact @WellFounded.fix _ Q Nat.lt Nat.lt_wfRel.wf Qstep (f a) a rfl
 
 @[simp]
-def vertices {g : Graph} {u v : g.vertex} : Walk g u v -> List g.vertex
+def vertices {G : Graph} {u v : G.vertex} : Walk G u v -> List G.vertex
   | here v => [v]
   | step conn_ut walk_tv => u :: walk_tv.vertices
 
-@[simp] lemma vertices_len_pos {g : Graph} {u v : g.vertex} {w : Walk g u v} :
+@[simp] lemma vertices_len_pos {G : Graph} {u v : G.vertex} {w : Walk G u v} :
   0 < w.vertices.length := by
   induction' w
   · simp
   · simp
 
-@[simp] lemma mem_vertices_endpoints {g : Graph} {u v : g.vertex} {w : Walk g u v} :
+@[simp] lemma mem_vertices_endpoints {G : Graph} {u v : G.vertex} {w : Walk G u v} :
   u ∈ w.vertices ∧ v ∈ w.vertices := by
   induction' w with _
   · simp
   · aesop
 
-@[simp] lemma walk_trivial_vertices_length {g : Graph} {u v : g.vertex} (p : Walk g u v)
+@[simp] lemma walk_trivial_vertices_length {G : Graph} {u v : G.vertex} (p : Walk G u v)
   (h : p.isTrivial) : p.vertices.length = 1 := by
   induction' p with p ih
   · simp
   · contradiction
 
-def verticesMultiset {g : Graph} {u v : g.vertex} :
-  Walk g u v -> Multiset g.vertex := fun w => Multiset.ofList w.vertices
+def verticesMultiset {G : Graph} {u v : G.vertex} :
+  Walk G u v -> Multiset G.vertex := fun w => Multiset.ofList w.vertices
 
-instance vertices_fintype {g : Graph} {u v : g.vertex} {w : Walk g u v} : Fintype w.verticesMultiset := by
+instance vertices_fintype {G : Graph} {u v : G.vertex} {w : Walk G u v} : Fintype w.verticesMultiset := by
   infer_instance
 
 -- We need to provide the explicit equality of `u = v` here. Is there a nicer way to do this?
 @[simp]
-lemma vertices_trivial {g : Graph} {u v : g.vertex} (p : Walk g u v) (eq : u = v)
+lemma vertices_trivial {G : Graph} {u v : G.vertex} (p : Walk G u v) (eq : u = v)
   (p_is_trivial : eq ▸ p = here u) :
   p.vertices = [u] := by
   aesop
 
 @[simp]
-lemma vertices_sublist_left {g : Graph} {u v w : g.vertex} {p : Walk g u w} {adj_u_v : g.adjacent u v}
-  {q : Walk g v w} {p_is_left : p = step adj_u_v q} : p.vertices = u :: q.vertices := by
+lemma vertices_sublist_left {G : Graph} {u v w : G.vertex} {p : Walk G u w} {adj_u_v : G.adjacent u v}
+  {q : Walk G v w} {p_is_left : p = step adj_u_v q} : p.vertices = u :: q.vertices := by
   aesop -- Can't just use simp, as it doesn't apply induction
 
-lemma vertices_left_length {g : Graph} {u v w : g.vertex} {p : Walk g u w} {adj_u_v : g.adjacent u v}
-  {q : Walk g v w} {p_is_left : p = step adj_u_v q} : q.vertices.length + 1 = p.vertices.length := by
-  rw [@vertices_sublist_left g u v w p adj_u_v q p_is_left]
+lemma vertices_left_length {G : Graph} {u v w : G.vertex} {p : Walk G u w} {adj_u_v : G.adjacent u v}
+  {q : Walk G v w} {p_is_left : p = step adj_u_v q} : q.vertices.length + 1 = p.vertices.length := by
+  rw [@vertices_sublist_left G u v w p adj_u_v q p_is_left]
   simp
 
-lemma vertices_length_as_multiset {g : Graph} {u v : g.vertex} (w : Walk g u v) :
+lemma vertices_length_as_multiset {G : Graph} {u v : G.vertex} (w : Walk G u v) :
   w.vertices.length = Fintype.card (Multiset.ofList w.vertices) := by
   simp
 
-lemma length_as_vertices {g : Graph} {u v : g.vertex} (w : Walk g u v) :
+lemma length_as_vertices {G : Graph} {u v : G.vertex} (w : Walk G u v) :
   w.length + 1 = w.vertices.length := by
   induction' w
   · simp
   · simp; assumption -- just apply induction hypothesis
 
-@[simp] def edges {g : Graph} {u v : g.vertex} : Walk g u v → List g.edge
+@[simp] def edges {G : Graph} {u v : G.vertex} : Walk G u v → List G.edge
   | here v => []
   | step adj_ut walk_tv =>
     let e := Graph.adjacentEdge adj_ut
     e :: walk_tv.edges
 
-instance {g : Graph} {u v : g.vertex} : Lean.ToJson (Walk g u v) where
+instance {G : Graph} {u v : G.vertex} : Lean.ToJson (Walk G u v) where
   toJson w := Lean.toJson w.edges
 
-lemma edges_length {g : Graph} {u v : g.vertex} {w : Walk g u v} :
+lemma edges_length {G : Graph} {u v : G.vertex} {w : Walk G u v} :
   w.edges.length = w.length := by
   induction w
   · simp
   · simp_all
 
 @[simp]
-lemma edges_sublist_left {g : Graph} {u v w : g.vertex} {p : Walk g u w} {adj_u_v : g.adjacent u v}
-  {q : Walk g v w} {p_is_left : p = step adj_u_v q} :
-  p.edges = g.adjacentEdge adj_u_v :: q.edges := by
+lemma edges_sublist_left {G : Graph} {u v w : G.vertex} {p : Walk G u w} {adj_u_v : G.adjacent u v}
+  {q : Walk G v w} {p_is_left : p = step adj_u_v q} :
+  p.edges = G.adjacentEdge adj_u_v :: q.edges := by
   aesop
 
 lemma lt_lt_succ_lt {a b n : Nat} (h : a < b) (h' : b < Nat.succ n) : a < n := by
@@ -170,17 +170,17 @@ lemma succ_consecutive_exists_cast {n : Nat} (i j : Fin (Nat.succ n)) (h : i.val
   apply Exists.intro h
   simp
 
-@[simp] lemma walk_vertices_get_zero {g : Graph} [Inhabited g.vertex] {u v : g.vertex}
-  (w : Walk g u v) (n : Nat) (h : n < 1) :
+@[simp] lemma walk_vertices_get_zero {G : Graph} [Inhabited G.vertex] {u v : G.vertex}
+  (w : Walk G u v) (n : Nat) (h : n < 1) :
   w.vertices.getI n = u := by
   induction' w
   · simp_all
   · simp_all
 
 /-- Two conescutive vertices on a path are adjacent. -/
-lemma consecutive_vertices_adjacent {g : Graph} {u v : g.vertex} {w : Walk g u v}
+lemma consecutive_vertices_adjacent {G : Graph} {u v : G.vertex} {w : Walk G u v}
   {i j : Fin w.vertices.length} {h : i.val + 1 = j.val} :
-  g.adjacent (w.vertices.get i) (w.vertices.get j) := by
+  G.adjacent (w.vertices.get i) (w.vertices.get j) := by
   have i_lt_j : i < j := by
     apply Iff.mpr Fin.lt_iff_val_lt_val
     rw [← h]
@@ -198,7 +198,7 @@ lemma consecutive_vertices_adjacent {g : Graph} {u v : g.vertex} {w : Walk g u v
       let ⟨j', cond'⟩ := Fin.eq_succ_of_ne_zero j_neq_0
       rw [cond']
       simp
-      have : Inhabited g.vertex := { default := u }
+      have : Inhabited G.vertex := { default := u }
       rw [← List.getI_eq_get]
       rw [walk_vertices_get_zero walk]
       exact adj
@@ -222,25 +222,25 @@ lemma consecutive_vertices_adjacent {g : Graph} {u v : g.vertex} {w : Walk g u v
 
 end Walk
 
-def ClosedWalk (g : Graph) (u : g.vertex) : Type := Walk g u u
+def ClosedWalk (G : Graph) (u : G.vertex) : Type := Walk G u u
 
 namespace ClosedWalk
 
-instance {g : Graph} {u : g.vertex} : Repr (ClosedWalk g u) where
+instance {G : Graph} {u : G.vertex} : Repr (ClosedWalk G u) where
   reprPrec c n := Walk.reprWalk.reprPrec c n
 
-def length {g : Graph} {u : g.vertex} (w : ClosedWalk g u) : Nat :=
+def length {G : Graph} {u : G.vertex} (w : ClosedWalk G u) : Nat :=
   Walk.length w
 
 @[simp]
-def vertices {g : Graph} {u : g.vertex} : ClosedWalk g u -> List g.vertex :=
+def vertices {G : Graph} {u : G.vertex} : ClosedWalk G u -> List G.vertex :=
   Walk.vertices
 
 @[simp]
-def edges {g : Graph} {u : g.vertex} : ClosedWalk g u -> List g.edge :=
+def edges {G : Graph} {u : G.vertex} : ClosedWalk G u -> List G.edge :=
   Walk.edges
 
-instance {g : Graph} {u : g.vertex} {w : ClosedWalk g u} : Fintype w.verticesMultiset := by
+instance {G : Graph} {u : G.vertex} {w : ClosedWalk G u} : Fintype w.verticesMultiset := by
   infer_instance
 
 end ClosedWalk
@@ -249,64 +249,64 @@ end ClosedWalk
     (This implies all the edges are distinct).
 -/
 @[reducible]
-def Walk.isPath {g : Graph} {u v : g.vertex} : Walk g u v → Bool :=
+def Walk.isPath {G : Graph} {u v : G.vertex} : Walk G u v → Bool :=
   List.all_distinct ∘ vertices
 
-structure Path (g : Graph) (u v : g.vertex) where
-  walk : Walk g u v
+structure Path (G : Graph) (u v : G.vertex) where
+  walk : Walk G u v
   isPath : walk.isPath := by rfl
 
 namespace Path
 
-theorem ext_iff {g : Graph} {u v : g.vertex} (p q : Path g u v) :
+theorem ext_iff {G : Graph} {u v : G.vertex} (p q : Path G u v) :
   p = q ↔ p.walk = q.walk := by
   rcases p with ⟨p_walk, _⟩
   rcases q with ⟨q_walk, _⟩
   simp
 
-@[ext] theorem ext {g : Graph} (u v : g.vertex) (p q : Path g u v)
+@[ext] theorem ext {G : Graph} (u v : G.vertex) (p q : Path G u v)
   (h : p.walk = q.walk) : p = q :=
   (ext_iff p q).mpr h
 
-instance trivialPath {g : Graph} (u : g.vertex) : Path g u u where
+instance trivialPath {G : Graph} (u : G.vertex) : Path G u u where
   walk := .here u
   isPath := by simp [List.all_distinct]
 
-instance {g : Graph} {u v : g.vertex} : Repr (Path g u v) where
+instance {G : Graph} {u v : G.vertex} : Repr (Path G u v) where
   reprPrec p n := reprPrec p.walk n
 
-instance {g : Graph} {u v : g.vertex} : ToString (Path g u v) where
+instance {G : Graph} {u v : G.vertex} : ToString (Path G u v) where
   toString p := toString p.walk
 
 
-instance {g : Graph} : Repr ((u v : g.vertex) ×' Path g u v) where
+instance {G : Graph} : Repr ((u v : G.vertex) ×' Path G u v) where
   reprPrec p n := reprPrec p.2.2 n
 
-instance {g : Graph} {u v : g.vertex} : Lean.ToJson (Path g u v) where
+instance {G : Graph} {u v : G.vertex} : Lean.ToJson (Path G u v) where
   toJson p := Lean.toJson p.walk.edges
 
 @[simp]
-def vertices {g : Graph} {u v : g.vertex} : Path g u v → List g.vertex := fun p =>
+def vertices {G : Graph} {u v : G.vertex} : Path G u v → List G.vertex := fun p =>
   Walk.vertices p.walk
 
-@[simp] lemma vertices_all_distinct {g : Graph} {u v : g.vertex} (p : Path g u v) :
+@[simp] lemma vertices_all_distinct {G : Graph} {u v : G.vertex} (p : Path G u v) :
   p.vertices.all_distinct := by
   apply p.isPath
 
-@[simp] def edges {g : Graph} {u v : g.vertex} : Path g u v → List g.edge :=
+@[simp] def edges {G : Graph} {u v : G.vertex} : Path G u v → List G.edge :=
   fun p => p.walk.edges
 
 
 @[simp]
-lemma subpathIsPath_left {g : Graph} {u v w : g.vertex} (p : Path g u w) (adj_u_v : g.adjacent u v)
-  (q : Walk g v w) (p_is_left : p.walk = .step adj_u_v q) : q.isPath = true := by
+lemma subpathIsPath_left {G : Graph} {u v w : G.vertex} (p : Path G u w) (adj_u_v : G.adjacent u v)
+  (q : Walk G v w) (p_is_left : p.walk = .step adj_u_v q) : q.isPath = true := by
   have walk_is_path : p.walk.isPath = true := by apply p.isPath
   aesop
 
 /-- Two consecutive vertices on a path cannot be equal, since a path
     never repeats a vertex.
 -/
-lemma consecutive_vertices_distinct {g : Graph} {u v : g.vertex} {p : Path g u v}
+lemma consecutive_vertices_distinct {G : Graph} {u v : G.vertex} {p : Path G u v}
   {i j : Fin p.vertices.length} {h : i.val + 1 = j.val} :
   p.vertices.get i ≠ p.vertices.get j := by
   have dist : p.vertices.all_distinct := by
@@ -321,75 +321,75 @@ lemma consecutive_vertices_distinct {g : Graph} {u v : g.vertex} {p : Path g u v
   contradiction
 
 @[simp]
-def vertexSet {g : Graph} {u v : g.vertex} : Path g u v → Set g.vertex := fun p =>
-  { x : g.vertex | x ∈ p.walk.vertices }
+def vertexSet {G : Graph} {u v : G.vertex} : Path G u v → Set G.vertex := fun p =>
+  { x : G.vertex | x ∈ p.walk.vertices }
 
 @[simp]
-lemma vertexSet_finite {g : Graph} {u v : g.vertex} (p : Path g u v) :
+lemma vertexSet_finite {G : Graph} {u v : G.vertex} (p : Path G u v) :
   Set.Finite p.vertexSet :=
   List.finite_toSet p.vertices
 
 @[simp]
-def vertexMultiset {g : Graph} {u v : g.vertex} : Path g u v → Multiset g.vertex := fun p =>
+def vertexMultiset {G : Graph} {u v : G.vertex} : Path G u v → Multiset G.vertex := fun p =>
   Walk.verticesMultiset p.walk
 
 @[simp]
-lemma vertexMultiset_nodup {g : Graph} {u v : g.vertex} {p : Path g u v} :
+lemma vertexMultiset_nodup {G : Graph} {u v : G.vertex} {p : Path G u v} :
   Multiset.Nodup p.vertexMultiset := by
   apply Iff.mp Multiset.coe_nodup
   apply Iff.mp List.all_distinct_iff_nodup
   apply p.isPath
 
 @[simp]
-def vertexFinset {g : Graph} {u v : g.vertex} : Path g u v → Finset g.vertex := fun p =>
+def vertexFinset {G : Graph} {u v : G.vertex} : Path G u v → Finset G.vertex := fun p =>
   ⟨p.vertexMultiset, vertexMultiset_nodup⟩
 
-instance path_vertices_fintype {g : Graph} {u v : g.vertex} {w : Path g u v} : Fintype w.vertexMultiset := by
+instance path_vertices_fintype {G : Graph} {u v : G.vertex} {w : Path G u v} : Fintype w.vertexMultiset := by
   infer_instance
 
-lemma path_vertices_length_as_multiset {g : Graph} {u v : g.vertex} {p : Path g u v} :
+lemma path_vertices_length_as_multiset {G : Graph} {u v : G.vertex} {p : Path G u v} :
   p.vertices.length = Fintype.card (Multiset.ofList p.vertices) := by
   simp
 
 @[simp]
-def length {g : Graph} {u v : g.vertex} : Path g u v → Nat
+def length {G : Graph} {u v : G.vertex} : Path G u v → Nat
   | ⟨w, _⟩ => w.length
 
-lemma edges_length {g : Graph} {u v : g.vertex} {p : Path g u v} :
+lemma edges_length {G : Graph} {u v : G.vertex} {p : Path G u v} :
   p.edges.length = p.length := by
   simp [Walk.edges_length]
 
-lemma vertexMultiset_card_is_vertices_length {g : Graph} {u v : g.vertex} {p : Path g u v} :
+lemma vertexMultiset_card_is_vertices_length {G : Graph} {u v : G.vertex} {p : Path G u v} :
   Multiset.card p.vertexMultiset = p.vertices.length := by
   simp
   rfl
 
-lemma vertexFinset_card_is_vertices_length {g : Graph} {u v : g.vertex} {p : Path g u v} :
+lemma vertexFinset_card_is_vertices_length {G : Graph} {u v : G.vertex} {p : Path G u v} :
   p.vertexFinset.card = p.vertices.length := by
   simp [vertexMultiset_card_is_vertices_length]
   rfl
 
-lemma length_is_num_vertices {g : Graph} {u v : g.vertex} {p : Path g u v} :
+lemma length_is_num_vertices {G : Graph} {u v : G.vertex} {p : Path G u v} :
   p.length + 1 = p.vertexFinset.card := by
   simp [vertexFinset_card_is_vertices_length, Walk.length_as_vertices]
   rfl
 
-lemma length_as_vertices {g : Graph} {u v : g.vertex} {p : Path g u v} :
+lemma length_as_vertices {G : Graph} {u v : G.vertex} {p : Path G u v} :
   p.length + 1 = p.vertices.length := by
   simp [Walk.length_as_vertices]
 
-lemma length_as_vertices_multiset {g : Graph} {u v : g.vertex} {p : Path g u v} :
+lemma length_as_vertices_multiset {G : Graph} {u v : G.vertex} {p : Path G u v} :
   p.length + 1 = Fintype.card p.vertexMultiset := by
   simp [Walk.length_as_vertices]
   rfl
 
-lemma length_as_fintype_card {g : Graph} {u v : g.vertex} (p : Path g u v) :
+lemma length_as_fintype_card {G : Graph} {u v : G.vertex} (p : Path G u v) :
   p.length + 1 = Fintype.card (Fin (List.length (vertices p))) := by
   simp_all only [length, Walk.length_as_vertices, Graph.vertex, Graph.connected, vertices, Fintype.card_fin]
 
 /-- The length of a path in a graph is at most the number of vertices -/
-theorem maxPathLength {g : Graph} {u v : g.vertex} (p : Path g u v) :
-  p.length + 1 <= Fintype.card g.vertex := by
+theorem maxPathLength {G : Graph} {u v : G.vertex} (p : Path G u v) :
+  p.length + 1 <= Fintype.card G.vertex := by
   by_contra h
   -- We want to apply the pigeonhole principle to show we must have a vertex appearing twice on the path.
   -- So we're going to use `Fintype.exists_ne_map_eq_of_card_lt` (the pigeonhole principle).
@@ -402,28 +402,28 @@ theorem maxPathLength {g : Graph} {u v : g.vertex} (p : Path g u v) :
     contradiction
 
 -- Same theorem just different proof
-theorem maxPathLength' {g : Graph} {u v : g.vertex} (p : Path g u v) :
+theorem maxPathLength' {G : Graph} {u v : G.vertex} (p : Path G u v) :
   p.length + 1 <= Finset.card p.vertexFinset := by
   by_contra h
   rw [not_le, length_is_num_vertices] at h
   simp_all only [lt_self_iff_false]
 
-def isShortest {g : Graph} {u v : g.vertex} (p : Path g u v) : Prop :=
-  ∀ (u' v': g.vertex) (q : Path g u' v'), p.length ≤ q.length
+def isShortest {G : Graph} {u v : G.vertex} (p : Path G u v) : Prop :=
+  ∀ (u' v': G.vertex) (q : Path G u' v'), p.length ≤ q.length
 
-def isShortestFromTo {g : Graph} (u v : g.vertex) (p : Path g u v) : Prop :=
-  ∀ (q : Path g u v), p.length ≤ q.length
+def isShortestFromTo {G : Graph} (u v : G.vertex) (p : Path G u v) : Prop :=
+  ∀ (q : Path G u v), p.length ≤ q.length
 
-def isLongest {g : Graph} {u v : g.vertex} (p : Path g u v) : Prop :=
-  ∀ (u' v' : g.vertex) (q : Path g u' v'), q.length ≤ p.length
+def isLongest {G : Graph} {u v : G.vertex} (p : Path G u v) : Prop :=
+  ∀ (u' v' : G.vertex) (q : Path G u' v'), q.length ≤ p.length
 
-def isLongestFromTo {g : Graph} (u v : g.vertex) (p : Path g u v) : Prop :=
-  ∀ (q : Path g u v), q.length ≤ p.length
+def isLongestFromTo {G : Graph} (u v : G.vertex) (p : Path G u v) : Prop :=
+  ∀ (q : Path G u v), q.length ≤ p.length
 
 end Path
 
 @[simp]
-def ClosedWalk.isCycle {g : Graph} {u : g.vertex} : ClosedWalk g u → Bool := fun cw =>
+def ClosedWalk.isCycle {G : Graph} {u : G.vertex} : ClosedWalk G u → Bool := fun cw =>
   let vertices := cw.vertices
   let edges := cw.edges
   match vertices with
@@ -431,82 +431,82 @@ def ClosedWalk.isCycle {g : Graph} {u : g.vertex} : ClosedWalk g u → Bool := f
   | _ :: vertices =>
     vertices.all_distinct && edges.all_distinct
 
-structure Cycle (g : Graph) (u : g.vertex) where
-  cycle : ClosedWalk g u
+structure Cycle (G : Graph) (u : G.vertex) where
+  cycle : ClosedWalk G u
   isCycle : ClosedWalk.isCycle cycle
 
 namespace Cycle
 
-theorem ext_iff {g : Graph} {u : g.vertex} (c d : Cycle g u) :
+theorem ext_iff {G : Graph} {u : G.vertex} (c d : Cycle G u) :
   c = d ↔ c.cycle = d.cycle := by
   rcases c with ⟨c_cycle, _⟩
   rcases d with ⟨c_cycle, _⟩
   simp
 
-@[ext] theorem ext {g : Graph} (u : g.vertex) (c d : Cycle g u)
+@[ext] theorem ext {G : Graph} (u : G.vertex) (c d : Cycle G u)
   (h : c.cycle = d.cycle) : c = d :=
   (ext_iff c d).mpr h
 
-instance {g : Graph} {u : g.vertex} : Repr (Cycle g u) where
+instance {G : Graph} {u : G.vertex} : Repr (Cycle G u) where
   reprPrec p n := reprPrec p.cycle n
 
-instance {g : Graph} : Repr ((u : g.vertex) ×' Cycle g u) where
+instance {G : Graph} : Repr ((u : G.vertex) ×' Cycle G u) where
   reprPrec p n := reprPrec p.2 n
 
-def length {g : Graph} {u : g.vertex} (c : Cycle g u) : Nat := c.cycle.length
+def length {G : Graph} {u : G.vertex} (c : Cycle G u) : Nat := c.cycle.length
 
-def edges {g : Graph} {u : g.vertex} (c : Cycle g u) := c.cycle.edges
+def edges {G : Graph} {u : G.vertex} (c : Cycle G u) := c.cycle.edges
 
-def isShortest {g : Graph} (u : g.vertex) (c : Cycle g u) : Prop :=
-  ∀ (u' : g.vertex) (c' : Cycle g u'), c.length ≤ c'.length
+def isShortest {G : Graph} (u : G.vertex) (c : Cycle G u) : Prop :=
+  ∀ (u' : G.vertex) (c' : Cycle G u'), c.length ≤ c'.length
 
-def isLongest {g : Graph} (u : g.vertex) (c : Cycle g u) : Prop :=
-  ∀ (u' : g.vertex) (c' : Cycle g u'), c'.length ≤ c.length
+def isLongest {G : Graph} (u : G.vertex) (c : Cycle G u) : Prop :=
+  ∀ (u' : G.vertex) (c' : Cycle G u'), c'.length ≤ c.length
 
-def isEulerian {g : Graph} {u : g.vertex} (c : Cycle g u) : Prop :=
-  ∀ (e : g.edge), e ∈ c.edges
+def isEulerian {G : Graph} {u : G.vertex} (c : Cycle G u) : Prop :=
+  ∀ (e : G.edge), e ∈ c.edges
 
 end Cycle
 
-class ShortestPath (g : Graph) where
-  u : g.vertex
-  v : g.vertex
-  path : Path g u v
+class ShortestPath (G : Graph) where
+  u : G.vertex
+  v : G.vertex
+  path : Path G u v
   isShortest : path.isShortest
 
-class LongestPath (g : Graph) where
-  u : g.vertex
-  v : g.vertex
-  path : Path g u v
+class LongestPath (G : Graph) where
+  u : G.vertex
+  v : G.vertex
+  path : Path G u v
   isLongest : path.isLongest
 
-class ShortestCycle (g : Graph) where
-  u : g.vertex
-  cycle : Cycle g u
+class ShortestCycle (G : Graph) where
+  u : G.vertex
+  cycle : Cycle G u
   isShortest : cycle.isShortest
 
-class LongestCycle (g : Graph) where
-  u : g.vertex
-  cycle : Cycle g u
+class LongestCycle (G : Graph) where
+  u : G.vertex
+  cycle : Cycle G u
   isLongest : cycle.isLongest
 
 /-- A graph is acyclic if it doesn't contain a cycle. -/
-def Graph.isAcyclic (g : Graph) : Prop :=
-  ¬ ∃ (u : g.vertex) (c : ClosedWalk g u), c.isCycle
+def Graph.isAcyclic (G : Graph) : Prop :=
+  ¬ ∃ (u : G.vertex) (c : ClosedWalk G u), c.isCycle
 
-def Graph.girth (g : Graph) [c : ShortestCycle g] : Nat := c.cycle.length
+def Graph.girth (G : Graph) [c : ShortestCycle G] : Nat := c.cycle.length
 
-def Graph.circumference (g : Graph) [c : LongestCycle g] : Nat := c.cycle.length
+def Graph.circumference (G : Graph) [c : LongestCycle G] : Nat := c.cycle.length
 
-def Graph.lengthOfLongestPath (g : Graph) [p : LongestPath g] : Nat := p.path.length
+def Graph.lengthOfLongestPath (G : Graph) [p : LongestPath G] : Nat := p.path.length
 
-def Graph.distance (g : Graph) (u v : g.vertex) (p : Path g u v)
+def Graph.distance (G : Graph) (u v : G.vertex) (p : Path G u v)
   (_ : p.isShortestFromTo u v) : Nat := p.length
 
-def Graph.isEulerian (g : Graph) : Prop :=
-  ∃ (u : g.vertex) (c : Cycle g u), c.isEulerian
+def Graph.isEulerian (G : Graph) : Prop :=
+  ∃ (u : G.vertex) (c : Cycle G u), c.isEulerian
 
-def Cycle.isTriangle {g : Graph} {u : g.vertex} (c : Cycle g u) : Prop :=
+def Cycle.isTriangle {G : Graph} {u : G.vertex} (c : Cycle G u) : Prop :=
   c.length = 3
 
 end LeanHoG
