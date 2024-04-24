@@ -16,6 +16,12 @@ set_option leanHoG.pythonExecutable "/Users/katja/Git/Lean-HoG/.venv/bin/python"
 -- In the examples, some invariant certificates are omitted on purpose.
 -- Below, they are marked with a comment.
 
+unsafe def testing : IO Unit := do
+  let g : Graph ← readGraph (Lean.Name.mkSimple "test") "examples/path1.json"
+  IO.println g.vertexSize
+
+#eval testing
+
 -- The discrete graph on two vertices
 load_graph Two "examples/two.json"
 #eval Two.connectedGraph

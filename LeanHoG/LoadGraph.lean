@@ -15,6 +15,8 @@ import LeanSAT
 import LeanHoG.Invariant.HamiltonianPath.SatEncoding
 import LeanHoG.Invariant.HamiltonianPath.Certificate
 
+import Lean.Elab.Command
+
 namespace LeanHoG
 
 open Qq Lean
@@ -121,7 +123,21 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
     }
     Elab.Command.liftTermElabM <| Meta.addInstance neighborhoodMapName .scoped 42
 
+unsafe def loadGraphObject (graphName : Name) (jsonData : JSONData) : Elab.Command.CommandElabM Graph := do
+  loadGraphAux graphName jsonData
+  Lean.evalConst Graph graphName
 
+unsafe def convertGraph  (graphName : Lean.Name) (jsonData : JSONData) : IO Graph := do
+      let elabGraph : Elab.Command.CommandElabM Graph := loadGraphObject graphName jsonData
+      let graph : CoreM Graph := Lean.liftCommandElabM (elabGraph)
+      let env ← importModules #[{module := "LeanHoG"}] Options.empty
+      have context : Core.Context := {fileName := "LoadGraph.lean", fileMap := default}
+      have state : Core.State := {env := env}
+      Prod.fst <$> (graph.toIO context state)
+
+unsafe def readGraph (graphName : Lean.Name) (path : System.FilePath) : IO Graph := do
+    let jsonData ← loadJSONData JSONData path
+    convertGraph graphName jsonData
 
 /-- `load_graph <ID> <file>` loads a graph into the given Lean identifier `ID` from the given file. -/
 @[command_elab loadGraph]
