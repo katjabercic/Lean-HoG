@@ -10,11 +10,12 @@ class Invariant():
     value : Union[bool, int, float]
     
     def _setFieldName(self):
+        """Convert invariant names"""
         s = self.name.title()
         s = s.replace(' ', '')
         s = s.replace('-', '')
-        # s should not be empty
-        self.fieldName = s[0].lower() + s[1:]
+        # s is not empty
+        self.fieldName = s[0].lower() + s[1:] # the first letter should not be capitalized
 
     def __init__(self, id : int, name : str, typeName : str, value : float):
         self.id = id
@@ -29,18 +30,16 @@ class Invariant():
 
 
 class Invariants():
-    """An object representing a values of invariants for a graph"""
+    """An object representing values of invariants for a graph"""
 
     invariant_values : Dict[int, Invariant] = {}
 
-    def __init__(self, values) -> None:
+    def __init__(self, values, metadata) -> None:
         raw_invariant_values = Invariants._parse_invariants(values)
-        with open("HoG-invariants.json") as invariants_metadata_fh:
-            invariants_metadata = json.load(invariants_metadata_fh)
-            for e in invariants_metadata["_embedded"]["invariantModelList"]:
-                id = e["entity"]["invariantId"]
-                value = raw_invariant_values[id]
-                self.invariant_values[id] = Invariant(id, e["entity"]["invariantName"], e["entity"]["typeName"], value)
+        for e in metadata["_embedded"]["invariantModelList"]:
+            id = e["entity"]["invariantId"]
+            value = raw_invariant_values[id]
+            self.invariant_values[id] = Invariant(id, e["entity"]["invariantName"], e["entity"]["typeName"], value)
 
     @staticmethod
     def _parse_invariants(invariants_data) -> Dict[int, Union[bool, int, float]]:

@@ -11,12 +11,12 @@ class Graph():
     adjacency : Dict[int, Set[int]]
     invariants : Invariants
 
-    def __init__(self, id : str, data : json, invariants_data : json):
+    def __init__(self, id : str, data : json, invariants : Invariants):
         self.HoG_id = id
         self.adjacency = Graph._parse_adjacency_list(data['adjacencyList'])
         self.vertex_size = len(self.adjacency)
         self.edges = set(Graph._to_edge(int(u), int(v)) for u in self.adjacency for v in self.adjacency[u])
-        self.invariants = Invariants(invariants_data)
+        self.invariants = invariants
 
     def vertices(self):
         """An iterator over the vertices of the graph."""

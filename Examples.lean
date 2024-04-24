@@ -10,8 +10,10 @@ namespace LeanHoG
 -- You may have to change this
 set_option leanHoG.pythonExecutable "/Users/katja/Git/Lean-HoG/.venv/bin/python"
 
-
--- Loading graphs, visualizing them, and checking their properties
+-----------------------------------------
+-- Loading graphs, visualizing them, and
+-- checking their properties
+-----------------------------------------
 
 -- In the examples, some invariant certificates are omitted on purpose.
 -- Below, they are marked with a comment.
@@ -70,11 +72,13 @@ load_graph Hanoi "examples/Hanoi2Disks.json"
 #show Petersen
 #eval Petersen.numberOfConnectedComponents
 -- check database values for the Petersen graph
-#eval Petersen.checkHoGnumberOfVertices
+#eval Petersen.checkHoGNumberOfVertices
 #eval Petersen.checkHoGnumberOfEdges
 #eval Petersen.checkHoGbipartite
 #eval Petersen.checkHoGconnectedComponents
 #eval Petersen.checkHoGconnected
+#check_traceable Petersen
+-- #eval Petersen.checkHoGtraceable
 
 -- Download the Wheel graph from HoG
 #download Wheel 204
