@@ -16,6 +16,12 @@ require proofwidgets from git "https://github.com/EdAyers/ProofWidgets4"@"v0.0.2
 
 lean_lib LeanHoG
 
+-- This is only to get the command "lake build verify" to build Verify.lean
+-- This way, there is no need to open the file in an editor.
+lean_lib verify where
+  srcDir := "."
+  roots := #["Verify"]
+
 lean_exe build_widgets where
   root := `widget.Build
 

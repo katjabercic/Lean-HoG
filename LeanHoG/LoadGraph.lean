@@ -129,7 +129,7 @@ unsafe def loadGraphObject (graphName : Name) (jsonData : JSONData) : Elab.Comma
 
 unsafe def convertGraph  (graphName : Lean.Name) (jsonData : JSONData) : IO Graph := do
       let elabGraph : Elab.Command.CommandElabM Graph := loadGraphObject graphName jsonData
-      let graph : CoreM Graph := Lean.liftCommandElabM (elabGraph)
+      let graph : CoreM Graph := liftCommandElabM (elabGraph)
       let env ← importModules #[{module := "LeanHoG"}] Options.empty
       have context : Core.Context := {fileName := "LoadGraph.lean", fileMap := default}
       have state : Core.State := {env := env}
@@ -147,6 +147,71 @@ unsafe def loadGraphImpl : Elab.Command.CommandElab
     let jsonData ← loadJSONData JSONData fileName.getString
     loadGraphAux graphName jsonData
 
+  | _ => Elab.throwUnsupportedSyntax
+
+/-- Checks the graph invariant against what is stored in HoG and outputs an error message in case of an error.
+Params:
+   propType: the expected type for the check (e.g., number of vertices = hog.number of vertices)
+   propValue: the expression to type check
+   graphName: the name of the graph
+   propKeyword: a keyword to append to the graphName to build the name of the expression.
+   propName: the name of the property (used in the error message).
+-/
+unsafe def tryCheck (propType : Expr) (propValue : Expr) (graphName : Name) (propKeyword : String) (propName : String) : Elab.Command.CommandElabM Unit := do
+      let checkName := Name.mkStr graphName propKeyword
+      -- We can use try catch to catch errors and use our own error messages.
+      try Elab.Command.liftCoreM <| addAndCompile <| .defnDecl {
+        name := checkName
+        levelParams := []
+        type := propType
+        value := propValue
+        hints := .regular 0
+        safety := .safe
+      }
+      catch _ => logError s!"Error when checking {propName} for graph {graphName}."
+
+
+/-- Checks that a given graph has the right values for the different invariants in HoG. Only works if we have the invariant from HoG and if we have a valid certificate for this invariant. -/
+unsafe def checkHoGGraphAux (graph : Q(Graph)) (graphName : Name) : Elab.Command.CommandElabM Unit := do
+  -- Because the instances might not exist, we first need to look for them
+  if let .some (rawHoGInstance : Q(RawHoG $graph)) ← (Elab.Command.liftTermElabM <| Meta.trySynthInstance q(RawHoG $graph) .none) then
+    if let .some (conCompsInstance : Q(ConnectedComponents $graph)) ← (Elab.Command.liftTermElabM <| Meta.trySynthInstance q(ConnectedComponents $graph) .none) then
+      -- The idea is to try to build a "theorem" and type check it.
+      -- For some reason, it does not work using the existing "check" functions. Maybe I was doing it wrong.
+      have compsCheck : Q(decide (($rawHoGInstance).numberOfComponents? = .some ($conCompsInstance).val) = true) := (q(Eq.refl true) : Lean.Expr)
+      tryCheck
+        q(($rawHoGInstance).numberOfComponents? = ($conCompsInstance).val)
+        q(of_decide_eq_true $compsCheck)
+        graphName
+        "connComps"
+        "number of connected components"
+    -- For bipartiteness, we should not check unless we have one of the two certificates. The default bipartite check will quickly fill the memory if we try too many graphs.
+    if let .some (_ : Q(TwoColoring $graph)) ← (Elab.Command.liftTermElabM <| Meta.trySynthInstance q(TwoColoring $graph) .none) then
+      have bipCheck : Q(decide (($rawHoGInstance).bipartite? = .some true) = true) := (q(Eq.refl true) : Lean.Expr)
+      tryCheck
+        q(($rawHoGInstance).bipartite? = .some true)
+        q(of_decide_eq_true $bipCheck)
+        graphName
+        "bip"
+        "bipartiteness"
+    if let .some (_ : Q(OddClosedWalk $graph)) ← (Elab.Command.liftTermElabM <| Meta.trySynthInstance q(OddClosedWalk $graph) .none) then
+      have bipCheck : Q(decide (($rawHoGInstance).bipartite? = .some false) = true) := (q(Eq.refl true) : Lean.Expr)
+      tryCheck
+        q(($rawHoGInstance).bipartite? = .some false)
+        q(of_decide_eq_true $bipCheck)
+        graphName
+        "bip"
+        "bipartiteness"
+
+/-- This command takes the graph identifier as input. -/
+syntax (name := checkHoGGraph) "check_hog_graph" ident : command
+
+@[command_elab checkHoGGraph]
+unsafe def checkCowImpl : Elab.Command.CommandElab
+  | `(check_hog_graph $graph) => do
+    -- We need the quoted graph associated with the given constant.
+    let graphQ : Q(Graph) := Lean.mkConst graph.getId
+    checkHoGGraphAux graphQ graph.getId
   | _ => Elab.throwUnsupportedSyntax
 
 end LeanHoG
