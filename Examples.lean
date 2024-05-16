@@ -1,14 +1,15 @@
 import LeanHoG.LoadGraph
+import LeanHoG.CheckHoGValues
 import LeanHoG.Invariant.ConnectedComponents.Basic
 import LeanHoG.Widgets
 import LeanHoG.Tactic.SearchDSL
 import LeanHoG.Tactic.Basic
 import LeanHoG.Invariant.HamiltonianPath.Tactic
-
+import Lean
 namespace LeanHoG
 
 -- You may have to change this
-set_option leanHoG.pythonExecutable "/Users/katja/Git/Lean-HoG/.venv/bin/python"
+set_option leanHoG.pythonExecutable "python"
 
 -----------------------------------------
 -- Loading graphs, visualizing them, and
@@ -71,12 +72,6 @@ load_graph Hanoi "examples/Hanoi2Disks.json"
 #download Petersen 660
 #show Petersen
 #eval Petersen.numberOfConnectedComponents
--- check database values for the Petersen graph
-#eval Petersen.checkHoGNumberOfVertices
-#eval Petersen.checkHoGnumberOfEdges
-#eval Petersen.checkHoGbipartite
-#eval Petersen.checkHoGconnectedComponents
-#eval Petersen.checkHoGconnected
 #check_traceable Petersen
 -- #eval Petersen.checkHoGtraceable
 
@@ -127,5 +122,19 @@ load_graph hog_896 "build/graphs/896.json"
 -- set_option leanHoG.proofCheckerCmd "cake_lpr"
 example : ∃ (G : Graph), G.traceable ∧ G.vertexSize > 3 ∧ (G.minimumDegree < G.vertexSize / 2) := by
   find_example
+
+
+---------------------------------------
+-- Checking the House of Graphs
+---------------------------------------
+
+#check Petersen
+#validate_hog Petersen
+#check Petersen.hog_number_of_vertices_correct
+#check Petersen.hog_number_of_edges_correct
+#check Petersen.hog_number_of_components_correct
+-- We don't have bipartiteness certificates for HoG graphs yet
+-- #check Petersen.hog_bipartite_correct
+
 
 end LeanHoG

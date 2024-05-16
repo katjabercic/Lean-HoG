@@ -9,6 +9,7 @@ import LeanHoG.Invariant.NeighborhoodMap.Certificate
 import LeanHoG.RawHoG
 
 import LeanHoG.Certificate
+import LeanHoG.CertificateNames
 import LeanHoG.JsonData
 
 import LeanSAT
@@ -23,10 +24,6 @@ open Qq Lean
 def liftExcept {α : Type} {m} [Monad m] [MonadError m] : Except String α → m α
   | .ok res => pure res
   | .error msg => throwError msg
-
-/-- A Lean name for a certicicate -/
-def certificateName (graphName: Name) (certName: String) : Name :=
-  (.str graphName certName)
 
 instance : LeanSAT.Solver IO := (LeanSAT.Solver.Impl.DimacsCommand "kissat")
 
@@ -50,7 +47,7 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
   | .none => pure ()
   | .some data =>
     have dataQ : Q(RawHoGData) := ToExpr.toExpr data
-    let rawHoGName := certificateName graphName "RawHoGI"
+    let rawHoGName := RawHoG.name graphName
     Elab.Command.liftCoreM <| addAndCompile <| .defnDecl {
       name := rawHoGName
       levelParams := []
@@ -64,7 +61,7 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
   match jsonData.connectedComponents? with
   | .none => pure ()
   | .some data =>
-    let componentsCertificateName := certificateName graphName "ConnectedComponentsCertificateI"
+    let componentsCertificateName := ConnectedComponentsCertificate.name graphName
     let componentsCertificateQ : Q(ConnectedComponentsCertificate $graph) := connectedComponentsCertificateOfData graph data
     Elab.Command.liftCoreM <| addAndCompile <| .defnDecl {
       name := componentsCertificateName
@@ -79,7 +76,7 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
   match jsonData.twoColoring? with
   | .none => pure ()
   | .some data =>
-    let TwoColoringName := certificateName graphName "TwoColoringI"
+    let TwoColoringName := TwoColoring.name graphName
     let TwoColoringQ : Q(TwoColoring $graph) := TwoColoringOfData graph data
     Elab.Command.liftCoreM <| addAndCompile <| .defnDecl {
       name := TwoColoringName
@@ -94,7 +91,7 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
   match jsonData.oddClosedWalk? with
   | .none => pure ()
   | .some data =>
-    let OddClosedWalkName := certificateName graphName "OddClosedWalkI"
+    let OddClosedWalkName := OddClosedWalk.name graphName
     let OddClosedWalkQ : Q(OddClosedWalk $graph) := OddClosedWalkOfData graph data
     Elab.Command.liftCoreM <| addAndCompile <| .defnDecl {
       name := OddClosedWalkName
@@ -109,7 +106,7 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
   match jsonData.neighborhoodMap? with
   | .none => pure ()
   | .some data =>
-    let neighborhoodMapName := certificateName graphName "neighborhoodMapI"
+    let neighborhoodMapName := NeighborhoodMap.name graphName
     let neighborhoodMapQ : Q(NeighborhoodMap $graph) := neighborhoodMapOfData graph data
     Elab.Command.liftCoreM <| addAndCompile <| .defnDecl {
       name := neighborhoodMapName

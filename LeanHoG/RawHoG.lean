@@ -58,28 +58,30 @@ deriving Lean.FromJson, Lean.ToExpr
 
 class RawHoG (G : Graph) extends RawHoGData
 
-/-- check that the number of vertices in the graph matches the value in the database -/
-def Graph.checkHoGNumberOfVertices (G : Graph) [R : RawHoG G] : Bool :=
-  decide (R.numberOfVertices? = G.vertexSize)
+-- The checks returning Bool are commented out in case we need them for a different type of validation
 
-/-- check that the number of edges in the graph matches the value in the database -/
-def Graph.checkHoGnumberOfEdges (G : Graph) [R : RawHoG G] : Bool :=
-  R.numberOfEdges? = G.edgeSize
+-- check that the number of vertices in the graph matches the value in the database
+-- def Graph.checkHoGNumberOfVertices (G : Graph) [R : RawHoG G] : Bool :=
+--   decide (R.numberOfVertices? = G.vertexSize)
 
-/-- check whether the graph is bipartite matches the value in the database -/
-def Graph.checkHoGbipartite (G : Graph) [R : RawHoG G] : Bool :=
-  R.bipartite? = decide G.bipartite
+--  check that the number of edges in the graph matches the value in the database
+-- def Graph.checkHoGnumberOfEdges (G : Graph) [R : RawHoG G] : Bool :=
+--   R.numberOfEdges? = G.edgeSize
 
-/-- check that the number of components in the graph matches the value in the database -/
-def Graph.checkHoGconnectedComponents (G : Graph) [R : RawHoG G] [C : ConnectedComponents G] : Bool :=
-  R.numberOfComponents? = C.val
+-- check whether the graph is bipartite matches the value in the database
+-- def Graph.checkHoGbipartite (G : Graph) [R : RawHoG G] : Bool :=
+--   R.bipartite? = decide G.bipartite
 
-/-- check whether the graph is connected matches the value in the database -/
-def Graph.checkHoGconnected (G : Graph) [R : RawHoG G] [C : ConnectedComponents G] : Bool :=
-  R.connected? = decide (C.val = 1)
+-- check that the number of components in the graph matches the value in the database
+-- def Graph.checkHoGconnectedComponents (G : Graph) [R : RawHoG G] [C : ConnectedComponents G] : Bool :=
+--   R.numberOfComponents? = C.val
 
-/-- check whether the graph is traceable matches the value in the database -/
-def Graph.checkHoGtraceable (G : Graph) [R : RawHoG G] [HamiltonianPath G] : Bool :=
-  R.traceable? = decide (G.traceable)
+-- check whether the graph is connected matches the value in the database
+-- def Graph.checkHoGconnected (G : Graph) [R : RawHoG G] [C : ConnectedComponents G] : Bool :=
+--   R.connected? = decide (C.val = 1)
+
+-- check whether the graph is traceable matches the value in the database
+-- def Graph.checkHoGtraceable (G : Graph) [R : RawHoG G] [HamiltonianPath G] : Bool :=
+--   R.traceable? = decide (G.traceable)
 
 end LeanHoG

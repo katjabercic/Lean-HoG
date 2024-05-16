@@ -35,7 +35,7 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) :
         | some false => continue
     let hpQ := hamiltonianPathOfData graph ⟨path.toList⟩
     -- Add a Hamiltonian path instance from the constructed path
-    let hamiltonianPathName := certificateName graphName "HamiltonianPathI"
+    let hamiltonianPathName := concatenateName graphName "HamiltonianPathI"
     Lean.addAndCompile <| .defnDecl {
       name := hamiltonianPathName
       levelParams := []
