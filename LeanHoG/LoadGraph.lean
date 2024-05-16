@@ -64,7 +64,7 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
   match jsonData.connectedComponents? with
   | .none => pure ()
   | .some data =>
-    let componentsCertificateName := certificateName graphName "CertificateI"
+    let componentsCertificateName := certificateName graphName "ConnectedComponentsCertificateI"
     let componentsCertificateQ : Q(ConnectedComponentsCertificate $graph) := connectedComponentsCertificateOfData graph data
     Elab.Command.liftCoreM <| addAndCompile <| .defnDecl {
       name := componentsCertificateName
