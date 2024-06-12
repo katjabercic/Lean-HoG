@@ -4,6 +4,13 @@ import sys
 import subprocess
 import argparse
 
+# File containing a list of ids to verify
+ID_FILE = "graphs.txt"
+# Directory containing the json files for the graphs
+GRAPHS_DIR = "graphs"
+# Name of the Lean file where verifying instructions will be written
+VERIFY_LEAN = "Verify.lean"
+
 # Imports
 FILE_INIT = """\
 import LeanHoG.LoadGraph
@@ -112,14 +119,14 @@ must be present in a directory named graphs. The filename must be <id>.json.
 
 def main():
     args = parse_arguments()
-    ids = get_ids("graphs.txt")
+    ids = get_ids(ID_FILE)
     reverse = args.batchSize < 0
     if args.limit is None:
         args.limit = len(ids) if not reverse else -1
     start = 0 if not reverse else len(ids) - 1
     end = start + args.batchSize
     while loopCond(start, end, len(ids), args.limit, reverse):
-        handleBatch("graphs", "Verify.lean", ids, start, limitedEnd(end, args.limit, reverse), args.batchSize)
+        handleBatch(GRAPHS_DIR, VERIFY_LEAN, ids, start, limitedEnd(end, args.limit, reverse), args.batchSize)
         start = end
         end = start + args.batchSize
 
