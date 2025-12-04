@@ -135,14 +135,17 @@ which uses the search feature to close certain goals of the form
 The predicate `P` must be a conjunction of comparisons of invariants with
 either invariants or numbers.
 The supported invariants are those Lean-HoG currently implements. They include:
-* `vertexSize`
-* `edgeSize`
-* `minimumDegree`
-* `maximumDegree`
-* `numberOfConnectedComponents`
+* `vertex size`
+* `edge size`
+* `minimum degree`
+* `maximum degree`
+* `number of connected components`
 * `traceable`
+* `non traceable`
 * `bipartite`
-* `connectedGraph`
+* `non bipartite`
+* `connected`
+* `Hamiltonian`
 
 #### Example
 

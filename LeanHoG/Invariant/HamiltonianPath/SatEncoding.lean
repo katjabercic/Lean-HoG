@@ -226,12 +226,12 @@ theorem no_assignment_implies_no_hamiltonian_path' {G : Graph} :
   Given a list of vertices of a graph, try to construct a `Path` in the graph from them.
   If the construction fails, return `none`.
 -/
-def buildPath {g : Graph} : Option (List (g.vertex)) → Option (HamiltonianPath g)
+def buildPath {G : Graph} : Option (List (G.vertex)) → Option (HamiltonianPath G)
   | none => none
   | some [] => none
   | some (v :: vs) =>
-    let rec fold (t : g.vertex) :
-      List (g.vertex) → Option ((s : g.vertex) ×' Path g s t)
+    let rec fold (t : G.vertex) :
+      List (G.vertex) → Option ((s : G.vertex) ×' Path G s t)
     | [] => none
     | [v] =>
       if h : v = t then
@@ -240,7 +240,7 @@ def buildPath {g : Graph} : Option (List (g.vertex)) → Option (HamiltonianPath
         dbg_trace "[v] not equal to s and t"
         none
     | u :: v :: vs =>
-      if h : g.adjacent u v then
+      if h : G.adjacent u v then
         match fold t (v :: vs) with
         | some ⟨s, p⟩ =>
           if h' : s = v then
