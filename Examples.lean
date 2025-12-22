@@ -67,11 +67,13 @@ load_graph Hanoi "examples/Hanoi2Disks.json"
 #download Petersen 660
 #show Petersen
 #eval Petersen.numberOfConnectedComponents
+#eval Petersen.g6
 
 -- Alternatively, download graphs directly from HoG
 #download Wheel 204
 #check Wheel
 #show Wheel
+#eval Wheel.g6
 
 -- Search the HoG database directly from Lean
 #search hog{ bipartite = true ∧ (numberOfEdges = 2 ∨ numberOfVertices < 6) }
@@ -92,6 +94,7 @@ load_graph hog_904 "build/graphs/904.json"
 #search hog{ traceable = false ∧ numberOfEdges = 2}
 load_graph hog_896 "build/graphs/896.json"
 #show hog_896
+#eval hog_896.g6
 #check_traceable hog_896
 #show_hamiltonian_path hog_896
 

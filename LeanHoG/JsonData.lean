@@ -21,6 +21,7 @@ deriving Lean.FromJson
 structure JSONData : Type where
   hogId : Option Nat
   graph : GraphData
+  canonicalForm? : Option String
 
   /- Invariants are optional -/
   connectedComponents? : Option ConnectedComponentsData

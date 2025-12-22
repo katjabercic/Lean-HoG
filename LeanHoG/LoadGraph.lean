@@ -2,6 +2,7 @@ import Lean
 import Qq
 
 import LeanHoG.Graph
+import LeanHoG.Invariant.G6
 import LeanHoG.Invariant.Bipartite.Certificate
 import LeanHoG.Invariant.ConnectedComponents.Certificate
 import LeanHoG.Invariant.NeighborhoodMap.Certificate
@@ -43,6 +44,21 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
   }
   setReducibleAttribute graphName
   have graph : Q(Graph) := mkConst graphName []
+
+  match jsonData.canonicalForm? with
+  | .none => pure ()
+  | .some g6 =>
+    let g6Name : Name := (.str graphName "val")
+    let g6Q : Q(G6 $graph) :=   q(G6.mk $g6)
+    Elab.Command.liftCoreM <| addAndCompile <| .defnDecl {
+      name := g6Name
+      levelParams := []
+      type := q(G6 $graph)
+      value := g6Q
+      hints := .regular 0
+      safety := .safe
+    }
+    Elab.Command.liftTermElabM <| Meta.addInstance g6Name .scoped 42
 
   match jsonData.connectedComponents? with
   | .none => pure ()

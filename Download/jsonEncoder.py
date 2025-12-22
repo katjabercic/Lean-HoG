@@ -10,6 +10,7 @@ class GraphEncoder(json.JSONEncoder):
         if isinstance(graph, Graph):
             g = {
                 "hogId": graph.HoG_id,
+                "canonicalForm": graph.canonicalForm,
                 "graph": graph.to_json(),
                 "connectedComponents": ConnectedComponentsCertificate(graph).to_json(),
                 "neighborhoodMap": NeighborhoodMap(graph).to_json()
