@@ -8,7 +8,7 @@ namespace LeanHoG
 @[simp] def Graph.bipartite (G : Graph) : Prop := ∃ (_ : TwoColoring G), True
 
 instance (G : Graph): Decidable G.bipartite := by
-  simp
+  simp only [Graph.bipartite]
   infer_instance
 
 /-- A graph is bipartite if it has a bipartite certificate.  -/

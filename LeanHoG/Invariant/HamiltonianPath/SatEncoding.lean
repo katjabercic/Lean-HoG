@@ -5,17 +5,19 @@ import LeanHoG.Invariant.HamiltonianPath.Basic
 import LeanHoG.Invariant.HamiltonianPath.Correctness
 import Lean
 
-import LeanSAT
+import Trestle.Model.PropFun
+import Trestle.Encode.VEncCNF
+import Trestle.Solver.Basic
 
 namespace LeanHoG
 
-open Lean LeanSAT Encode VEncCNF Meta Model PropFun
+open Lean Trestle Encode VEncCNF Meta Model PropFun
 
 /-- `Var i j = true` means: "at position j on the path is vertex i". -/
 structure Var (n : Nat) where
   vertex : Fin n
   pos : Fin n
-deriving DecidableEq, LeanColls.IndexType
+deriving DecidableEq, IndexType
 
 @[simp] def vertexAtPos {n : Nat} (i j : Fin n) : PropFun (Var n) :=
   Var.mk i j
@@ -90,17 +92,7 @@ def vertexClauses (G : Graph) : VCnf G.vertexSize (vertexConstraints G) :=
   ])
   |> mapProp (by
     ext τ
-    simp [Clause.toPropFun]
-    intro _
-    apply Iff.intro
-    intro h' i j k j_neq_k
-    have := h' i j k
-    simp [j_neq_k] at this
-    exact this
-    intro h' i j k
-    split
-    simp
-    next h'' => simp [h', h'']
+    simp [Clause.toPropFun, Array.finRange]
   )
 
 def positionClauses (G : Graph) : VCnf G.vertexSize (positionConstraints G) :=
@@ -116,17 +108,7 @@ def positionClauses (G : Graph) : VCnf G.vertexSize (positionConstraints G) :=
   ])
   |> mapProp (by
     ext τ
-    simp [Clause.toPropFun]
-    intro _
-    apply Iff.intro
-    intro h' i j k j_neq_k
-    have := h' i j k
-    simp [j_neq_k] at this
-    exact this
-    intro h' i j k
-    split
-    simp
-    next h'' => simp [h', h'']
+    simp [Clause.toPropFun, Array.finRange]
   )
 
 def edgeClauses (G : Graph) : VCnf G.vertexSize (edgeConstraints G) :=
@@ -141,16 +123,7 @@ def edgeClauses (G : Graph) : VCnf G.vertexSize (edgeConstraints G) :=
   )
   |> mapProp (by
     ext τ
-    simp [Clause.toPropFun]
-    apply Iff.intro
-    intro h k k' h'' i j h'''
-    have := h k k'
-    simp [h''] at this
-    have := this i j
-    simp [h''] at this
-    rename_i this_1
-    simp_all only [↓reduceIte]
-    aesop
+    simp [Clause.toPropFun, Array.finRange]
   )
 
 def hamiltonianPathCNF (G : Graph) : VCnf G.vertexSize (hamiltonianPathConstraints G) :=
@@ -201,22 +174,20 @@ lemma helper {G : Graph} :
   use u,v,p,cond
   intro h
   rcases h with ⟨u,v,p,cond⟩
-  have hp : HamiltonianPath G := { path := p, isHamiltonian := cond }
+  have hp : HamiltonianPath G := { u := u, v := v, path := p, isHamiltonian := cond }
   use hp
 
 theorem no_assignment_implies_no_hamiltonian_path' {G : Graph} :
   (¬ ∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianPathConstraints G) →
   (¬ ∃ (u v : G.vertex) (p : Path G u v), p.isHamiltonian) := by
-  -- TODO: This proof can definitely be made nicer.
-  have := @Iff.imp
-    ((¬ ∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianPathConstraints G))
-    ((¬ ∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianPathConstraints G))
-    (¬ ∃ (_ : HamiltonianPath G), True)
-    (¬ ∃ (u v : G.vertex) (p : Path G u v), p.isHamiltonian)
-    (Iff.refl _)
-    (Iff.not helper)
-  apply Iff.mp this
-  apply no_assignment_implies_no_hamiltonian_path
+  intro h
+  have contr := no_assignment_implies_no_hamiltonian_path h
+  simp at contr
+  cases contr with
+  | mk h =>
+    intro expham
+    obtain ⟨u, v, ⟨p, cond⟩⟩ := expham
+    cases h { u := u, v := v, path := p, isHamiltonian := cond }
 
 ------------------------------------------------------------------------------
 -- By adding an axiom show that if the SAT solver and proof checker say there
@@ -262,9 +233,9 @@ def buildPath {G : Graph} : Option (List (G.vertex)) → Option (HamiltonianPath
     match List.getLast? vs with
     | some t =>
       match fold t (v :: vs) with
-      | some ⟨_, p⟩ =>
+      | some ⟨u, p⟩ =>
         if h : p.isHamiltonian then
-          some { path := p, isHamiltonian := h }
+          some { u := u, v := t, path := p, isHamiltonian := h }
         else
           none
       | none => none
@@ -276,7 +247,7 @@ def tryFindHamiltonianPath [Solver IO] (G : Graph) :
   let foo := EncCNF.run enc
   let cnf := foo.2.cnf
   let map := foo.2.vMap
-  match ← Solver.solve cnf with
+  match ← Solver.solve cnf.toICnf with
   | .error =>
     IO.println "error"
     return none
@@ -284,15 +255,15 @@ def tryFindHamiltonianPath [Solver IO] (G : Graph) :
     IO.println "unsat"
     return none
   | .sat assn =>
-    if h : 0 < G.vertexSize then
-      let mut path : Array (G.vertex) := Array.mkArray G.vertexSize ⟨0, h⟩
+    if h: 0 < G.vertexSize then
+      let mut path : Array (G.vertex) := Array.replicate G.vertexSize ⟨0, h⟩
       for i in List.fins G.vertexSize do
         for j in List.fins G.vertexSize do
-          match assn.find? (map (Var.mk i j))  with
+          match assn.findEntry? (map (Var.mk i j))  with
           | none => panic! "wtf"
-          | some true =>
+          | some (_, true) =>
             path := path.set! j i
-          | some false =>
+          | some (_, false) =>
             path := path
       let p := buildPath (some path.toList)
       return p

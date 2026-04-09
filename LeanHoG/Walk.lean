@@ -4,6 +4,7 @@ import LeanHoG.Invariant.ConnectedComponents.Basic
 import LeanHoG.Util.List
 import Mathlib.Data.Multiset.Fintype
 import Mathlib.Lean.Json
+import Mathlib.Data.List.GetD
 
 namespace LeanHoG
 
@@ -54,23 +55,6 @@ def length {G : Graph} {s t : G.vertex} : Walk G s t → ℕ
 lemma pathImpliesConnected {G : Graph} {s t : G.vertex} : Walk G s t → G.connected s t
   | here s => G.connected_of_eq s s (Eq.refl s)
   | step e p' => G.connected_trans _ _ _ (G.connected_of_adjacent e) (pathImpliesConnected p')
-
-theorem strongInduction
-  (α : Type)
-  (f : α → ℕ) (P : α → Type)
-  (step : ∀ a, (∀ b, f b < f a → P b) → P a) :
-  ∀ a, P a := by
-  intro a
-  let Q := fun n => ∀ a, f a = n → P a
-  have Qstep : ∀ (n : ℕ), (∀ (m : ℕ), m < n → Q m) → Q n
-  { intros n h a ξ
-    apply (step a)
-    intros b fb_lt_fa
-    rw [ξ] at fb_lt_fa
-    apply (h (f b)) fb_lt_fa
-    rfl
-  }
-  exact @WellFounded.fix _ Q Nat.lt Nat.lt_wfRel.wf Qstep (f a) a rfl
 
 @[simp]
 def vertices {G : Graph} {u v : G.vertex} : Walk G u v -> List G.vertex
@@ -173,16 +157,14 @@ lemma succ_consecutive_exists_cast {n : Nat} (i j : Fin (Nat.succ n)) (h : i.val
 @[simp] lemma walk_vertices_get_zero {G : Graph} [Inhabited G.vertex] {u v : G.vertex}
   (w : Walk G u v) (n : Nat) (h : n < 1) :
   w.vertices.getI n = u := by
-  induction' w
-  · simp_all
-  · simp_all
+  induction' w <;> simp_all [List.getI]
 
 /-- Two conescutive vertices on a path are adjacent. -/
 lemma consecutive_vertices_adjacent {G : Graph} {u v : G.vertex} {w : Walk G u v}
   {i j : Fin w.vertices.length} {h : i.val + 1 = j.val} :
   G.adjacent (w.vertices.get i) (w.vertices.get j) := by
   have i_lt_j : i < j := by
-    apply Iff.mpr Fin.lt_iff_val_lt_val
+    apply Iff.mpr Fin.lt_def
     rw [← h]
     apply Nat.lt_succ_self
   induction' w with _ s t r adj walk ih
@@ -199,7 +181,7 @@ lemma consecutive_vertices_adjacent {G : Graph} {u v : G.vertex} {w : Walk G u v
       rw [cond']
       simp
       have : Inhabited G.vertex := { default := u }
-      rw [← List.getI_eq_get]
+      rw [← List.getI_eq_getElem]
       rw [walk_vertices_get_zero walk]
       exact adj
       simp_all
@@ -214,7 +196,7 @@ lemma consecutive_vertices_adjacent {G : Graph} {u v : G.vertex} {w : Walk G u v
         have k_l : k.val + 1 = l.val := by
           simp_all
         have k_lt_l : k < l := by
-          apply Iff.mpr Fin.lt_iff_val_lt_val
+          apply Iff.mpr Fin.lt_def
           rw [← k_l]
           apply Nat.lt_succ_self
         have adj_k_l := @ih k l k_l k_lt_l
@@ -365,13 +347,11 @@ lemma vertexMultiset_card_is_vertices_length {G : Graph} {u v : G.vertex} {p : P
   rfl
 
 lemma vertexFinset_card_is_vertices_length {G : Graph} {u v : G.vertex} {p : Path G u v} :
-  p.vertexFinset.card = p.vertices.length := by
-  simp [vertexMultiset_card_is_vertices_length]
-  rfl
+  p.vertexFinset.card = p.vertices.length := by rfl
 
 lemma length_is_num_vertices {G : Graph} {u v : G.vertex} {p : Path G u v} :
   p.length + 1 = p.vertexFinset.card := by
-  simp [vertexFinset_card_is_vertices_length, Walk.length_as_vertices]
+  simp [Walk.length_as_vertices]
   rfl
 
 lemma length_as_vertices {G : Graph} {u v : G.vertex} {p : Path G u v} :
@@ -385,7 +365,7 @@ lemma length_as_vertices_multiset {G : Graph} {u v : G.vertex} {p : Path G u v} 
 
 lemma length_as_fintype_card {G : Graph} {u v : G.vertex} (p : Path G u v) :
   p.length + 1 = Fintype.card (Fin (List.length (vertices p))) := by
-  simp_all only [length, Walk.length_as_vertices, Graph.vertex, Graph.connected, vertices, Fintype.card_fin]
+  simp_all only [length, Walk.length_as_vertices, Graph.vertex, vertices, Fintype.card_fin]
 
 /-- The length of a path in a graph is at most the number of vertices -/
 theorem maxPathLength {G : Graph} {u v : G.vertex} (p : Path G u v) :

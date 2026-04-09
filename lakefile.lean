@@ -5,14 +5,7 @@ package «LeanHoG» {
   moreLeanArgs := #["-DautoImplicit=false"]
 }
 
-require mathlib from git
-  "https://github.com/leanprover-community/mathlib4.git" @ "v4.6.0"
-
-require «lean-sat» from git
-  "https://github.com/cilinder/LeanSAT.git" @ "cake-lpr"
-
--- You should replace v0.0.3 with the latest version published under Releases
-require proofwidgets from git "https://github.com/EdAyers/ProofWidgets4"@"v0.0.29"
+require «trestle» from git "https://github.com/FormalSAT/trestle.git" @ "dev"
 
 lean_lib LeanHoG
 
@@ -24,8 +17,8 @@ def npmCmd : String :=
 
 def widgetDir := __dir__ / "widget"
 
-def widgetBuildAll (_ : NPackage _package.name) :
-  IndexBuildM (BuildJob (Array FilePath)) := do
+def widgetBuildAll (_ : NPackage __name__) :
+  FetchM (Job (Array System.FilePath)) := do
 
   let job := (Task.spawn (fun () => do
     let output1 ← IO.Process.output {
@@ -45,9 +38,9 @@ def widgetBuildAll (_ : NPackage _package.name) :
       IO.eprintln s!"failed to run npm build: {output2.stderr}"
   ))
   Task.get job
-  BuildJob.collectArray #[]
+  return Job.collectArray #[]
 
-target buildWidget pkg : Array FilePath := do
+target buildWidget pkg : Array System.FilePath := do
   widgetBuildAll pkg
 
 @[default_target]

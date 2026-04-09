@@ -10,7 +10,7 @@ import LeanHoG.Invariant.NeighborhoodMap.Certificate
 import LeanHoG.Certificate
 import LeanHoG.JsonData
 
-import LeanSAT
+import Trestle.Solver.Impl.DimacsCommand
 import LeanHoG.Invariant.HamiltonianPath.SatEncoding
 import LeanHoG.Invariant.HamiltonianPath.Certificate
 
@@ -27,7 +27,7 @@ def liftExcept {α : Type} {m} [Monad m] [MonadError m] : Except String α → m
 def certificateName (graphName: Name) (certName: String) : Name :=
   (.str graphName certName)
 
-instance : LeanSAT.Solver IO := (LeanSAT.Solver.Impl.DimacsCommand "kissat")
+instance : Trestle.Solver IO := (Trestle.Solver.Impl.DimacsCommand "kissat")
 
 syntax (name := loadGraph) "load_graph" ident str (" try_ham ")? : command
 

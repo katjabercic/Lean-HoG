@@ -1,7 +1,15 @@
 import LeanHoG.Edge
-import Std
-import Std.Data.RBMap.Basic
-import Mathlib.Data.Set.Finite
+import Batteries.Data.RBMap.Basic
+import Batteries.Data.RBMap.Lemmas
+import Mathlib.Data.Finite.Defs
+import Mathlib.Data.Fintype.Powerset
+
+-- This was deprecated and eventually removed from Mathlib for no good
+-- reason and with no good replacemnet (lt_trichotomy is only vaguely
+-- related to this)
+def ltByCases {α : Type} [LinearOrder α] (x y : α) {P : Sort*} (h₁ : x < y → P) (h₂ : x = y → P) (h₃ : y < x → P) : P :=
+  if h : x < y then h₁ h
+  else if h' : y < x then h₃ h' else h₂ (le_antisymm (le_of_not_gt h') (le_of_not_gt h))
 
 namespace LeanHoG
 
@@ -18,10 +26,10 @@ def Graph.vertexSet (G : Graph) : Set G.vertex := { u : G.vertex | u = u }
 
 /-- A finite subset of vertices -/
 @[reducible]
-def Graph.vertexSubset (G : Graph) := Std.RBSet G.vertex compare
+def Graph.vertexSubset (G : Graph) := Batteries.RBSet G.vertex compare
 
 /-- A map from vertices -/
-def Graph.vertexMap (G : Graph) (α : Type) : Type := Std.RBMap G.vertex α compare
+def Graph.vertexMap (G : Graph) (α : Type) : Type := Batteries.RBMap G.vertex α compare
 
 lemma Graph.vertexSetFinite (G : Graph) : Set.Finite G.vertexSet := by
   apply Iff.mp Set.finite_coe_iff
@@ -72,14 +80,13 @@ def Graph.adjacentEdge {G : Graph} {u v : G.vertex} :
   · intros u_lt_v uv
     constructor
     case val => exact Edge.mk u v u_lt_v
-    case property => simp_all [u_lt_v, ltByCases, adjacent, badjacent]
-  · intro u_eq_v
-    intro H
+    case property => simp_all [ltByCases, adjacent, badjacent]
+  · intros u_eq_v H
     simp [u_eq_v, ltByCases, adjacent, badjacent] at H
   · intros v_lt_u uv
     constructor
     case val => exact Edge.mk v u v_lt_u
-    case property => simp_all [v_lt_u, not_lt_of_lt, ltByCases, adjacent, badjacent]
+    case property =>  simp_all [not_lt_of_gt v_lt_u, ltByCases, adjacent, badjacent]
 
 /-- Adjacency is irreflexive. -/
 lemma Graph.irreflexiveAdjacent (G : Graph) :
@@ -89,7 +96,7 @@ lemma Graph.irreflexiveAdjacent (G : Graph) :
 lemma Graph.symmetricAdjacent (G : Graph) :
   ∀ (u v : G.vertex), adjacent u v → adjacent v u := by
     intros u v
-    apply ltByCases u v <;> (intro h ; simp [ltByCases, not_lt_of_lt, h, adjacent, badjacent])
+    apply ltByCases u v <;> (intro h ; simp [ltByCases, h, adjacent, badjacent]) <;> simp [not_lt_of_gt h]
 
 lemma member_rbset (G : Graph) (e : G.edgeType) : e ∈ G.edgeSet ↔ G.edgeSet.Mem e := by
   constructor
@@ -108,12 +115,12 @@ lemma member_rbnode (G : Graph) (e : G.edgeType) : e ∈ G.edgeSet.1 ↔ G.edgeS
 lemma edge_in_node (G : Graph) (e : G.edgeType) : e ∈ G.edgeSet ↔ e ∈ G.edgeSet.1 := by
   apply Iff.intro
   · rw [member_rbset, member_rbnode]
-    unfold Std.RBSet.Mem
-    unfold Std.RBNode.EMem
-    unfold Std.RBSet.MemP
-    unfold Std.RBNode.MemP
-    rw [Std.RBNode.Any_def]
-    rw [Std.RBNode.Any_def]
+    unfold Batteries.RBSet.Mem
+    unfold Batteries.RBNode.EMem
+    unfold Batteries.RBSet.MemP
+    unfold Batteries.RBNode.MemP
+    rw [Batteries.RBNode.Any_def]
+    rw [Batteries.RBNode.Any_def]
     intro H
     apply Exists.elim H
     intro a H'
@@ -121,12 +128,12 @@ lemma edge_in_node (G : Graph) (e : G.edgeType) : e ∈ G.edgeSet ↔ e ∈ G.ed
     rw [compare_eq_iff_eq] at compare
     use a
   · rw [member_rbset, member_rbnode]
-    unfold Std.RBSet.Mem
-    unfold Std.RBNode.EMem
-    unfold Std.RBSet.MemP
-    unfold Std.RBNode.MemP
-    rw [Std.RBNode.Any_def]
-    rw [Std.RBNode.Any_def]
+    unfold Batteries.RBSet.Mem
+    unfold Batteries.RBNode.EMem
+    unfold Batteries.RBSet.MemP
+    unfold Batteries.RBNode.MemP
+    rw [Batteries.RBNode.Any_def]
+    rw [Batteries.RBNode.Any_def]
     intro H
     apply Exists.elim H
     intro a H'
@@ -138,7 +145,7 @@ lemma edge_in_node (G : Graph) (e : G.edgeType) : e ∈ G.edgeSet ↔ e ∈ G.ed
 lemma Graph.adj_impl_ex_edge (G: Graph) (u v : G.vertex) (e : G.edge) : (adj : G.adjacent u v) → u < v → G.adjacentEdge adj = e → G.fst e = u ∧ G.snd e = v := by
   intro adj comp
   unfold adjacentEdge
-  simp [comp]
+  simp [comp, ltByCases]
   intro v
   subst v
   simp
@@ -150,13 +157,13 @@ The problem here is that the RBSet checks for membership using the cmp function 
 lemma Graph.all_edges (G : Graph) (p : G.edgeType → Prop) [DecidablePred p] :
     G.edgeSet.all p = true → ∀ (e : G.edge), p e
   := by
-    unfold Std.RBSet.all
-    rw [Std.RBNode.all_iff]
-    rw [Std.RBNode.All_def]
+    unfold Batteries.RBSet.all
+    rw [Batteries.RBNode.all_iff]
+    rw [Batteries.RBNode.All_def]
     intro H e
     specialize H e
     have member : e.1 ∈ G.edgeSet := by
-      rw [← Std.RBSet.contains_iff]
+      rw [← Batteries.RBSet.contains_iff]
       exact e.2
     rw [edge_in_node] at member
     apply H at member
@@ -187,7 +194,7 @@ def Graph.all_adjacent_of_edges {G : Graph} (R : G.vertex → G.vertex → Prop)
     assumption
   · intro v_lt_u
     let A := all_edge (G.adjacentEdge uv)
-    simp [adjacentEdge, ltByCases, v_lt_u, not_lt_of_lt] at A
+    simp [adjacentEdge, ltByCases, v_lt_u, not_lt_of_gt] at A
     apply R_symm
     exact A
 
