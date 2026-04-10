@@ -814,7 +814,7 @@ unsafe def searchForExampleImpl : Command.CommandElab
     let links := buildLinks results
     let text : DivWithLink := ⟨s!"Found {links.length} graphs satisfying given query", "", ""⟩
     let links := text :: buildLinks results
-    Widget.savePanelWidgetInfo (hash HtmlDisplayPanel.javascript)
-      (return json% { html: $(← Server.RpcEncodable.rpcEncode (putInDiv links)) }) stx
+    Command.liftCoreM (Widget.savePanelWidgetInfo (hash HtmlDisplayPanel.javascript)
+      (return json% { html: $(← Server.RpcEncodable.rpcEncode (putInDiv links)) }) stx)
 
   | _ => throwUnsupportedSyntax

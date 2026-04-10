@@ -5,13 +5,13 @@ import LeanHoG.Invariant.HamiltonianPath.SatEncoding
 import LeanHoG.Tactic.Options
 import LeanHoG.Util.LeanSAT
 
-import LeanSAT
+import Trestle.Encode.EncCNF
 
 namespace LeanHoG
 
 open Lean Elab Qq
 
-open LeanSAT Model in
+open Trestle Model in
 unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) :
   TermElabM (Expr × Expr × Solver.Res) := do
   let G ← Meta.evalExpr' Graph ``Graph graph
@@ -19,20 +19,20 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) :
   let opts ← getOptions
   let cadicalExe := opts.get leanHoG.solverCmd.name leanHoG.solverCmd.defValue
   let cake_lprExr := opts.get leanHoG.proofCheckerCmd.name leanHoG.proofCheckerCmd.defValue
-  let solver := SolverWithCakeLpr.SolverWithCakeLpr cadicalExe #["--no-binary", "--lrat=true"] cake_lprExr
+  let solver := SolverWithCakeLpr cadicalExe #["--no-binary", "--lrat=true"] cake_lprExr
   let cnf := Encode.EncCNF.toICnf enc
   let (_, s) := Encode.EncCNF.run enc
   let res ← solver.solve cnf
   match res with
   | .sat assn =>
     -- Build a Hamiltonian path from the solution given by the SAT solver
-    let mut path : Array Nat := Array.mkArray G.vertexSize 0
+    let mut path : Array Nat := Array.replicate G.vertexSize 0
     for i in List.fins G.vertexSize do
       for j in List.fins G.vertexSize do
-        match assn.find? (s.vMap (Var.mk i j))  with
+        match assn.findEntry? (s.vMap (Var.mk i j))  with
         | none => throwError "invalid index ({i},{j})"
-        | some true => path := path.set! j i
-        | some false => continue
+        | some (_, true) => path := path.set! j i
+        | some (_, false) => continue
     let hpQ := hamiltonianPathOfData graph ⟨path.toList⟩
     -- Add a Hamiltonian path instance from the constructed path
     let hamiltonianPathName := certificateName graphName "HamiltonianPathI"
@@ -100,7 +100,7 @@ unsafe def checkTraceableImpl : Command.CommandElab
 -- TODO: Remove code duplication once I figure out how to do it corectly.
 
 syntax (name := checkTraceableTactic) "check_traceable " ident (" with" (ppSpace colGt ident))? : tactic
-open LeanSAT Model in
+open Trestle Model in
 /-- `#check_traceable G` runs a SAT solver on the encoding of the Hamiltonian path problem
     on the graph `G` and if the SAT solver says the problem is unsatisfiable it runs the produced proof
     through a verified proof checker cake_lpr. If the checker agrees with the proof, we add an axiom

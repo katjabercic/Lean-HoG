@@ -1,7 +1,6 @@
 import Lean
 import Qq
 import Aesop.Util.Basic
-import Std.Data.List.Basic
 
 import LeanHoG.Graph
 import LeanHoG.Tactic.SearchDSL
@@ -87,7 +86,7 @@ unsafe def findExampleImpl : Tactic.Tactic
         if h : graphs.length > 0 then
           -- We now have to load one of the results into the context
           -- TODO: Currently we globaly load the graph, should just load it into the local context
-          let ⟨graphId⟩ := graphs[0]'(by simp_all only [not_lt_zero'])
+          let ⟨graphId⟩ := graphs[0]'(by simp_all only [])
           let opts ← getOptions
           let downloadLocation := opts.get leanHoG.graphDownloadLocation.name leanHoG.graphDownloadLocation.defValue
           let graphLoc := System.mkFilePath [downloadLocation, s!"{graphId}.json"]
@@ -144,8 +143,9 @@ unsafe def findExampleImpl : Tactic.Tactic
                 Lean.logInfo s!"Closed goal using {graphIdent.getId}"
               -- Visualize the graph we used to close the goal
               -- TODO: Make this an option
-              let wi : Expr ←
-                Widget.elabWidgetInstanceSpecAux (mkIdent `visualize) (← ``((Graph.toVisualizationFormat $graphIdent)))
+              let vizf ← ``((Graph.toVisualizationFormat $graphIdent))
+              let wis ← `(Widget.widgetInstanceSpec| $(mkIdent `visualize) with $vizf)
+              let wi : Expr ← Widget.elabWidgetInstanceSpec wis
               let wi ← Widget.evalWidgetInstance wi
               Widget.savePanelWidgetInfo wi.javascriptHash wi.props stx
             else
