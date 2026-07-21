@@ -5,7 +5,7 @@ package «LeanHoG» {
   moreLeanArgs := #["-DautoImplicit=false"]
 }
 
-require «trestle» from git "https://github.com/FormalSAT/trestle.git" @ "dev"
+require «trestle» from git "https://github.com/FormalSAT/trestle.git" @ "853ce03"
 
 lean_lib LeanHoG
 
