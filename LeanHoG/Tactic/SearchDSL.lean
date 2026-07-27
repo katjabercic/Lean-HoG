@@ -748,10 +748,13 @@ unsafe def queryDatabaseForExamplesAux (queries : List ConstructedQuery) (queryH
   let opts ← getOptions
   let pythonExe := opts.get leanHoG.pythonExecutable.name leanHoG.pythonExecutable.defValue
   let searchCacheLoc := opts.get leanHoG.searchCacheLocation.name leanHoG.searchCacheLocation.defValue
+  let sp ← Lean.getSrcSearchPath
+  let leanhog ← Lean.findLean sp `LeanHoG
+  let searchHoGpy := (leanhog.withFileName "Download") / "searchHoG.py"
   for q in queries do
     let output ← IO.Process.output {
       cmd := pythonExe
-      args := #["Download/searchHoG.py", searchCacheLoc, s!"{q.query}", s!"{queryHash}"]
+      args := #[s!"{searchHoGpy}", searchCacheLoc, s!"{q.query}", s!"{queryHash}"]
     }
     if output.exitCode ≠ 0 then
       throwError f!"failed to download graphs: {output.stderr}"
@@ -773,10 +776,10 @@ unsafe def queryDatabaseForExamplesAux (queries : List ConstructedQuery) (queryH
       results := ⟨id⟩ :: results
   return results
 
-syntax (name := searchHoG) "#search" term : command
+syntax (name := searchHoG) "#search_hog " term : command
 
 open ProofWidgets in
-/-- `#search hog{ <hog-query> }` searches the HoG database for graphs satisfying
+/-- `#search_hog hog{ <hog-query> }` searches the HoG database for graphs satisfying
     the given query. The graphs returned by HoG are stored in the graph download
     location defined by the user option `leanHog.graphDownloadLocation`.
     The syntax for the query is
@@ -799,11 +802,11 @@ open ProofWidgets in
 
     ### Example:
 
-    `#search hog{ bipartite = true ∧ (numberOfEdges = 2 ∨ numberOfVertices < 6) }`
+    `#search_hog hog{ bipartite = true ∧ (numberOfEdges = 2 ∨ numberOfVertices < 6) }`
 -/
 @[command_elab searchHoG]
 unsafe def searchForExampleImpl : Command.CommandElab
-  | stx@`(#search $q ) => do
+  | stx@`(#search_hog $q ) => do
     let qs ← Command.liftTermElabM do
       let qe : Expr ← Term.elabTerm q none
       let query ← Meta.mkAppM ``Queries.mk #[(← Meta.mkAppM ``List.map #[(← Meta.mkAppM ``HoGQuery.build #[]), qe])]
