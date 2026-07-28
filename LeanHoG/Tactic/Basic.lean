@@ -38,7 +38,7 @@ unsafe def downloadHoGImpl : Elab.Command.CommandElab
     let opts ← getOptions
     let pythonExe := opts.get leanHoG.pythonExecutable.name leanHoG.pythonExecutable.defValue
     let downloadLocation := opts.get leanHoG.graphDownloadLocation.name leanHoG.graphDownloadLocation.defValue
-    let downloadGraphPy := System.FilePath.mk packageDir / "Download" / "downloadGraph.py"
+    let downloadGraphPy := packageDirPath / "Download" / "downloadGraph.py"
     let output ← IO.Process.output {
       cmd := pythonExe
       args := #[s!"{downloadGraphPy}", downloadLocation, s!"{n}"]

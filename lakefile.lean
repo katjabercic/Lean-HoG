@@ -7,7 +7,8 @@ package «LeanHoG» {
 
 require «trestle» from git "https://github.com/FormalSAT/trestle.git" @ "853ce03"
 
-lean_lib LeanHoG
+lean_lib LeanHoG where
+  extraDepTargets := #[`buildWidget]
 
 lean_exe build_widgets where
   root := `widget.Build
@@ -22,7 +23,7 @@ def widgetBuildAll (_ : NPackage __name__) :
 
   let job := (Task.spawn (fun () => do
     let output1 ← IO.Process.output {
-      cwd := "widget"
+      cwd := widgetDir
       cmd := npmCmd
       args := #["install", "--silent", "--no-progress"]
     }
@@ -30,7 +31,7 @@ def widgetBuildAll (_ : NPackage __name__) :
       IO.eprintln s!"failed to install npm packages: {output1.stderr}"
       return
     let output2 ← IO.Process.output {
-      cwd := "widget"
+      cwd := widgetDir
       cmd := npmCmd
       args := #["run", "build"]
     }

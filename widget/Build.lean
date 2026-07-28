@@ -1,11 +1,11 @@
 import Init.System.Platform
-
+import LeanHoG.Util.PackageDir
 
 def main : IO Unit := do
   let npmCmd : String :=
     if System.Platform.isWindows then "npm.cmd" else "npm"
   let exitCode ← IO.Process.spawn {
-    cwd := "widget"
+    cwd := packageDirPath / "widget"
     cmd := npmCmd
     args := #["install", "--silent", "--no-progress"]
   } >>= (·.wait)
@@ -13,7 +13,7 @@ def main : IO Unit := do
     IO.eprintln s!"failed to install npm packages"
     return
   let exitCode ← IO.Process.spawn {
-    cwd := "widget"
+    cwd := packageDirPath / "widget"
     cmd := npmCmd
     args := #["run", "build"]
   } >>= (·.wait)

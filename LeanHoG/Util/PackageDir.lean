@@ -22,3 +22,10 @@ elab "leanHoG_dir%" : term => do
 compiled. Use this to locate files shipped with the package, such as the Python
 scripts under `Download/`. -/
 def packageDir : String := leanHoG_dir%
+
+/-- `packageDir` as a `System.FilePath`, for building paths with `/`.
+
+`Coe String FilePath` fires in function-argument position but not for the `/`
+operator, so every call site that joins onto the package root would otherwise
+need its own `System.FilePath.mk`. -/
+def packageDirPath : System.FilePath := System.FilePath.mk packageDir

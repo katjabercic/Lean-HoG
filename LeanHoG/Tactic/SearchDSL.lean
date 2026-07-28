@@ -749,7 +749,7 @@ unsafe def queryDatabaseForExamplesAux (queries : List ConstructedQuery) (queryH
   let opts ← getOptions
   let pythonExe := opts.get leanHoG.pythonExecutable.name leanHoG.pythonExecutable.defValue
   let searchCacheLoc := opts.get leanHoG.searchCacheLocation.name leanHoG.searchCacheLocation.defValue
-  let searchHoGpy := System.FilePath.mk packageDir / "Download" / "searchHoG.py"
+  let searchHoGpy := packageDirPath / "Download" / "searchHoG.py"
   for q in queries do
     let output ← IO.Process.output {
       cmd := pythonExe
