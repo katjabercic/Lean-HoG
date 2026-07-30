@@ -18,8 +18,7 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) :
   let enc := (hamiltonianPathCNF G).val
   let opts ← getOptions
   let cadicalExe := opts.get leanHoG.solverCmd.name leanHoG.solverCmd.defValue
-  let cake_lprExr := opts.get leanHoG.proofCheckerCmd.name leanHoG.proofCheckerCmd.defValue
-  let solver := SolverWithCakeLpr cadicalExe #["--no-binary", "--lrat=true"] cake_lprExr
+  let solver := SolverWithLRAT cadicalExe #["--no-binary", "--lrat=true"]
   let cnf := Encode.EncCNF.toICnf enc
   let (_, s) := Encode.EncCNF.run enc
   let res ← solver.solve cnf
@@ -51,8 +50,8 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) :
 
   | .unsat =>
     -- The formula is UNSAT, add an axiom saying so
-    let declName : Name := .str graphName "noHamiltonianPathCertificateExists"
-    let type : Q(Prop) := q(¬ (∃ (τ : PropAssignment (Var (Graph.vertexSize $graph))), τ |> hamiltonianPathConstraints $graph))
+    let declName : Name := .str graphName "hamiltonianPathCNFUnsat"
+    let type : Q(Prop) := q(((hamiltonianPathCNF $graph).val.toICnf.toStd).Unsat)
     let decl := Declaration.axiomDecl {
       name        := declName,
       levelParams := [],
@@ -63,7 +62,8 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) :
     Term.ensureNoUnassignedMVars decl
     addDecl decl
     logWarning m!"added axiom {declName} : {type}"
-    let noExistsCert ← Qq.elabTermEnsuringTypeQ (mkIdent declName) type
+    let cnfUnsat ← Qq.elabTermEnsuringTypeQ (mkIdent declName) type
+    let noExistsCert ← Meta.mkAppM ``LeanHoG.std_unsat_implies_no_assignment #[cnfUnsat]
     let noExistsHamPath ← Meta.mkAppM ``LeanHoG.no_assignment_implies_no_hamiltonian_path' #[noExistsCert]
     let noExistsType := q(¬ ∃ (u v : Graph.vertex $graph) (p : Path $graph u v), p.isHamiltonian)
     return (noExistsType, noExistsHamPath, res)
@@ -77,9 +77,9 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) :
 
 syntax (name := checkTraceable) "#check_traceable " ident : command
 /-- `#check_nontraceable G` runs a SAT solver on the encoding of the Hamiltonian path problem
-    on the graph `G` and if the SAT solver says the problem is unsat it runs the produced proof
-    through a verified proof checker cake_lpr. If the checker agrees with the proof, we add an axiom
-    saying there exists no satisfying assignmment for the encoding.
+    on the graph `G`. If the SAT solver says the problem is unsatisfiable, Lean's built-in
+    verified LRAT checker checks the produced proof. If the checker accepts it, we add an axiom
+    saying there is no satisfying assignment for the encoding.
 -/
 @[command_elab checkTraceable]
 unsafe def checkTraceableImpl : Command.CommandElab
@@ -102,11 +102,11 @@ unsafe def checkTraceableImpl : Command.CommandElab
 syntax (name := checkTraceableTactic) "check_traceable " ident (" with" (ppSpace colGt ident))? : tactic
 open Trestle Model in
 /-- `#check_traceable G` runs a SAT solver on the encoding of the Hamiltonian path problem
-    on the graph `G` and if the SAT solver says the problem is unsatisfiable it runs the produced proof
-    through a verified proof checker cake_lpr. If the checker agrees with the proof, we add an axiom
-    saying there exists no satisfying assignmment for the encoding. The tactic uses the new axiom to
-    deduce that there is no Hamiltonian path in the graph by using theorem and adds it
-    as a hypothesis to the current context.
+    on the graph `G`. If the SAT solver says the problem is unsatisfiable, Lean's built-in
+    verified LRAT checker checks the produced proof. If the checker accepts it, we add an axiom
+    saying there is no satisfying assignment for the encoding. The tactic uses the new axiom and
+    the encoding correctness theorem to deduce that there is no Hamiltonian path in the graph,
+    then adds that result as a hypothesis to the current context.
 
     Can also use `#check_traceable G with h` to save the hypothesis into the variable `h`.
 -/

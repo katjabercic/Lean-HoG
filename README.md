@@ -22,13 +22,14 @@ brew install --cask visual-studio-code
 
 For using the SAT solving facilities of the library (e.g. computing Hamiltonian paths) you need the following:
 
-* A modern SAT solver capable of producing proofs of unsatisfiability, 
+* A modern SAT solver capable of producing LRAT proofs of unsatisfiability,
   we recommend **[CaDiCaL](https://github.com/arminbiere/cadical)**.
-* A SAT proof checker, we recommend the formally verified checker **[cake_lpr](https://github.com/tanyongkiam/cake_lpr)**.
 
-Once you have installed the SAT solver and a proof checker, you should set in Lean
-* `leanHoG.solverCmd` to the location of the SAT solver executable.
-* `leanHoG.proofCheckerCmd` to the location of the SAT proof checker.
+Unsatisfiability proofs are checked by Lean's built-in verified LRAT checker;
+no separate proof-checker executable is required.
+
+Once you have installed the SAT solver, set `leanHoG.solverCmd` in Lean to the
+location of the solver executable.
 
 ## Installation
 

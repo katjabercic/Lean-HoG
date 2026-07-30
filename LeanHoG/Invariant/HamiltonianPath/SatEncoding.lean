@@ -8,6 +8,7 @@ import Lean
 import Trestle.Model.PropFun
 import Trestle.Encode.VEncCNF
 import Trestle.Solver.Basic
+import LeanHoG.Util.TrestleStd
 
 namespace LeanHoG
 
@@ -177,6 +178,14 @@ lemma helper {G : Graph} :
   have hp : HamiltonianPath G := { u := u, v := v, path := p, isHamiltonian := cond }
   use hp
 
+theorem std_unsat_implies_no_assignment {G : Graph} :
+      ((hamiltonianPathCNF G).val.toICnf.toStd).Unsat →
+      ¬ ∃ τ, τ |> hamiltonianPathConstraints G := by
+  intro hStd hConstraints
+  have hICnf : ¬ Cnf.Sat (hamiltonianPathCNF G).val.toICnf := (ICnf.unsat_toStd_iff _).mp hStd
+  apply hICnf
+  exact (VEncCNF.toICnf_equisatisfiable (hamiltonianPathCNF G)).mpr hConstraints
+
 theorem no_assignment_implies_no_hamiltonian_path' {G : Graph} :
   (¬ ∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianPathConstraints G) →
   (¬ ∃ (u v : G.vertex) (p : Path G u v), p.isHamiltonian) := by
@@ -190,8 +199,8 @@ theorem no_assignment_implies_no_hamiltonian_path' {G : Graph} :
     cases h { u := u, v := v, path := p, isHamiltonian := cond }
 
 ------------------------------------------------------------------------------
--- By adding an axiom show that if the SAT solver and proof checker say there
--- is no solution to the constraints, then there is no Hamiltonian path
+-- Turn unsatisfiability of the SAT constraints into nonexistence of a
+-- Hamiltonian path.
 
 /--
   Given a list of vertices of a graph, try to construct a `Path` in the graph from them.

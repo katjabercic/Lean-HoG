@@ -2,26 +2,20 @@ import Trestle
 import Trestle.Solver.Basic
 import Trestle.Solver.Dimacs
 import Trestle.Solver.Impl.DimacsCommand
+import LeanHoG.Util.TrestleStd
+import Std.Tactic.BVDecide.LRAT.Checker
+import Std.Tactic.BVDecide.LRAT.Parser
 
 open Trestle
 
-def runCakeLpr (cake_lpr : String := "cake_lpr") (fml : ICnf) (proof : System.FilePath)
-    : IO Bool :=
-  IO.FS.withTempFile fun cnfHandle => fun cnfPath => do
-  let cakeProc ← IO.Process.spawn {
-    cmd := cake_lpr
-    args := #[cnfPath.toString, proof.toString]
-    stdout := .piped
-  }
-  -- Note: opening a FIFO file to write blocks until someone opens the FIFO file to read
-  Solver.Dimacs.printICnf (cnfHandle.putStr) fml
-  cnfHandle.flush
-  let output ← IO.asTask cakeProc.stdout.readToEnd Task.Priority.dedicated
-  let _ ← cakeProc.wait
-  let outputStr ← IO.ofExcept output.get
-  return outputStr.trimAscii == "s VERIFIED UNSAT"
+def runLRATChecker (fml : ICnf) (proof : System.FilePath) : IO Bool :=
+  do
+    let actions ← Std.Tactic.BVDecide.LRAT.loadLRATProof proof
+    -- Converting the CNF and checking the parsed actions are pure computations.
+    let stdCnf := fml.toStd
+    return Std.Tactic.BVDecide.LRAT.check actions stdCnf
 
-def SolverWithCakeLpr (solverCmd : String) (solverFlags : Array String := #[]) (cakelprCmd : String := "cake_lpr") : Solver IO where
+def SolverWithLRAT (solverCmd : String) (solverFlags : Array String := #[]) : Solver IO where
   solve := fun fml => do
     let tempFile := "proof.lrat"
     let solver ← IO.Process.spawn {
@@ -43,7 +37,7 @@ def SolverWithCakeLpr (solverCmd : String) (solverFlags : Array String := #[]) (
       IO.FS.removeFile tempFile
       return .error
     | .unsat =>
-      let succeeded ← runCakeLpr cakelprCmd fml tempFile
+      let succeeded ← runLRATChecker fml tempFile
       IO.FS.removeFile tempFile
       if succeeded then
         return res
