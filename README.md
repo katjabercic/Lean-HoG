@@ -32,12 +32,18 @@ Once you have installed the SAT solver and a proof checker, you should set in Le
 
 ## Installation
 
-To install all the dependencies and compile Lean-HoG, run these commands from withing the Lean-HoG directory:
+To install all dependencies and compile Lean-HoG, run this command from the
+Lean-HoG directory:
 
-* `elan update` to make sure you have an up-to-date version of Lean,
-* `lake exe cache get` to get a cached version of Mathlib (or else wait for it to compile),
-* `lake exe build_widgets` to build the Javascript graph visualization widgets,
-* `lake build` to compile Lean-HoG
+```shell
+lake build
+```
+
+Lake installs the Lean version pinned in `lean-toolchain`, fetches the package
+dependencies, installs the JavaScript dependencies, builds the graph
+visualization widget, and then compiles Lean-HoG. The widget does not need to be
+built separately. Mathlib's update hook also fetches its cached build artifacts
+automatically, so there is no separate cache command to run.
 
 ## Usage
 
