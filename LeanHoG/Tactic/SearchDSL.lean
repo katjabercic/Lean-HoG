@@ -4,6 +4,7 @@ import Lean.Data.Json.Basic
 import LeanHoG.LoadGraph
 import LeanHoG.Widgets
 import LeanHoG.Tactic.Options
+import LeanHoG.Util.PackageDir
 
 import ProofWidgets.Component.HtmlDisplay
 
@@ -748,9 +749,7 @@ unsafe def queryDatabaseForExamplesAux (queries : List ConstructedQuery) (queryH
   let opts ← getOptions
   let pythonExe := opts.get leanHoG.pythonExecutable.name leanHoG.pythonExecutable.defValue
   let searchCacheLoc := opts.get leanHoG.searchCacheLocation.name leanHoG.searchCacheLocation.defValue
-  let sp ← Lean.getSrcSearchPath
-  let leanhog ← Lean.findLean sp `LeanHoG
-  let searchHoGpy := (leanhog.withFileName "Download") / "searchHoG.py"
+  let searchHoGpy := packageDirPath / "Download" / "searchHoG.py"
   for q in queries do
     let output ← IO.Process.output {
       cmd := pythonExe
@@ -763,6 +762,7 @@ unsafe def queryDatabaseForExamplesAux (queries : List ConstructedQuery) (queryH
   let contents ← path.readDir
   let mut results := []
   let graphsLocation := opts.get leanHoG.graphDownloadLocation.name leanHoG.graphDownloadLocation.defValue
+  IO.FS.createDirAll graphsLocation
   for result in contents.toList do
     -- Copy each result into the graphs folder
     let fileContent ← IO.FS.readFile result.path

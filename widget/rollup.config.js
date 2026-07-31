@@ -1,25 +1,16 @@
-import glob from 'glob';
 import { nodeResolve } from '@rollup/plugin-node-resolve'
 import commonjs from '@rollup/plugin-commonjs';
 import replace from '@rollup/plugin-replace';
 import terser from '@rollup/plugin-terser';
 import babel from '@rollup/plugin-babel';
 
-/** @type {(_: any) => import('rollup').RollupOptions} */
-export default cliArgs => {
-    const tsxName = cliArgs.tsxName;
-    if (tsxName !== undefined)
-        // We delete the custom argument so that Rollup does not try to process it and complain.
-        delete cliArgs.tsxName;
-    const inputs = tsxName ?
-        [ `src/${tsxName}.jsx` ] :
-        glob.sync('src/**/*.jsx')
+const isProduction = process.env.NODE_ENV === 'production';
 
-    const isProduction = process.env.NODE_ENV && process.env.NODE_ENV === 'production';
-    const configForInput = fname => ({
-    input: fname,
+/** @type {import('rollup').RollupOptions} */
+export default {
+    input: 'src/graphVisualization.jsx',
     output: {
-        dir: '../build/js',
+        file: '../build/js/graphVisualization.js',
         format: 'es',
         // Hax: apparently setting `global` makes some CommonJS modules work ¯\_(ツ)_/¯
         intro: 'const global = window;',
@@ -29,13 +20,12 @@ export default cliArgs => {
     },
     external: [
         'react',
-        'react-dom',
         'react/jsx-runtime',
-        '@leanprover/infoview',
     ],
     plugins: [
         babel({
             presets: ["@babel/preset-react"],
+            babelHelpers: 'bundled',
         }),
         nodeResolve({
             browser: true
@@ -59,10 +49,4 @@ export default cliArgs => {
             ],
         })
     ],
-    })
-
-    // For why we must return an array of configs rather than use an array in `input`, see
-    // https://github.com/rollup/rollup/issues/2756. This is pretty suboptimal as every build
-    // rechecks all TS files, so the process is quadratic.
-    return inputs.map(configForInput)
 }

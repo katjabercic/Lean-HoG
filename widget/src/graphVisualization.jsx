@@ -1,6 +1,6 @@
 import React from 'react';
 import Cytoscape from 'cytoscape';
-import CytoscapeComponent, { use } from 'react-cytoscapejs';
+import CytoscapeComponent from 'react-cytoscapejs';
 import dagre from 'cytoscape-dagre';
 
 Cytoscape.use( dagre ); // register extension

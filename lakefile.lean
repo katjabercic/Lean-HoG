@@ -1,5 +1,5 @@
 import Lake
-open Lake DSL
+open Lake DSL System
 
 package «LeanHoG» {
   moreLeanArgs := #["-DautoImplicit=false"]
@@ -7,47 +7,56 @@ package «LeanHoG» {
 
 require «trestle» from git "https://github.com/FormalSAT/trestle.git" @ "853ce03"
 
-lean_lib LeanHoG
+def widgetDir : FilePath := "widget"
 
-lean_exe build_widgets where
-  root := `widget.Build
+nonrec def Lake.Package.widgetDir (pkg : Package) : FilePath :=
+  pkg.dir / widgetDir
 
-def npmCmd : String :=
-  if System.Platform.isWindows then "npm.cmd" else "npm"
+def Lake.Package.runNpmCommand (pkg : Package) (args : Array String) : LogIO Unit :=
+  if Platform.isWindows then
+    proc {
+      cmd := "powershell"
+      args := #["-Command", "npm.cmd"] ++ args
+      cwd := pkg.widgetDir
+    } (quiet := true)
+  else
+    proc {
+      cmd := "npm"
+      args
+      cwd := pkg.widgetDir
+    } (quiet := true)
 
-def widgetDir := __dir__ / "widget"
+input_file widgetPackageJson where
+  path := widgetDir / "package.json"
+  text := true
 
-def widgetBuildAll (_ : NPackage __name__) :
-  FetchM (Job (Array System.FilePath)) := do
+input_file widgetPackageLock where
+  path := widgetDir / "package-lock.json"
+  text := true
 
-  let job := (Task.spawn (fun () => do
-    let output1 ← IO.Process.output {
-      cwd := "widget"
-      cmd := npmCmd
-      args := #["install", "--silent", "--no-progress"]
-    }
-    if output1.exitCode ≠ 0 then
-      IO.eprintln s!"failed to install npm packages: {output1.stderr}"
-      return
-    let output2 ← IO.Process.output {
-      cwd := "widget"
-      cmd := npmCmd
-      args := #["run", "build"]
-    }
-    if output2.exitCode ≠ 0 then
-      IO.eprintln s!"failed to run npm build: {output2.stderr}"
-  ))
-  Task.get job
-  return Job.collectArray #[]
+input_file widgetRollupConfig where
+  path := widgetDir / "rollup.config.js"
+  text := true
 
-target buildWidget pkg : Array System.FilePath := do
-  widgetBuildAll pkg
+input_dir widgetSrcs where
+  path := widgetDir / "src"
+  filter := .extension <| .mem #["js", "jsx"]
+  text := true
+
+target buildWidget pkg : Unit := do
+  let srcs ← widgetSrcs.fetch
+  let config ← widgetRollupConfig.fetch
+  let packageJson ← widgetPackageJson.fetch
+  let packageLock ← widgetPackageLock.fetch
+  srcs.bindM (sync := true) fun _ =>
+  config.bindM (sync := true) fun _ =>
+  packageJson.bindM (sync := true) fun _ =>
+  packageLock.mapM fun _ => do
+    let outputFile := pkg.dir / "build" / "js" / "graphVisualization.js"
+    buildUnlessUpToDate outputFile (← getTrace) (outputFile.addExtension "trace") do
+      pkg.runNpmCommand #["clean-install", "--silent", "--no-progress"]
+      pkg.runNpmCommand #["run", "build"]
 
 @[default_target]
-target all : Unit := do
-  let lib ← LeanHoG.get
-  let job₁ ← buildWidget.fetch
-  let _ ← job₁.await
-  let job₂ ← lib.leanArts.fetch
-  let _ ← job₂.await
-  return .nil
+lean_lib LeanHoG where
+  needs := #[buildWidget]

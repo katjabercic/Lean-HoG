@@ -38,9 +38,10 @@ unsafe def downloadHoGImpl : Elab.Command.CommandElab
     let opts ← getOptions
     let pythonExe := opts.get leanHoG.pythonExecutable.name leanHoG.pythonExecutable.defValue
     let downloadLocation := opts.get leanHoG.graphDownloadLocation.name leanHoG.graphDownloadLocation.defValue
+    let downloadGraphPy := packageDirPath / "Download" / "downloadGraph.py"
     let output ← IO.Process.output {
       cmd := pythonExe
-      args := #["Download/downloadGraph.py", downloadLocation, s!"{n}"]
+      args := #[s!"{downloadGraphPy}", downloadLocation, s!"{n}"]
     }
     if output.exitCode ≠ 0 then
       throwError f!"failed to download graph: {output.stderr}"

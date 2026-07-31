@@ -22,22 +22,29 @@ brew install --cask visual-studio-code
 
 For using the SAT solving facilities of the library (e.g. computing Hamiltonian paths) you need the following:
 
-* A modern SAT solver capable of producing proofs of unsatisfiability, 
+* A modern SAT solver capable of producing LRAT proofs of unsatisfiability,
   we recommend **[CaDiCaL](https://github.com/arminbiere/cadical)**.
-* A SAT proof checker, we recommend the formally verified checker **[cake_lpr](https://github.com/tanyongkiam/cake_lpr)**.
 
-Once you have installed the SAT solver and a proof checker, you should set in Lean
-* `leanHoG.solverCmd` to the location of the SAT solver executable.
-* `leanHoG.proofCheckerCmd` to the location of the SAT proof checker.
+Unsatisfiability proofs are checked by Lean's built-in verified LRAT checker;
+no separate proof-checker executable is required.
+
+Once you have installed the SAT solver, set `leanHoG.solverCmd` in Lean to the
+location of the solver executable.
 
 ## Installation
 
-To install all the dependencies and compile Lean-HoG, run these commands from withing the Lean-HoG directory:
+To install all dependencies and compile Lean-HoG, run this command from the
+Lean-HoG directory:
 
-* `elan update` to make sure you have an up-to-date version of Lean,
-* `lake exe cache get` to get a cached version of Mathlib (or else wait for it to compile),
-* `lake exe build_widgets` to build the Javascript graph visualization widgets,
-* `lake build` to compile Lean-HoG
+```shell
+lake build
+```
+
+Lake installs the Lean version pinned in `lean-toolchain`, fetches the package
+dependencies, installs the JavaScript dependencies, builds the graph
+visualization widget, and then compiles Lean-HoG. The widget does not need to be
+built separately. Mathlib's update hook also fetches its cached build artifacts
+automatically, so there is no separate cache command to run.
 
 ## Usage
 
