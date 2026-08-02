@@ -18,7 +18,10 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) :
   let enc := (hamiltonianPathCNF G).val
   let opts ← getOptions
   let cadicalExe := opts.get leanHoG.solverCmd.name leanHoG.solverCmd.defValue
+  let timeoutSec := opts.get leanHoG.solverTimeout.name leanHoG.solverTimeout.defValue
+  let maxCertMB := opts.get leanHoG.maxCertificateSize.name leanHoG.maxCertificateSize.defValue
   let solver := SolverWithLRAT cadicalExe #["--no-binary", "--lrat=true"]
+    { timeoutSec := timeoutSec, maxProofBytes := maxCertMB * 1024 * 1024 }
   let cnf := Encode.EncCNF.toICnf enc
   let (_, s) := Encode.EncCNF.run enc
   let res ← solver.solve cnf
