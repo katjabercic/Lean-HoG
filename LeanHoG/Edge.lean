@@ -1,15 +1,17 @@
 import Lean
 import Mathlib.Data.Fintype.Basic
+import Mathlib.Data.Fintype.Sigma
 import Mathlib.Tactic.DeriveFintype
 import Mathlib.Order.Basic
 import Mathlib.Data.Prod.Lex
+import Batteries.Data.RBMap.Basic
 
 namespace LeanHoG
 
 structure Edge (m : Nat) where
   fst : Fin m
   snd : Fin m
-  ord : (fst : Nat) < snd
+  ord : fst < snd
 deriving Fintype, Repr
 
 instance (m : Nat) : Lean.ToJson (Edge m) where
@@ -40,6 +42,6 @@ instance Edge.linearOrder (m : Nat) : LinearOrder (Edge m) :=
   LinearOrder.lift' (fst_snd m) fst_snd_injective
 
 @[reducible]
-def EdgeSet (n : Nat) := Std.RBSet (Edge n) (Edge.linearOrder n).compare
+def EdgeSet (n : Nat) := Batteries.RBSet (Edge n) (Edge.linearOrder n).compare
 
 end LeanHoG

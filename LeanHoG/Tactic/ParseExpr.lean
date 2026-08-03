@@ -6,7 +6,6 @@ import LeanHoG.Invariant.HamiltonianPath.Basic
 import Qq
 
 import Aesop.Util.Basic
-import Std.Data.List.Basic
 
 namespace LeanHoG
 
@@ -122,7 +121,7 @@ partial def decomposeAndsQ {G : Q(Sort)} (e : Q($G → Prop)) : MetaM (List Q($G
 
 unsafe def decomposeExistsQ (e : Q(Prop)) : MetaM (List HoGEnquiry) := do
   match e with
-  | ~q(∃ G, $P G) =>
+  | ~q(∃ G:Graph, $P G) =>
     let Ps ← decomposeAndsQ P
     let enquiries ← List.mapM (fun R => do
        let Q ← decomposeComparisonQ R

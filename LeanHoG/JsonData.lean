@@ -24,6 +24,7 @@ structure JSONData : Type where
   hogId : Option Nat
   graph : GraphData
   rawHoG? : Option RawHoGData
+  canonicalForm? : Option String
 
   /- Invariants are optional -/
   connectedComponents? : Option ConnectedComponentsData

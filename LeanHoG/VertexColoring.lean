@@ -19,7 +19,6 @@ def VertexColoring.mk' {Color : Type} [DecidableEq Color] (G : Graph) (color : G
   · intros u v h e ; apply h ; symm ; assumption
   · assumption
 
-@[reducible]
 class TwoColoring (G : Graph) extends VertexColoring (Fin 2) G
 deriving Fintype
 
@@ -37,11 +36,11 @@ theorem TwoColoring.even_odd_walk
     cases Nat.even_or_odd (Walk.length w) with
     | inl evenw =>
       have _ := c.isColoring e
-      simp_all [Walk.length, Nat.even_add_one, evenw]
+      simp_all [Walk.length, Nat.even_add_one]
     | inr oddw =>
       have _ := c.isColoring e
       have _ := ih.1 oddw
-      simp_all [Walk.length, Nat.even_add_one]
+      simp_all [Walk.length]
       have fin2 : ∀ (a b c : Fin 2), a ≠ b → b ≠ c → a = c := by simp [Fin.forall_fin_two]
       apply (fin2 (c.color s) (c.color t) (c.color u)) <;> assumption
 

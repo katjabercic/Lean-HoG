@@ -1,31 +1,21 @@
-import LeanSAT
-import LeanSAT.Solver.Basic
-import LeanSAT.Solver.Dimacs
+import Trestle
+import Trestle.Solver.Basic
+import Trestle.Solver.Dimacs
+import Trestle.Solver.Impl.DimacsCommand
+import LeanHoG.Util.TrestleStd
+import Std.Tactic.BVDecide.LRAT.Checker
+import Std.Tactic.BVDecide.LRAT.Parser
 
-import LeanSAT.Util.MkFIFO
+open Trestle
 
-namespace SolverWithCakeLpr
+def runLRATChecker (fml : ICnf) (proof : System.FilePath) : IO Bool :=
+  do
+    let actions ← Std.Tactic.BVDecide.LRAT.loadLRATProof proof
+    -- Converting the CNF and checking the parsed actions are pure computations.
+    let stdCnf := fml.toStd
+    return Std.Tactic.BVDecide.LRAT.check actions stdCnf
 
-open LeanSAT
-
-def runCakeLpr (cake_lpr : String := "cake_lpr") (fml : ICnf) (proof : System.FilePath)
-    : IO Bool :=
-  Util.withTempFIFO fun cnfPath => do
-  let cakeProc ← IO.Process.spawn {
-    cmd := cake_lpr
-    args := #[cnfPath.toString, proof.toString]
-    stdout := .piped
-  }
-  -- Note: opening a FIFO file to write blocks until someone opens the FIFO file to read
-  let cnfHandle ← IO.FS.Handle.mk cnfPath .write
-  Solver.Dimacs.printFormula (cnfHandle.putStr) fml
-  cnfHandle.flush
-  let output ← IO.asTask cakeProc.stdout.readToEnd Task.Priority.dedicated
-  let _ ← cakeProc.wait
-  let outputStr ← IO.ofExcept output.get
-  return outputStr.trim = "s VERIFIED UNSAT"
-
-def SolverWithCakeLpr (solverCmd : String) (solverFlags : Array String := #[]) (cakelprCmd : String := "cake_lpr") : LeanSAT.Solver IO where
+def SolverWithLRAT (solverCmd : String) (solverFlags : Array String := #[]) : Solver IO where
   solve := fun fml => do
     let tempFile := "proof.lrat"
     let solver ← IO.Process.spawn {
@@ -35,7 +25,7 @@ def SolverWithCakeLpr (solverCmd : String) (solverFlags : Array String := #[]) (
       stdout := .piped
     }
     let (stdin, solver) ← solver.takeStdin
-    Solver.Dimacs.printFormula (stdin.putStr) fml
+    Solver.Dimacs.printICnf (stdin.putStr) fml
     stdin.flush
     let output ← IO.asTask solver.stdout.readToEnd Task.Priority.dedicated
 
@@ -47,7 +37,7 @@ def SolverWithCakeLpr (solverCmd : String) (solverFlags : Array String := #[]) (
       IO.FS.removeFile tempFile
       return .error
     | .unsat =>
-      let succeeded ← runCakeLpr cakelprCmd fml tempFile
+      let succeeded ← runLRATChecker fml tempFile
       IO.FS.removeFile tempFile
       if succeeded then
         return res
@@ -56,5 +46,3 @@ def SolverWithCakeLpr (solverCmd : String) (solverFlags : Array String := #[]) (
     | .sat assn =>
       IO.FS.removeFile tempFile
       return (.sat assn)
-
-end SolverWithCakeLpr

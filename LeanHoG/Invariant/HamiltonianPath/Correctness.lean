@@ -7,7 +7,7 @@ import Mathlib.Data.List.ProdSigma
 
 namespace LeanHoG
 
-open LeanSAT Model PropFun
+open Trestle Model PropFun
 
 @[simp, reducible] def Fin.coe {n k : Nat} {h : k < n} : Fin k → Fin n := fun i =>
   ⟨i, Nat.lt_trans i.isLt h⟩
@@ -68,15 +68,14 @@ abbrev e {G : Graph} (k k' : Fin G.vertexSize) :
     simp [satisfies_conj_list] at h
     intros j k j_neq_k
     have := h (disj_list [(x i j)ᶜ, (x i k)ᶜ]) j k
-    simp [List.mem_filter, j_neq_k] at this
-    simp [this]
+    simp [j_neq_k] at this
+    simp
     have not_sat_fls : τ ⊭ fls := by apply not_satisfies_fls
     simp [not_sat_fls] at this
     exact this
   · intro h
     simp [satisfies_conj_list]
     intros p j k j_k_in
-    simp [List.mem_filter, List.mem_product] at j_k_in
     have := h j k j_k_in
     intro ass
     cases' this with h h
@@ -101,15 +100,14 @@ abbrev e {G : Graph} (k k' : Fin G.vertexSize) :
     simp [satisfies_conj_list] at h
     intros i k i_neq_k
     have := h (disj_list [(x i j)ᶜ, (x k j)ᶜ]) i k
-    simp [List.mem_filter, i_neq_k] at this
-    simp [this]
+    simp [i_neq_k] at this
+    simp
     have not_sat_fls : τ ⊭ fls := by apply not_satisfies_fls
     simp [not_sat_fls] at this
     exact this
   · intro h
     simp [satisfies_conj_list]
     intros p i k i_k_in
-    simp [List.mem_filter, List.mem_product] at i_k_in
     have := h i k i_k_in
     intro ass
     cases' this with h h
@@ -130,27 +128,18 @@ abbrev e {G : Graph} (k k' : Fin G.vertexSize) :
   · intros h i j not_edge
     simp [satisfies_conj_list] at h
     have := h (disj_list [(x i k)ᶜ, (x j k')ᶜ]) i j
-    simp [List.mem_filter, not_edge] at this
-    simp [this]
+    simp [not_edge] at this
+    simp
     have not_sat_fls : τ ⊭ fls := by apply not_satisfies_fls
     simp [not_sat_fls] at this
     exact this
   · intro h
     simp [satisfies_conj_list]
     intros p i j not_edge
-    simp [List.mem_filter] at h
-    simp [List.mem_filter] at not_edge
+    simp at h
     have := h i j not_edge
     intro ass
-    cases' this with h h
-    · rw [← ass]
-      aesop_subst ass
-      simp_all only [ge_iff_le, sup_le_iff, compl_le_compl_iff_le, satisfies_disj, Pos, satisfies_neg, satisfies_var,
-        not_false_eq_true, Bool.not_eq_true, true_or]
-    · rw [← ass]
-      aesop_subst ass
-      simp_all only [ge_iff_le, sup_le_iff, compl_le_compl_iff_le, satisfies_disj, Pos, satisfies_neg, satisfies_var,
-        Bool.not_eq_true, not_false_eq_true, true_or, or_true]
+    cases' this with h h <;> rw [← ass] <;> aesop
 
 abbrev at_least_one_at_pos (n : Nat) : PropFun (Pos n) :=
   let range := List.finRange n
@@ -194,7 +183,7 @@ abbrev has_hamiltonian_path (G : Graph) :=
 @[simp] lemma satisfies_at_most_one_fin_n_iff {n : Nat} {τ : PropAssignment (Pos n)} :
   τ ⊨ at_most_one_fin_n n ↔ ∀ (j : Fin n), τ ⊨ b j := by
   simp only [Pos, satisfies_conj_list, List.mem_map, List.mem_finRange, true_and, forall_exists_index,
-    forall_apply_eq_imp_iff, satisfies_b_iff, ne_eq, satisfies_neg, satisfies_var, Bool.not_eq_true]
+    forall_apply_eq_imp_iff, ne_eq]
 
 @[simp] lemma satisfies_exactly_one_fin_n_iff {n : Nat} {τ : PropAssignment (Pos n)} :
   τ ⊨ exactly_one_fin_n n ↔
@@ -212,7 +201,7 @@ abbrev has_hamiltonian_path (G : Graph) :=
 @[simp] lemma satisfies_at_most_one_at_pos_iff {n : Nat} {τ : PropAssignment (Pos n)} :
   τ ⊨ at_most_one_at_pos n ↔ ∀ (j : Fin n), τ ⊨ d j := by
   simp only [Pos, satisfies_conj_list, List.mem_map, List.mem_finRange, true_and, forall_exists_index,
-    forall_apply_eq_imp_iff, satisfies_d_iff, ne_eq, satisfies_neg, satisfies_var, Bool.not_eq_true]
+    forall_apply_eq_imp_iff, ne_eq]
 
 @[simp] lemma satisfies_exactly_one_at_pos_iff {n : Nat} {τ : PropAssignment (Pos n)} :
   τ ⊨ exactly_one_at_pos n ↔
@@ -248,9 +237,7 @@ abbrev has_hamiltonian_path (G : Graph) :=
   · intro h
     simp [satisfies_conj_list, List.mem_filter]
     intro p x x_1 a a_1
-    aesop_subst a_1
-    simp_all only [Pos, satisfies_neg, satisfies_var, Bool.not_eq_true, satisfies_e_iff, not_false_eq_true,
-      implies_true]
+    aesop
 
 @[simp] lemma satisfies_has_hamiltonian_path_iff {G : Graph} {τ : PropAssignment (Pos G.vertexSize)} :
   τ ⊨ has_hamiltonian_path G ↔
@@ -262,7 +249,7 @@ abbrev has_hamiltonian_path (G : Graph) :=
   simp_all only [Pos, satisfies_conj, satisfies_at_least_one_at_pos_iff, satisfies_c_iff, satisfies_var,
     satisfies_at_most_one_at_pos_iff, satisfies_d_iff, ne_eq, satisfies_neg, Bool.not_eq_true,
     satisfies_at_least_one_fin_n_iff, satisfies_a_iff, satisfies_at_most_one_fin_n_iff, satisfies_b_iff,
-    satisfies_no_non_edges_iff, satisfies_e_iff, exists_and_right]
+    satisfies_no_non_edges_iff, exists_and_right]
   apply Iff.intro
   · intro a
     simp_all only [not_false_eq_true, implies_true, and_self]
@@ -272,7 +259,8 @@ abbrev has_hamiltonian_path (G : Graph) :=
 lemma get_subst {X : Type} {n : Nat} {l : List X} {l_len : n = l.length} {i : X}
   {h : ∃ j, l.get j = i} : ∃ j, l.get (Fin.cast l_len j) = i := by
   subst l_len
-  simp [h]
+  simp at h ⊢
+  exact h
 
 lemma helper' {n : Nat} {l : List (Fin n)} {l_len : n = l.length} {i : Fin n}
   {h : ∃ j, l.get j = i} : ∃ j, l.get (Fin.cast l_len j) = i := by
@@ -295,14 +283,7 @@ theorem hamiltonian_path_to_sat (G : Graph) (hp : HamiltonianPath G) :
   let τ : PropAssignment (Pos n) := fun pos =>
     match pos with
     | (i,j) => if l.get (Fin.cast l_len j) = i then true else false
-  have x_i_j_def : ∀ i j, (τ ⊨ x j i ↔ l.get (Fin.cast l_len i) = j) := by
-    intros i j
-    apply Iff.intro
-    · intro t_xji
-      simp at t_xji
-      by_contra neg
-      simp_all only [HamiltonianPath.vertices, Path.vertices, List.list_to_fun, ite_false]
-    · aesop
+  have x_i_j_def : ∀ i j, (τ ⊨ x j i ↔ l.get (Fin.cast l_len i) = j) := by aesop
   apply Exists.intro τ
   apply Iff.mpr PropFun.satisfies_conj
   apply And.intro
@@ -310,9 +291,9 @@ theorem hamiltonian_path_to_sat (G : Graph) (hp : HamiltonianPath G) :
     apply Iff.mpr satisfies_at_least_one_at_pos_iff
     suffices ∀ i, ∃ j, l.get (l_len▸i) = j by
       intro i
-      simp_all only [Pos, satisfies_var, ite_eq_left_iff, imp_false, not_not, implies_true, exists_eq', satisfies_c_iff]
+      simp_all only [Pos, satisfies_var, implies_true, exists_eq', satisfies_c_iff]
     intro i
-    simp_all only [Pos, satisfies_var, ite_eq_left_iff, imp_false, not_not, implies_true, exists_eq']
+    simp_all only [Pos, satisfies_var, exists_eq']
 
   have τ_sat_at_most_at_pos : τ ⊨ at_most_one_at_pos n := by
     apply Iff.mpr satisfies_at_most_one_at_pos_iff
@@ -321,7 +302,7 @@ theorem hamiltonian_path_to_sat (G : Graph) (hp : HamiltonianPath G) :
     intros i k i_neq_k
     by_contra h
     apply Iff.mp not_or at h
-    simp at h
+    simp [τ] at h
     let ⟨left, right⟩ := h
     rw [left] at right
     contradiction
@@ -351,9 +332,9 @@ theorem hamiltonian_path_to_sat (G : Graph) (hp : HamiltonianPath G) :
     apply Iff.mp not_or_satisfies_not at h'
     let ⟨h₁, h₂⟩ := h'
     have h₁' : l.get (Fin.cast l_len j) = i := by
-      simp_all only [h₁]
+      simp_all only []
     have h₂' : l.get (Fin.cast l_len k) = i := by
-      simp_all only [h₂]
+      simp_all only []
     have foo : (Fin.cast l_len j) = (Fin.cast l_len k) := by
       apply List.all_distinct_list_get_inj
       exact h
@@ -385,7 +366,8 @@ theorem hamiltonian_path_to_sat (G : Graph) (hp : HamiltonianPath G) :
     have eq₁ := neg.1
     have eq₂ := neg.2
     have that : Graph.adjacent (l.get (Fin.cast l_len k)) (l.get (Fin.cast l_len k')) := by
-      simp [i_adj_j]
+      simp [l] at i_adj_j ⊢
+      exact i_adj_j
     rw [eq₁, eq₂] at that
     simp [Graph.adjacent] at that
     contradiction
@@ -399,7 +381,7 @@ lemma hamiltonian_path_to_assignment {G : Graph} :
   (∃ (τ : PropAssignment (Pos G.vertexSize)), τ ⊨ has_hamiltonian_path G) := by
   intro h
   let ⟨u, v, p, ham⟩ := h
-  have hp : HamiltonianPath G := { path := p, isHamiltonian := ham }
+  have hp : HamiltonianPath G := { u := u, v := v, path := p, isHamiltonian := ham }
   apply hamiltonian_path_to_sat G hp
 
 lemma hamiltonian_path_to_assignment_expanded {G : Graph} :

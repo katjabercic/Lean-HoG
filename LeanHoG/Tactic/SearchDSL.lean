@@ -4,6 +4,7 @@ import Lean.Data.Json.Basic
 import LeanHoG.LoadGraph
 import LeanHoG.Widgets
 import LeanHoG.Tactic.Options
+import LeanHoG.Util.PackageDir
 
 import ProofWidgets.Component.HtmlDisplay
 
@@ -748,10 +749,11 @@ unsafe def queryDatabaseForExamplesAux (queries : List ConstructedQuery) (queryH
   let opts ← getOptions
   let pythonExe := opts.get leanHoG.pythonExecutable.name leanHoG.pythonExecutable.defValue
   let searchCacheLoc := opts.get leanHoG.searchCacheLocation.name leanHoG.searchCacheLocation.defValue
+  let searchHoGpy := packageDirPath / "Download" / "searchHoG.py"
   for q in queries do
     let output ← IO.Process.output {
       cmd := pythonExe
-      args := #["Download/searchHoG.py", searchCacheLoc, s!"{q.query}", s!"{queryHash}"]
+      args := #[s!"{searchHoGpy}", searchCacheLoc, s!"{q.query}", s!"{queryHash}"]
     }
     if output.exitCode ≠ 0 then
       throwError f!"failed to download graphs: {output.stderr}"
@@ -760,6 +762,7 @@ unsafe def queryDatabaseForExamplesAux (queries : List ConstructedQuery) (queryH
   let contents ← path.readDir
   let mut results := []
   let graphsLocation := opts.get leanHoG.graphDownloadLocation.name leanHoG.graphDownloadLocation.defValue
+  IO.FS.createDirAll graphsLocation
   for result in contents.toList do
     -- Copy each result into the graphs folder
     let fileContent ← IO.FS.readFile result.path
@@ -773,10 +776,10 @@ unsafe def queryDatabaseForExamplesAux (queries : List ConstructedQuery) (queryH
       results := ⟨id⟩ :: results
   return results
 
-syntax (name := searchHoG) "#search" term : command
+syntax (name := searchHoG) "#search_hog " term : command
 
 open ProofWidgets in
-/-- `#search hog{ <hog-query> }` searches the HoG database for graphs satisfying
+/-- `#search_hog hog{ <hog-query> }` searches the HoG database for graphs satisfying
     the given query. The graphs returned by HoG are stored in the graph download
     location defined by the user option `leanHog.graphDownloadLocation`.
     The syntax for the query is
@@ -799,11 +802,11 @@ open ProofWidgets in
 
     ### Example:
 
-    `#search hog{ bipartite = true ∧ (numberOfEdges = 2 ∨ numberOfVertices < 6) }`
+    `#search_hog hog{ bipartite = true ∧ (numberOfEdges = 2 ∨ numberOfVertices < 6) }`
 -/
 @[command_elab searchHoG]
 unsafe def searchForExampleImpl : Command.CommandElab
-  | stx@`(#search $q ) => do
+  | stx@`(#search_hog $q ) => do
     let qs ← Command.liftTermElabM do
       let qe : Expr ← Term.elabTerm q none
       let query ← Meta.mkAppM ``Queries.mk #[(← Meta.mkAppM ``List.map #[(← Meta.mkAppM ``HoGQuery.build #[]), qe])]
@@ -814,7 +817,7 @@ unsafe def searchForExampleImpl : Command.CommandElab
     let links := buildLinks results
     let text : DivWithLink := ⟨s!"Found {links.length} graphs satisfying given query", "", ""⟩
     let links := text :: buildLinks results
-    Widget.savePanelWidgetInfo (hash HtmlDisplayPanel.javascript)
-      (return json% { html: $(← Server.RpcEncodable.rpcEncode (putInDiv links)) }) stx
+    Command.liftCoreM (Widget.savePanelWidgetInfo (hash HtmlDisplayPanel.javascript)
+      (return json% { html: $(← Server.RpcEncodable.rpcEncode (putInDiv links)) }) stx)
 
   | _ => throwUnsupportedSyntax

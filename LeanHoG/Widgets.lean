@@ -1,10 +1,9 @@
 import LeanHoG.Invariant.HamiltonianPath.Basic
 import LeanHoG.Invariant.HamiltonianPath.SatEncoding
-import Lean
-import LeanSAT
+import Trestle.Solver.Impl.DimacsCommand
 import Qq
 
-open Lean Widget Elab Command Term Meta LeanSAT Qq
+open Lean Widget Elab Command Term Meta Trestle Qq
 namespace LeanHoG
 
 @[widget_module]
@@ -27,8 +26,8 @@ def HamiltonianPath.toVisualizationFormat (G : Graph) :
 
 instance widgetInstance : Solver IO := (Solver.Impl.DimacsCommand "kissat")
 
-def IO.unsafeGet {α} [Inhabited α] (val : IO α) : α := Id.run do
-  let .ok val' s := val.run () | return default
+unsafe def IO.unsafeGet {α} [Inhabited α] (val : IO α) : α := Id.run do
+  let .ok val' := unsafeIO val | return default
   return val'
 
 def HamiltonianPath.toVisualizationFormat? (G : Graph) : IO Json := do
@@ -52,7 +51,7 @@ This is done using the `https://js.cytoscape.org/` javascript library. -/
 def elabVisualizeGraphCmd : CommandElab
   | stx@`(#show $g) => liftTermElabM do
     let wi : Expr ←
-      elabWidgetInstanceSpecAux (mkIdent `visualize) (← ``((Graph.toVisualizationFormat $g)))
+      elabWidgetInstanceSpec (← `(widgetInstanceSpec| $(mkIdent `visualize) with $(← ``((Graph.toVisualizationFormat $g)))))
     let wi : WidgetInstance ← evalWidgetInstance wi
     savePanelWidgetInfo wi.javascriptHash wi.props stx
   | _ => throwUnsupportedSyntax
@@ -67,8 +66,10 @@ unsafe def elabVisualizeHamiltonianPathCmd : CommandElab
     let gg : Expr ← elabTerm G none
     let hpInst ← mkAppM ``HamiltonianPath #[gg]
     if let .some _ ← synthInstance? hpInst then
-      let wi : Expr ← elabWidgetInstanceSpecAux (mkIdent `visualize) (← ``(buildVisualizationInstance $G))
-      let wi : WidgetInstance ← evalWidgetInstance wi
+      let vizf ← ``((Graph.toVisualizationFormat $G))
+      let wis ← `(Widget.widgetInstanceSpec| $(mkIdent `visualize) with $vizf)
+      let wi : Expr ← Widget.elabWidgetInstanceSpec wis
+      let wi ← Widget.evalWidgetInstance wi
       savePanelWidgetInfo wi.javascriptHash wi.props stx
     else
       IO.println "Hamiltonian path for graph not found."

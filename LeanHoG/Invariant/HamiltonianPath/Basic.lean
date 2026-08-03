@@ -80,12 +80,11 @@ instance {G : Graph} [HamiltonianPath G] : Decidable (G.traceable) :=
 lemma lt_count_eq_one {n : Nat} : ∀ (k : Nat), k < n → List.count k (List.range n) = 1 := by
   intros k k_lt_n
   have k_in_range : k ∈ (List.range n) := by apply Iff.mpr (List.mem_range) k_lt_n
-  apply List.count_eq_one_of_mem (List.nodup_range n) k_in_range
+  apply List.count_eq_one_of_mem List.nodup_range k_in_range
 
 lemma mem_count_ge_one {α : Type} [DecidableEq α] (l : List α) (x : α) (h : x ∈ l) :
   List.count x l ≥ 1 := by
-  have : 0 < List.count x l := by apply Iff.mpr List.count_pos_iff_mem h
-  simp [Nat.lt_iff_add_one_le] at this
+  have : 0 < List.count x l := by apply Iff.mpr List.count_pos_iff h
   exact this
 
 example {α : Type} [DecidableEq α] (l : List α) (d : l.Nodup) : Finset.card (List.toFinset l) = l.length := by

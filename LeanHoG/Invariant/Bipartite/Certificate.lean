@@ -14,10 +14,10 @@ open Qq
 def TwoColoringOfData (G : Q(Graph)) (C : TwoColoringData) : Q(TwoColoring $G) :=
   have n : Q(Nat) := q(Graph.vertexSize $G)
   have convertToFin : Nat × Nat → Q(Fin $n × Fin 2) := fun (i,j) => q(($(finOfData n i), $(finOfData (Lean.mkRawNatLit 2) j)))
-  have colorMap : Q(Std.RBMap (Graph.vertex $G) (Fin 2) Fin.instLinearOrderFin.compare) :=
-    build_RBMap (C.color.map convertToFin) q(Fin.instLinearOrderFin)
-  have color : Q(Graph.vertex $G → Fin 2) := q(fun v => Std.RBMap.findD $colorMap v 0)
-  have edgeColor : Q(Std.RBSet.all (Graph.edgeSet $G) (fun e => $color e.fst ≠ $color e.snd) = true) := (q(Eq.refl true) : Lean.Expr)
+  have colorMap : Q(Batteries.RBMap (Graph.vertex $G) (Fin 2) Fin.instLinearOrder.compare) :=
+    build_RBMap (C.color.map convertToFin) q(Fin.instLinearOrder)
+  have color : Q(Graph.vertex $G → Fin 2) := q(fun v => Batteries.RBMap.findD $colorMap v 0)
+  have edgeColor : Q(Batteries.RBSet.all (Graph.edgeSet $G) (fun e => $color e.fst ≠ $color e.snd) = true) := (q(Eq.refl true) : Lean.Expr)
   q(@TwoColoring.mk $G (VertexColoring.mk' $G $color (Graph.all_edges $G (fun e => $color e.fst ≠ $color e.snd) $edgeColor)))
 
 def OddClosedWalkOfData (G : Q(Graph)) (W : OddClosedWalkData) : Q(OddClosedWalk $G) :=

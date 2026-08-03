@@ -19,7 +19,7 @@ theorem all_distinct_iff_dedup {α : Type} [DecidableEq α] (l : List α) :
 
 theorem index_of_lt_length_of_exists {α : Type} [DecidableEq α] (xs : List α)
   (_ : xs.all_distinct) (x : α) (h : x ∈ xs) :
-  xs.indexOf x < xs.length := by
+  xs.findIdx (. = x) < xs.length := by
   apply List.findIdx_lt_length_of_exists
   apply Exists.intro x
   apply And.intro
@@ -63,19 +63,13 @@ theorem all_distinct_injective_map {α β: Type} [DecidableEq α] [DecidableEq �
       apply ih
       exact h.2
 
--- TODO: Surely we can just apply the theorem we used to prove this instead of a separate theorem
-theorem get_implies_get? {α : Type} {l : List α} {i j : Fin l.length} :
-  (l.get i) = (l.get j) → l.get? i = l.get? j := by
-  simp [List.get?_eq_get]
-
 @[simp]
 theorem all_distinct_get_injective {α : Type} [DecidableEq α] {l : List α} {h : l.all_distinct}
   {i j : Fin l.length} : l.get i = l.get j → i = j := by
   intro eq
   have H : l.Nodup := by apply Iff.mp all_distinct_iff_nodup h
-  have : l.get? i = l.get? j := by apply get_implies_get? eq
-  apply Iff.mp Fin.val_inj
-  apply List.get?_injective (by apply i.isLt) H this
+  rw [← List.Nodup.get_inj_iff H]
+  exact eq
 
 @[simp] theorem all_distinct_get_injective_function {α : Type} [DecidableEq α] {l : List α}
   {h : l.all_distinct} : Function.Injective (l.get) := by
@@ -90,8 +84,8 @@ lemma not_all_distinct_exists_duplicate {α : Type} [DecidableEq α] (l : List �
   have h' : ¬ l.Nodup := by
     apply Iff.mp (not_congr all_distinct_iff_nodup)
     exact h
-  have h''' : ¬ ∀ (i j : ℕ), i < j → j < List.length l → List.get? l i ≠ List.get? l j := by
-    apply Iff.mp (not_congr List.nodup_iff_get?_ne_get?)
+  have h''' : ¬ ∀ (i j : ℕ), i < j → j < List.length l → l[i]? ≠ l[j]? := by
+    apply Iff.mp (not_congr List.nodup_iff_getElem?_ne_getElem?)
     exact h'
   simp at h'''
   let ⟨i, j, cond⟩ := h'''
@@ -99,12 +93,7 @@ lemma not_all_distinct_exists_duplicate {α : Type} [DecidableEq α] (l : List �
   have j_lt : j < l.length := by linarith
   apply Exists.intro ⟨i, i_lt⟩
   apply Exists.intro ⟨j, j_lt⟩
-  simp_all only [gt_iff_lt, get?_eq_get, Option.some.injEq, true_and, ne_eq, Fin.mk.injEq, and_true]
-  unhygienic with_reducible aesop_destruct_products
-  simp_all only [gt_iff_lt, get?_eq_get]
-  apply Aesop.BuiltinRules.not_intro
-  intro i_eq_j
-  simp_all only [lt_self_iff_false]
+  simp_all [ne_of_lt cond.left, Option.some.injEq, true_and, ne_eq, Fin.mk.injEq]
 
 /--
   Reformulation of injectivity of get for a list with the `all_distinct` property.
@@ -113,9 +102,8 @@ theorem all_distinct_get_inj {α : Type} [DecidableEq α] (l : List α) (d : l.a
   (∀ (i j : Fin l.length), l.get i = l.get j → i = j) := by
   have d' : l.Nodup := Iff.mp all_distinct_iff_nodup d
   intros i j h
-  let h' : l.get? i = l.get? j := get_implies_get? h
-  have := List.get?_inj i.2 d' h'
-  apply Fin.ext this -- have to apply Fin extensionality
+  apply all_distinct_get_injective h
+  exact d
 
 /-- Given an element [x] of a list [l] and a proof that x ∈ l,
     produce the index of [x] in [l].
@@ -129,7 +117,7 @@ def mem_to_idx {α : Type} [BEq α] [LawfulBEq α] (x : α) (l : List α) (h : x
     simp
   let foo := @List.findIdx_lt_length_of_exists α (· == x) l boo
   have bar : List.findIdx (· == x) l < l.length := by apply foo
-  have moo := @List.findIdx_get α (· == x) l bar
+  have moo := @List.findIdx_eq α (· == x) l _ bar
   exact ⟨⟨List.findIdx (· == x) l, bar⟩, by aesop⟩
 
 lemma length_gt_one_ne_singleton {α : Type} (l : List α) (h : 1 < l.length) :
@@ -138,8 +126,7 @@ lemma length_gt_one_ne_singleton {α : Type} (l : List α) (h : 1 < l.length) :
   simp_all only [ne_eq]
   apply Aesop.BuiltinRules.not_intro
   intro a
-  aesop_subst a
-  simp_all only [length_singleton, lt_self_iff_false]
+  simp [a] at h
 
 lemma length_gt_exists_get {α : Type} [DecidableEq α] {l : List α} {i : Fin l.length} :
   ∃ (x : α), l.get i = x := by
@@ -159,45 +146,26 @@ lemma range_nodup {n : Nat} : (List.range n).Nodup := by
   apply Iff.mp all_distinct_iff_nodup
   simp
 
-lemma all_distinct_finRange_succ {n : Nat} : all_distinct (concat (map Fin.castSucc (finRange n)) (Fin.last n)) ↔
-  all_distinct (Fin.last n :: (map Fin.castSucc (finRange n))) := by
-  apply Iff.intro
-  · intro h
-    simp at h
-    apply Iff.mp all_distinct_concat_iff_cons at h
-    exact h
-  · intro h
-    simp
-    apply Iff.mpr all_distinct_concat_iff_cons at h
-    exact h
-
 @[simp]
 lemma finRange_all_distinct {n : Nat} : (List.finRange n).all_distinct := by
   induction' n with n ih
   · simp
-  · rw [List.finRange_succ]
-    apply Iff.mpr all_distinct_finRange_succ
-    simp
-    apply And.intro
-    · intro k
-      have : Fin.castSucc k < Fin.last n := Fin.castSucc_lt_last k
-      aesop
-    · apply all_distinct_injective_map
-      exact ih
-      exact (Fin.castSucc_injective n)
+  · simp [List.finRange_succ, all_distinct_iff_nodup] at ih ⊢
+    apply Nodup.map
+    · simp [Function.Injective]
+    · exact ih
 
 @[simp]
 def finRange_get (n : Nat) : Fin n → Fin n :=
-  fun i => (List.finRange n).get (Eq.symm (List.length_finRange n) ▸ i)
+  fun i => (List.finRange n).get (Eq.symm List.length_finRange ▸ i)
 
 theorem finRange_get_inj {n : Nat} (i j : Fin n) :
   (finRange_get n) i = (finRange_get n) j → i = j := by
   intro h
   have := all_distinct_get_inj (List.finRange n) finRange_all_distinct
-  have len : n = (List.finRange n).length := Eq.symm (List.length_finRange n)
+  have len : n = (List.finRange n).length := Eq.symm List.length_finRange
   simp at h
-  have := this (len ▸ i) (len ▸ j) h
-  aesop
+  exact h
 
 @[simp]
 theorem finRange_get_injective {n : Nat} : Function.Injective (finRange_get n) := by
@@ -207,7 +175,7 @@ theorem finRange_get_injective {n : Nat} : Function.Injective (finRange_get n) :
 
 @[simp]
 theorem finRange_get_surjective {n : Nat} : Function.Surjective (finRange_get n) := by
-  apply Function.Injective.surjective_of_fintype
+  apply Function.Injective.surjective_of_finite
   exact Equiv.refl (Fin n)
   apply finRange_get_injective
 
@@ -220,7 +188,7 @@ theorem finRange_get_bijective {n : Nat} : Function.Bijective (finRange_get n) :
 @[simp]
 def list_to_fun {α : Type} (l : List α) : Fin l.length → { x : α // x ∈ l } :=
   fun i =>
-    ⟨l.get i, List.get_mem l i.val i.isLt⟩
+    ⟨l.get i, List.get_mem l ⟨i.val, i.isLt⟩⟩
 
 @[simp]
 theorem list_to_fun_all_distinct_inj {α : Type} [DecidableEq α] {l : List α}
@@ -242,7 +210,7 @@ theorem list_to_fun_all_distinct_injective {α : Type} [DecidableEq α] (l : Lis
 @[simp]
 theorem list_to_fun_all_distinct_surjective {α : Type} [DecidableEq α] (l : List α)
   (h : l.all_distinct) : Function.Surjective (list_to_fun l) := by
-  apply Function.Injective.surjective_of_fintype
+  apply Function.Injective.surjective_of_finite
   apply List.Nodup.getEquiv
   apply Iff.mp all_distinct_iff_nodup h
   apply list_to_fun_all_distinct_injective
@@ -273,7 +241,7 @@ theorem all_distinct_list_get_injective {n : Nat} {l : List (Fin n)}
 
 theorem all_distinct_list_get_surjective {n : Nat} {l : List (Fin n)} {len : n = l.length}
   {h : l.all_distinct} : Function.Surjective l.get := by
-  apply Function.Injective.surjective_of_fintype
+  apply Function.Injective.surjective_of_finite
   rw [← len]
   apply all_distinct_list_get_injective
   exact h

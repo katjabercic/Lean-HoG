@@ -1,5 +1,7 @@
 # Performance experimentation
 
+## Summary
+
 We used Lean-HoG to verify the number of connected components on more than
 23000 graphs stored in HoG. We excluded 6 graphs with more than 2100 edges
 that caused stack-overflows even when verified on their individually.
@@ -23,3 +25,9 @@ In practice, we could reduce the runtime by using multiple processes (Lean 4 is
 single-threaded), provided enough memory is available.
 
 We found no error in the number of connected components in HoG.
+
+## Running the verification
+
+To measure the performance, one can use the branch `verifyAllGraphs` where all
+the code is available. The file `Verify.md` in this branch explains how to
+verify supported invariants as well as how to measure performance.

@@ -77,6 +77,7 @@ load_graph Hanoi "examples/Hanoi2Disks.json"
 #download Petersen 660
 #show Petersen
 #eval Petersen.numberOfConnectedComponents
+#eval Petersen.g6
 -- check database values for the Petersen graph
 #eval Petersen.checkHoGNumberOfVertices
 #eval Petersen.checkHoGnumberOfEdges
@@ -90,13 +91,14 @@ load_graph Hanoi "examples/Hanoi2Disks.json"
 #download Wheel 204
 #check Wheel
 #show Wheel
+#eval Wheel.g6
 
 -- Search the HoG database directly from Lean
-#search hog{ bipartite = true ∧ (numberOfEdges = 2 ∨ numberOfVertices < 6) }
+#search_hog hog{ bipartite = true ∧ (numberOfEdges = 2 ∨ numberOfVertices < 6) }
 load_graph hog_904 "build/graphs/904.json"
 #show hog_904
 -- Uncomment the line below to initiate the search
--- #search hog{ traceable = true ∧ numberOfVertices > 3 ∧ minimumDegree < numberOfVertices / 2}
+-- #search_hog hog{ traceable = true ∧ numberOfVertices > 3 ∧ minimumDegree < numberOfVertices / 2}
 
 -----------------------------------------
 -- Hamiltonian paths
@@ -107,9 +109,10 @@ load_graph hog_904 "build/graphs/904.json"
 #show_hamiltonian_path Wheel
 
 -- We can also show that there is no Hamiltonian path is some graphs
-#search hog{ traceable = false ∧ numberOfEdges = 2}
+#search_hog hog{ traceable = false ∧ numberOfEdges = 2}
 load_graph hog_896 "build/graphs/896.json"
 #show hog_896
+#eval hog_896.g6
 #check_traceable hog_896
 #show_hamiltonian_path hog_896
 

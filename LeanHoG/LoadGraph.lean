@@ -2,6 +2,7 @@ import Lean
 import Qq
 
 import LeanHoG.Graph
+import LeanHoG.Invariant.G6
 import LeanHoG.Invariant.Bipartite.Certificate
 import LeanHoG.Invariant.ConnectedComponents.Certificate
 import LeanHoG.Invariant.NeighborhoodMap.Certificate
@@ -11,7 +12,7 @@ import LeanHoG.RawHoG
 import LeanHoG.Certificate
 import LeanHoG.JsonData
 
-import LeanSAT
+import Trestle.Solver.Impl.DimacsCommand
 import LeanHoG.Invariant.HamiltonianPath.SatEncoding
 import LeanHoG.Invariant.HamiltonianPath.Certificate
 
@@ -30,7 +31,7 @@ def liftExcept {α : Type} {m} [Monad m] [MonadError m] : Except String α → m
 def certificateName (graphName: Name) (certName: String) : Name :=
   (.str graphName certName)
 
-instance : LeanSAT.Solver IO := (LeanSAT.Solver.Impl.DimacsCommand "kissat")
+instance : Trestle.Solver IO := (Trestle.Solver.Impl.DimacsCommand "kissat")
 
 syntax (name := loadGraph) "load_graph" ident str (" try_ham ")? : command
 
@@ -61,7 +62,22 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
       hints := .regular 0
       safety := .safe
     }
-    Elab.Command.liftTermElabM <| Meta.addInstance rawHoGName .scoped 42
+    Elab.Command.liftTermElabM <| Meta.addInstance rawHoGName .global 42
+
+  match jsonData.canonicalForm? with
+  | .none => pure ()
+  | .some g6 =>
+    let g6Name : Name := (.str graphName "val")
+    let g6Q : Q(G6 $graph) :=   q(G6.mk $g6)
+    Elab.Command.liftCoreM <| addAndCompile <| .defnDecl {
+      name := g6Name
+      levelParams := []
+      type := q(G6 $graph)
+      value := g6Q
+      hints := .regular 0
+      safety := .safe
+    }
+    Elab.Command.liftTermElabM <| Meta.addInstance g6Name .global 42
 
   match jsonData.connectedComponents? with
   | .none => pure ()
@@ -76,7 +92,7 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
       hints := .regular 0
       safety := .safe
     }
-    Elab.Command.liftTermElabM <| Meta.addInstance componentsCertificateName .scoped 42
+    Elab.Command.liftTermElabM <| Meta.addInstance componentsCertificateName .global 42
 
   match jsonData.twoColoring? with
   | .none => pure ()
@@ -91,7 +107,7 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
       hints := .regular 0
       safety := .safe
     }
-    Elab.Command.liftTermElabM <| Meta.addInstance TwoColoringName .scoped 42
+    Elab.Command.liftTermElabM <| Meta.addInstance TwoColoringName .global 42
 
   match jsonData.oddClosedWalk? with
   | .none => pure ()
@@ -106,7 +122,7 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
       hints := .regular 0
       safety := .safe
     }
-    Elab.Command.liftTermElabM <| Meta.addInstance OddClosedWalkName .scoped 42
+    Elab.Command.liftTermElabM <| Meta.addInstance OddClosedWalkName .global 42
 
   match jsonData.neighborhoodMap? with
   | .none => pure ()
@@ -121,7 +137,7 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
       hints := .regular 0
       safety := .safe
     }
-    Elab.Command.liftTermElabM <| Meta.addInstance neighborhoodMapName .scoped 42
+    Elab.Command.liftTermElabM <| Meta.addInstance neighborhoodMapName .global 42
 
 unsafe def loadGraphObject (graphName : Name) (jsonData : JSONData) : Elab.Command.CommandElabM Graph := do
   loadGraphAux graphName jsonData
