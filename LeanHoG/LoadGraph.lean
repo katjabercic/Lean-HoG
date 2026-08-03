@@ -146,7 +146,7 @@ unsafe def loadGraphObject (graphName : Name) (jsonData : JSONData) : Elab.Comma
 unsafe def convertGraph  (graphName : Lean.Name) (jsonData : JSONData) : IO Graph := do
       let elabGraph : Elab.Command.CommandElabM Graph := loadGraphObject graphName jsonData
       let graph : CoreM Graph := liftCommandElabM (elabGraph)
-      let env ← importModules #[{module := "LeanHoG"}] Options.empty
+      let env ← importModules #[{module := `LeanHoG}] Options.empty
       have context : Core.Context := {fileName := "LoadGraph.lean", fileMap := default}
       have state : Core.State := {env := env}
       Prod.fst <$> (graph.toIO context state)

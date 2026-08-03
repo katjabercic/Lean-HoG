@@ -65,4 +65,4 @@ lean_lib LeanHoG where
 -- This way, there is no need to open the file in an editor.
 lean_lib verify where
   srcDir := "."
-  roots := #["Verify"]
+  roots := #[`Verify]
