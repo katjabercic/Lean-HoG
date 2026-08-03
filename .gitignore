@@ -9,3 +9,11 @@ Download/__pycache__
 Download/Invariant/__pycache__
 *.pyc
 .venv
+
+# Downloaded HoG graph data and batch verification outputs
+graphs/
+graphs.zip
+graphs.txt
+output.txt
+verifyBatchOutput.txt
+*.backup
