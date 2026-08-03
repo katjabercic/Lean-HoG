@@ -62,15 +62,19 @@ target buildWidget pkg : Unit := do
 
 @[default_target]
 lean_lib LeanHoG where
+  -- Glob the submodules, not just the root. `LeanHoG.lean` imports only
+  -- `LoadGraph`, so by default the SAT/LRAT modules are never built and breakage
+  -- in them passes as a green build. A glob builds a module without importing it
+  -- anywhere, so no consumer gains it in its import graph. See #47.
+  globs := #[.andSubmodules `LeanHoG]
   needs := #[buildWidget]
 
--- `Examples.lean` is the only file that imports every code path: the tactics,
--- the widgets and the SAT/LRAT machinery, none of which `LeanHoG.lean` reaches.
--- `lake build examples` therefore compiles all of it. Deliberately not a
--- default target: it runs Python, downloads from HoG and calls a SAT solver, so
--- it must not fire on a plain `lake build` or for library consumers. See #47.
+-- `Examples.lean` otherwise belongs to no target at all. This builds the whole
+-- `LeanHoG` library and then the examples on top, so code reachable only from an
+-- example is covered too. Deliberately not a default target: elaborating
+-- `Examples.lean` runs Python, downloads from HoG and calls a SAT solver, none of
+-- which may fire on a plain `lake build` or for a downstream consumer.
 lean_lib «examples» where
   srcDir := "."
   roots := #[`Examples]
-  globs := #[.one `Examples]
-  needs := #[buildWidget]
+  needs := #[buildWidget, LeanHoG]
