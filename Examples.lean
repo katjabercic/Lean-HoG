@@ -98,6 +98,31 @@ load_graph hog_896 "build/graphs/896.json"
 #check_traceable hog_896
 #show_hamiltonian_path hog_896
 
+-- The command only reports what it found. To use the result in a proof there is
+-- a tactic of the same name, without the leading `#`. The tactic does not need
+-- the command to have been run on the graph first: each example below uses a
+-- graph that no `#check_traceable` above has touched.
+
+-- `check_traceable` adds the fact it derives to the context as a hypothesis. It
+-- does not close the goal, and the hypothesis is the unfolded existential rather
+-- than `¬ G.traceable`, so the proof is finished with `assumption`.
+#download Fork 30
+example : ¬Fork.traceable := by
+  check_traceable Fork
+  assumption
+
+-- `with h` gives that hypothesis a name instead of leaving it inaccessible.
+#download HGraph 334
+example : ¬HGraph.traceable := by
+  check_traceable HGraph with h
+  exact h
+
+-- `check_traceablea` performs the `assumption` step itself, in the same spirit as
+-- `simpa` for `simp`.
+#download Cross 208
+example : ¬Cross.traceable := by
+  check_traceablea Cross
+
 ---------------------------------------
 -- Tactics
 ---------------------------------------

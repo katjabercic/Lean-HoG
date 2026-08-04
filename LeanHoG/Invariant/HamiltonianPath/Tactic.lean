@@ -90,10 +90,15 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) :
 ------------------------------------------
 
 syntax (name := checkTraceable) "#check_traceable " ident : command
-/-- `#check_nontraceable G` runs a SAT solver on the encoding of the Hamiltonian path problem
+/-- `#check_traceable G` runs a SAT solver on the encoding of the Hamiltonian path problem
     on the graph `G`. If the SAT solver says the problem is unsatisfiable, Lean's built-in
     verified LRAT checker checks the produced proof. If the checker accepts it, we add an axiom
     saying there is no satisfying assignment for the encoding.
+
+    This is the *command* form: it reports what it found and, when there is a Hamiltonian
+    path, registers it as an instance. It proves nothing about the current goal — see the
+    `check_traceable` tactic for that. The two are independent: the tactic does not require
+    the command to have been run on `G` first.
 -/
 @[command_elab checkTraceable]
 unsafe def checkTraceableImpl : Command.CommandElab
@@ -111,40 +116,81 @@ unsafe def checkTraceableImpl : Command.CommandElab
 ------------------------------------------
 -- Find Hamiltonian path tactic
 ------------------------------------------
--- TODO: Remove code duplication once I figure out how to do it corectly.
+
+open Trestle Model in
+/-- Run the Hamiltonian path search on `g` and add what it establishes to the local
+    context as a hypothesis named `h`. Shared by the `check_traceable` and
+    `check_traceablea` tactics.
+-/
+unsafe def assertTraceabilityFact (g : Ident) (h : Name) : Tactic.TacticM Unit :=
+  Tactic.withMainContext do
+    let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
+    let (type, proof, _) ← searchForHamiltonianPathAux g.getId graph
+    Tactic.liftMetaTactic fun mvarId => do
+      let mvarIdNew ← mvarId.assert h type proof
+      let (_, mvarIdNew) ← mvarIdNew.intro1P
+      return [mvarIdNew]
 
 syntax (name := checkTraceableTactic) "check_traceable " ident (" with" (ppSpace colGt ident))? : tactic
-open Trestle Model in
-/-- `#check_traceable G` runs a SAT solver on the encoding of the Hamiltonian path problem
+/-- `check_traceable G` runs a SAT solver on the encoding of the Hamiltonian path problem
     on the graph `G`. If the SAT solver says the problem is unsatisfiable, Lean's built-in
     verified LRAT checker checks the produced proof. If the checker accepts it, we add an axiom
     saying there is no satisfying assignment for the encoding. The tactic uses the new axiom and
     the encoding correctness theorem to deduce that there is no Hamiltonian path in the graph,
     then adds that result as a hypothesis to the current context.
 
-    Can also use `#check_traceable G with h` to save the hypothesis into the variable `h`.
+    **This tactic adds a hypothesis; it does not close the goal.** The hypothesis is the
+    unfolded existential, not `¬ G.traceable`, so finish with `assumption` (or use
+    `check_traceablea`, which does that for you):
+
+    ```lean
+    example : ¬hog_896.traceable := by
+      check_traceable hog_896
+      assumption
+    ```
+
+    `check_traceable G with h` names the hypothesis `h` instead of leaving it inaccessible:
+
+    ```lean
+    example : ¬hog_896.traceable := by
+      check_traceable hog_896 with h
+      exact h
+    ```
+
+    The tactic is self-contained — it does not require `#check_traceable G` to have been
+    run on `G` beforehand.
 -/
 @[tactic checkTraceableTactic]
 unsafe def checkTraceableTacticImpl : Tactic.Tactic
-  | `(tactic|check_traceable $g) =>
-    Tactic.withMainContext do
-      let graphName := g.getId
-      let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
-      let (val, type, _) ← searchForHamiltonianPathAux graphName graph
-      Tactic.liftMetaTactic fun mvarId => do
-        let mvarIdNew ← mvarId.assert .anonymous val type
-        let (_, mvarIdNew) ← mvarIdNew.intro1P
-        return [mvarIdNew]
+  | `(tactic|check_traceable $g) => assertTraceabilityFact g .anonymous
+  | `(tactic|check_traceable $g with $h) => assertTraceabilityFact g h.getId
+  | _ => throwUnsupportedSyntax
 
-  | `(tactic|check_traceable $g with $ident) =>
+syntax (name := checkTraceableaTactic) "check_traceablea " ident : tactic
+/-- `check_traceablea G` is `check_traceable G` followed by `assumption`, in the same spirit
+    as `simpa` for `simp`: it derives the fact about Hamiltonian paths in `G` and then uses
+    it to close the goal, rather than leaving it in the context.
+
+    ```lean
+    example : ¬hog_896.traceable := by
+      check_traceablea hog_896
+    ```
+
+    Use `check_traceable` when the derived fact is a step rather than the whole proof.
+-/
+@[tactic checkTraceableaTactic]
+unsafe def checkTraceableaTacticImpl : Tactic.Tactic
+  | `(tactic|check_traceablea $g) => do
+    assertTraceabilityFact g .anonymous
     Tactic.withMainContext do
-      let graphName := g.getId
-      let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
-      let (val, type, _) ← searchForHamiltonianPathAux graphName graph
       Tactic.liftMetaTactic fun mvarId => do
-        let mvarIdNew ← mvarId.assert ident.getId val type
-        let (_, mvarIdNew) ← mvarIdNew.intro1P
-        return [mvarIdNew]
+        try
+          mvarId.assumption
+          return []
+        catch _ =>
+          throwError "check_traceablea derived a fact about Hamiltonian paths in {g}, but it \
+            does not close the goal. Use `check_traceable {g} with h` to name it and finish \
+            the proof by hand."
 
   | _ => throwUnsupportedSyntax
 
