@@ -8,7 +8,7 @@ import LeanHoG.Invariant.HamiltonianPath.Tactic
 namespace LeanHoG
 
 -- You may have to change this
-set_option leanHoG.pythonExecutable "/Users/katja/Git/Lean-HoG/.venv/bin/python"
+set_option leanHoG.pythonExecutable "python"
 
 -----------------------------------------
 -- Loading graphs, visualizing them, and
