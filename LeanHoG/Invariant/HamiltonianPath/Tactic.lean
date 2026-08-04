@@ -74,6 +74,32 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph))
         | none => throwError "invalid index ({i},{j})"
         | some (_, true) => path := path.set! j i
         | some (_, false) => continue
+    -- The assignment is the solver's word for it, so check that it really describes
+    -- a Hamiltonian path before building a certificate out of it.
+    --
+    -- Soundness does not rest on this check. `hamiltonianPathOfData` proves every
+    -- step by `Eq.refl` at `decide` — one adjacency, then `Walk.isPath`, then
+    -- `Path.isHamiltonian` — so a bogus path cannot be accepted. But it is the
+    -- *kernel* that rejects it, as an `of_decide_eq_true` type mismatch that says
+    -- nothing about a solver, and the kernel check is deferred, so the command gets
+    -- as far as reporting that it registered a certificate first. Checking here
+    -- reports what actually went wrong, and stops before anything claims success.
+    let vs := path.toList
+    let solverBlame := m!"The solver named by `leanHoG.solverCmd` ({cadicalExe}) is \
+      not answering correctly."
+    if vs.mergeSort (· ≤ ·) ≠ List.range G.vertexSize then
+      throwError "the SAT solver returned an assignment that does not describe a \
+        Hamiltonian path in {graphName}: {toString vs} is not a permutation of the \
+        {G.vertexSize} vertices. {solverBlame}"
+    for uv in vs.zip vs.tail do
+      let (u, v) := uv
+      if hu : u < G.vertexSize then
+        if hv : v < G.vertexSize then
+          unless G.badjacent ⟨u, hu⟩ ⟨v, hv⟩ do
+            throwError "the SAT solver returned an assignment that does not describe \
+              a Hamiltonian path in {graphName}: {u} and {v} are consecutive on the \
+              returned path {toString vs}, but are not adjacent in the graph. \
+              {solverBlame}"
     let hpQ := hamiltonianPathOfData graph ⟨path.toList⟩
     -- The certificate to hand to `path_of_cert`. `hamiltonianPathOfData` returns a
     -- self-contained term, so a declaration is a convenience and never a necessity:
