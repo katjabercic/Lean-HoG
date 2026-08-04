@@ -12,8 +12,25 @@ namespace LeanHoG
 open Lean Elab Qq
 
 open Trestle Model in
-unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) :
-  TermElabM (Expr × Expr × Solver.Res) := do
+/-- Decide traceability of `graph` with the SAT solver, and return the fact that
+    establishes, a proof of it, and the solver's answer.
+
+    `register` says whether that fact should be backed by a declaration named after
+    the *graph*: the `HamiltonianPath` instance in the SAT case, the axiom in the
+    UNSAT case. The `#check_traceable` command wants one, since registering a
+    reusable certificate is the whole point of the command and
+    `#show_hamiltonian_path` looks the instance up by name.
+
+    The `check_traceable` tactics must not ask for one. Lean elaborates declarations
+    in parallel and lets each add only names beneath its own prefix, so a named
+    theorem cannot introduce `G.HamiltonianPathI` and fails with `cannot add
+    declaration ... as it is restricted to the prefix ...`. With
+    `register := false` the certificate is placed in the proof term directly, and
+    the axiom — which has to be a declaration, there being no other way to assert
+    one — is named beneath the declaration being elaborated. Either way an
+    equivalent declaration already in the environment is reused. -/
+unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph))
+    (register : Bool) : TermElabM (Expr × Expr × Solver.Res) := do
   let G ← Meta.evalExpr' Graph ``Graph graph
   let enc := (hamiltonianPathCNF G).val
   let opts ← getOptions
@@ -36,27 +53,36 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) :
         | some (_, true) => path := path.set! j i
         | some (_, false) => continue
     let hpQ := hamiltonianPathOfData graph ⟨path.toList⟩
-    -- Add a Hamiltonian path instance from the constructed path
-    let hamiltonianPathName := certificateName graphName "HamiltonianPathI"
+    -- The certificate to hand to `path_of_cert`. `hamiltonianPathOfData` returns a
+    -- self-contained term, so a declaration is a convenience and never a necessity:
+    -- it makes the certificate reusable and visible to instance synthesis.
+    --
     -- The name is a function of the graph's, so a second run on the same graph —
     -- `#check_traceable G` and then the tactic, or the tactic twice — would be
     -- re-declaring it. The certificate already in the environment is a certificate
     -- for the same graph, so reuse it rather than failing.
-    unless (← getEnv).contains hamiltonianPathName do
-      Lean.addAndCompile <| .defnDecl {
-        name := hamiltonianPathName
-        levelParams := []
-        type := q(HamiltonianPath $graph)
-        value := hpQ
-        hints := .regular 0
-        safety := .safe
-      }
-      Lean.Meta.addInstance hamiltonianPathName .global 42
-    -- Applied to the certificate by name, not left to instance synthesis: `mkAppM`
+    let hamiltonianPathName := certificateName graphName "HamiltonianPathI"
+    let cert : Expr ←
+      if (← getEnv).contains hamiltonianPathName then
+        pure (mkConst hamiltonianPathName)
+      else if register then do
+        Lean.addAndCompile <| .defnDecl {
+          name := hamiltonianPathName
+          levelParams := []
+          type := q(HamiltonianPath $graph)
+          value := hpQ
+          hints := .regular 0
+          safety := .safe
+        }
+        Lean.Meta.addInstance hamiltonianPathName .global 42
+        pure (mkConst hamiltonianPathName)
+      else
+        pure hpQ
+    -- Applied to the certificate explicitly, not left to instance synthesis: `mkAppM`
     -- with no arguments returns the bare constant, whose implicit `G` and instance
     -- are still abstracted, and that only fails later in the kernel.
     let existsHamPath ← Meta.mkAppOptM ``LeanHoG.HamiltonianPath.path_of_cert
-      #[graph, mkConst hamiltonianPathName]
+      #[graph, cert]
     let existsType := q(Graph.traceable $graph)
     return (existsType, existsHamPath, res)
 
@@ -70,25 +96,38 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) :
     -- an error but still has the hole. So the derivation is built against a
     -- local hypothesis of the axiom's type, and the axiom is only committed
     -- once that has succeeded.
-    let declName : Name := .str graphName "hamiltonianPathCNFUnsat"
+    let globalName : Name := .str graphName "hamiltonianPathCNFUnsat"
     let type : Q(Prop) := q(((hamiltonianPathCNF $graph).val.toICnf.toStd).Unsat)
     let noExistsType := q(¬ ∃ (u v : Graph.vertex $graph) (p : Path $graph u v), p.isHamiltonian)
+    -- Where the axiom goes. One for this graph already in the environment says
+    -- exactly what is needed, so reuse it; that is the case a second run on the
+    -- same graph used to die on. Otherwise declare it, globally for the command and
+    -- beneath the enclosing declaration for a tactic, which may not add a name
+    -- outside its own prefix.
+    let declName : Name ←
+      if (← getEnv).contains globalName ∨ register then
+        pure globalName
+      else
+        match ← Term.getDeclName? with
+        | some enclosing => pure (enclosing ++ globalName)
+        | none => pure globalName
     -- `fun h => no_assignment_implies_no_hamiltonian_path' (std_unsat_implies_no_assignment h)`
     let derivation ← Meta.withLocalDeclD `hCnfUnsat type fun h => do
       let noExistsCert ← Meta.mkAppM ``LeanHoG.std_unsat_implies_no_assignment #[h]
       let noExistsHamPath ← Meta.mkAppM ``LeanHoG.no_assignment_implies_no_hamiltonian_path' #[noExistsCert]
       Meta.mkLambdaFVars #[h] (← instantiateMVars noExistsHamPath)
-    let decl := Declaration.axiomDecl {
-      name        := declName,
-      levelParams := [],
-      type        := type,
-      isUnsafe    := false
-    }
-    trace[Elab.axiom] "{declName} : {type}"
-    Term.ensureNoUnassignedMVars decl
-    -- Past this point nothing but `addDecl` itself can fail.
-    addDecl decl
-    logWarning m!"added axiom {declName} : {type}"
+    unless (← getEnv).contains declName do
+      let decl := Declaration.axiomDecl {
+        name        := declName,
+        levelParams := [],
+        type        := type,
+        isUnsafe    := false
+      }
+      trace[Elab.axiom] "{declName} : {type}"
+      Term.ensureNoUnassignedMVars decl
+      -- Past this point nothing but `addDecl` itself can fail.
+      addDecl decl
+      logWarning m!"added axiom {declName} : {type}"
     return (noExistsType, .app derivation (mkConst declName), res)
 
   | .error => throwError "SAT solver exited with error"
@@ -117,7 +156,7 @@ unsafe def checkTraceableImpl : Command.CommandElab
   | `(#check_traceable $g) => Command.liftTermElabM do
     let graphName := g.getId
     let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
-    let (_, _, res) ← searchForHamiltonianPathAux graphName graph
+    let (_, _, res) ← searchForHamiltonianPathAux graphName graph (register := true)
     match res with
     | .sat _ =>
       logInfo m!"found Hamiltonian path, registered as \
@@ -140,7 +179,7 @@ open Trestle Model in
 unsafe def assertTraceabilityFact (g : Ident) (h : Name) : Tactic.TacticM Unit :=
   Tactic.withMainContext do
     let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
-    let (type, proof, _) ← searchForHamiltonianPathAux g.getId graph
+    let (type, proof, _) ← searchForHamiltonianPathAux g.getId graph (register := false)
     Tactic.liftMetaTactic fun mvarId => do
       let mvarIdNew ← mvarId.assert h type proof
       let (_, mvarIdNew) ← mvarIdNew.intro1P
