@@ -63,3 +63,6 @@ target buildWidget pkg : Unit := do
 @[default_target]
 lean_lib LeanHoG where
   needs := #[buildWidget]
+
+lean_lib Examples where
+  needs := #[LeanHoG]
