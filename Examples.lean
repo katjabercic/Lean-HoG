@@ -99,19 +99,27 @@ load_graph hog_896 "build/graphs/896.json"
 #show_hamiltonian_path hog_896
 
 -- The command only reports what it found. To use the result in a proof there is
--- a tactic of the same name, without the leading `#`. The tactic does not need
--- the command to have been run on the graph first: each example below uses a
--- graph that no `#check_traceable` above has touched.
+-- a tactic of the same name, without the leading `#`. It decides traceability in
+-- both directions, so it proves that a graph *is* traceable just as well as that
+-- it is not.
 
--- `check_traceable` adds the fact it derives to the context as a hypothesis. It
--- does not close the goal, and the hypothesis is the unfolded existential rather
--- than `¬ G.traceable`, so the proof is finished with `assumption`.
+-- `check_traceable` adds the fact it derives to the context as a hypothesis; it
+-- does not close the goal, so the proof is finished with `assumption`.
 #download Fork 30
 example : ¬Fork.traceable := by
   check_traceable Fork
   assumption
 
--- `with h` gives that hypothesis a name instead of leaving it inaccessible.
+-- The same tactic on a goal of the opposite sign. Here the solver returns a
+-- satisfying assignment, which is read back as an actual Hamiltonian path, so the
+-- hypothesis is `Petersen.traceable` and the proof depends on no axiom.
+example : Petersen.traceable := by
+  check_traceable Petersen
+  assumption
+
+-- `with h` gives that hypothesis a name instead of leaving it inaccessible. In the
+-- UNSAT case the hypothesis is the unfolded existential rather than `¬ G.traceable`,
+-- which is why `assumption` above is the finisher to reach for in general.
 #download HGraph 334
 example : ¬HGraph.traceable := by
   check_traceable HGraph with h
@@ -122,6 +130,11 @@ example : ¬HGraph.traceable := by
 #download Cross 208
 example : ¬Cross.traceable := by
   check_traceablea Cross
+
+-- `#check_traceable Wheel` above already registered a Hamiltonian path for `Wheel`.
+-- The tactic reuses that certificate rather than clashing with it.
+example : Wheel.traceable := by
+  check_traceablea Wheel
 
 ---------------------------------------
 -- Tactics
