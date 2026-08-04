@@ -113,7 +113,11 @@ unsafe def findExampleImpl : Tactic.Tactic
                 -- Now try to simp which will among other things look for instance for e.g. HamiltonianPath
                 if mentionsTracability then
                   -- If we want to prove things about tracability we need to search for a Hamiltonian path
+                  -- `register := true`: the SAT case below closes the goal by instance
+                  -- synthesis rather than with the proof term, so the certificate has
+                  -- to be a registered instance and not just a term.
                   let (val, type, res) ← LeanHoG.searchForHamiltonianPathAux graphIdent.getId r
+                    (register := true)
                   match res with
                   | .unsat =>
                     Tactic.liftMetaTactic fun mvarId => do
