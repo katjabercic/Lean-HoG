@@ -209,15 +209,15 @@ unsafe def checkHoGGraphAux (graph : Q(Graph)) (graphName : Name) : Elab.Command
         q(of_decide_eq_true $bipCheck)
         graphName
         "bip"
-        "bipartiteness"
+        "bipartiteness (via a 2-coloring)"
     if let .some (_ : Q(OddClosedWalk $graph)) ← (Elab.Command.liftTermElabM <| Meta.trySynthInstance q(OddClosedWalk $graph) .none) then
       have bipCheck : Q(decide (($rawHoGInstance).bipartite? = .some false) = true) := (q(Eq.refl true) : Lean.Expr)
       tryCheck
         q(($rawHoGInstance).bipartite? = .some false)
         q(of_decide_eq_true $bipCheck)
         graphName
-        "bip"
-        "bipartiteness"
+        "notBip"
+        "bipartiteness (via an odd closed walk)"
 
 /-- This command takes the graph identifier as input. -/
 syntax (name := checkHoGGraph) "check_hog_graph" ident : command
