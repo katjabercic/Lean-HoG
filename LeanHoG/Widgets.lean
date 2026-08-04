@@ -51,7 +51,7 @@ This is done using the `https://js.cytoscape.org/` javascript library. -/
 def elabVisualizeGraphCmd : CommandElab
   | stx@`(#show $g) => liftTermElabM do
     let wi : Expr ←
-      elabWidgetInstanceSpec (← `(widgetInstanceSpec| $(mkIdent `visualize) with $(← ``((Graph.toVisualizationFormat $g)))))
+      elabWidgetInstanceSpec (← `(widgetInstanceSpec| $(mkIdent ``visualize) with $(← ``((Graph.toVisualizationFormat $g)))))
     let wi : WidgetInstance ← evalWidgetInstance wi
     savePanelWidgetInfo wi.javascriptHash wi.props stx
   | _ => throwUnsupportedSyntax
@@ -67,7 +67,7 @@ unsafe def elabVisualizeHamiltonianPathCmd : CommandElab
     let hpInst ← mkAppM ``HamiltonianPath #[gg]
     if let .some _ ← synthInstance? hpInst then
       let vizf ← ``((Graph.toVisualizationFormat $G))
-      let wis ← `(Widget.widgetInstanceSpec| $(mkIdent `visualize) with $vizf)
+      let wis ← `(Widget.widgetInstanceSpec| $(mkIdent ``visualize) with $vizf)
       let wi : Expr ← Widget.elabWidgetInstanceSpec wis
       let wi ← Widget.evalWidgetInstance wi
       savePanelWidgetInfo wi.javascriptHash wi.props stx
