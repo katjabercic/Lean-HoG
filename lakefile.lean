@@ -64,6 +64,9 @@ target buildWidget pkg : Unit := do
 lean_lib LeanHoG where
   needs := #[buildWidget]
 
+lean_lib Examples where
+  needs := #[LeanHoG]
+
 -- This is only to get the command "lake build verify" to build Verify.lean
 -- This way, there is no need to open the file in an editor.
 lean_lib verify where
