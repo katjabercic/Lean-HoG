@@ -1,5 +1,34 @@
 import json
-from typing import Dict, Union
+import math
+from typing import Dict, Optional, Union
+
+# Values HoG uses for "there is no finite value here". It is not consistent about
+# which one it picks: a disconnected graph can come back with diameter
+# "Infinity" but radius null, and an acyclic one with girth null rather than
+# "Infinity", so both spellings have to be handled for the same situation.
+NO_VALUE_STRINGS = ("Infinity", "-Infinity", "NaN")
+
+
+def coerceValue(typeName : str, value) -> Optional[Union[bool, int, float]]:
+    """
+    Convert a raw HoG invariant value to the type its metadata declares.
+
+    Returns None when HoG has no usable value, which callers should read as
+    "invariant absent" rather than as an error: around half the graphs in HoG
+    have at least one, so treating it as an error means most of the database
+    cannot be downloaded at all.
+    """
+    if value is None:
+        return None
+    if isinstance(value, str) and value in NO_VALUE_STRINGS:
+        return None
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if typeName == "b":
+        return bool(value)
+    if typeName == "i":
+        return int(value)
+    return value
 
 
 class Invariant():
@@ -7,8 +36,9 @@ class Invariant():
     id : int
     name : str
     fieldName : str
-    value : Union[bool, int, float]
-    
+    # None when HoG has no finite value for this invariant on this graph.
+    value : Optional[Union[bool, int, float]]
+
     def _setFieldName(self):
         """Convert invariant names"""
         s = self.name.title()
@@ -21,25 +51,33 @@ class Invariant():
         self.id = id
         self.name = name
         self._setFieldName()
-        if typeName == "b":
-            self.value = bool(value)
-        elif typeName == "i":
-            self.value = int(value)
-        else:
-            self.value = value
+        self.value = coerceValue(typeName, value)
 
 
 class Invariants():
     """An object representing values of invariants for a graph"""
 
-    invariant_values : Dict[int, Invariant] = {}
+    invariant_values : Dict[int, Invariant]
 
     def __init__(self, values, metadata) -> None:
+        # Per instance, deliberately. As a class attribute with a `= {}` default
+        # this dict was shared by every Invariants ever built, so downloading
+        # several graphs in one process wrote each graph's invariants into the
+        # next graph's JSON. Harmless while downloadGraph.py was one graph per
+        # process; silent data corruption for anything that batches.
+        self.invariant_values = {}
         raw_invariant_values = Invariants._parse_invariants(values)
         for e in metadata["_embedded"]["invariantModelList"]:
             id = e["entity"]["invariantId"]
-            value = raw_invariant_values[id]
-            self.invariant_values[id] = Invariant(id, e["entity"]["invariantName"], e["entity"]["typeName"], value)
+            # `.get`: HoG may omit an invariant from a graph's list entirely,
+            # which is the same situation as an explicit null.
+            invariant = Invariant(id, e["entity"]["invariantName"], e["entity"]["typeName"],
+                                  raw_invariant_values.get(id))
+            # Absent invariants are left out of the JSON rather than written as
+            # null. Every field of `RawHoGData` is an `Option`, and Lean's
+            # derived `FromJson` reads a missing field as `none`.
+            if invariant.value is not None:
+                self.invariant_values[id] = invariant
 
     @staticmethod
     def _parse_invariants(invariants_data) -> Dict[int, Union[bool, int, float]]:

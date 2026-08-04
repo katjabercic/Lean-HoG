@@ -8,7 +8,7 @@ import LeanHoG.Invariant.HamiltonianPath.Tactic
 namespace LeanHoG
 
 -- You may have to change this
-set_option leanHoG.pythonExecutable "/Users/katja/Git/Lean-HoG/.venv/bin/python"
+set_option leanHoG.pythonExecutable "python"
 
 -----------------------------------------
 -- Loading graphs, visualizing them, and
@@ -123,17 +123,14 @@ load_graph hog_896 "build/graphs/896.json"
 -- Tactic to close goals of the form ∃ G, P G
 -- Not all P are supported, only propositions using invariants defined
 -- Note: To check for Hamiltonian paths, we use a SAT solver.
--- If the solver says the problem is unsat, we check it's proof with a
--- verified proof checker.
+-- If the solver says the problem is unsat, we check its proof with the
+-- verified LRAT checker from `Std`.
 -- For this you need to have a solver installed, capable of producing
--- LRAT proofs of unsat. We recommend CaDiCal 1.9.5+ (https://github.com/arminbiere/cadical)
--- and cake_lpr (https://github.com/tanyongkiam/cake_lpr).
--- We set the location of the solver and proof checker with user options
--- `leanHoG.solverCmd` and `leanHoG.proofCheckerCmd`.
--- Uncomment lines below to run the tactic
+-- LRAT proofs of unsat. We recommend CaDiCal 1.9.5+ (https://github.com/arminbiere/cadical).
+-- We set the location of the solver with the user option `leanHoG.solverCmd`.
+-- Uncomment the line below to run the tactic
 
 -- set_option leanHoG.solverCmd "cadical"
--- set_option leanHoG.proofCheckerCmd "cake_lpr"
 example : ∃ (G : Graph), G.traceable ∧ G.vertexSize > 3 ∧ (G.minimumDegree < G.vertexSize / 2) := by
   find_example
 

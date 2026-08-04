@@ -5,7 +5,10 @@ package «LeanHoG» {
   moreLeanArgs := #["-DautoImplicit=false"]
 }
 
-require «trestle» from git "https://github.com/FormalSAT/trestle.git" @ "853ce03"
+-- Pinned to a commit on trestle's `dev` branch: 4.28 support is not in a
+-- released version yet. Pin, don't track the branch, so builds stay
+-- reproducible. See issue #53 for moving back to a release.
+require «trestle» from git "https://github.com/FormalSAT/trestle.git" @ "853ce034ff4a5081d19ccc250d5780d4b7e718ec"
 
 def widgetDir : FilePath := "widget"
 
@@ -60,6 +63,9 @@ target buildWidget pkg : Unit := do
 @[default_target]
 lean_lib LeanHoG where
   needs := #[buildWidget]
+
+lean_lib Examples where
+  needs := #[LeanHoG]
 
 -- This is only to get the command "lake build verify" to build Verify.lean
 -- This way, there is no need to open the file in an editor.
