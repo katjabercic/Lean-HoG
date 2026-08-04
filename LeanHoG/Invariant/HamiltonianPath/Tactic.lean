@@ -18,7 +18,10 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) :
   let enc := (hamiltonianPathCNF G).val
   let opts ← getOptions
   let cadicalExe := opts.get leanHoG.solverCmd.name leanHoG.solverCmd.defValue
+  let timeoutSec := opts.get leanHoG.solverTimeout.name leanHoG.solverTimeout.defValue
+  let maxCertMB := opts.get leanHoG.maxCertificateSize.name leanHoG.maxCertificateSize.defValue
   let solver := SolverWithLRAT cadicalExe #["--no-binary", "--lrat=true"]
+    { timeoutSec := timeoutSec, maxProofBytes := maxCertMB * 1024 * 1024 }
   let cnf := Encode.EncCNF.toICnf enc
   let (_, s) := Encode.EncCNF.run enc
   let res ← solver.solve cnf
@@ -49,9 +52,23 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) :
     return (existsType, existsHamPath, res)
 
   | .unsat =>
-    -- The formula is UNSAT, add an axiom saying so
+    -- The formula is UNSAT, so we will assert an axiom saying so.
+    --
+    -- Everything that can fail is done *before* `addDecl`. Deriving the
+    -- conclusion from the axiom is the expensive part, and if it is done after
+    -- the axiom is in the environment then running out of heartbeats there
+    -- leaves the axiom behind on a command that reports failure — the user sees
+    -- an error but still has the hole. So the derivation is built against a
+    -- local hypothesis of the axiom's type, and the axiom is only committed
+    -- once that has succeeded.
     let declName : Name := .str graphName "hamiltonianPathCNFUnsat"
     let type : Q(Prop) := q(((hamiltonianPathCNF $graph).val.toICnf.toStd).Unsat)
+    let noExistsType := q(¬ ∃ (u v : Graph.vertex $graph) (p : Path $graph u v), p.isHamiltonian)
+    -- `fun h => no_assignment_implies_no_hamiltonian_path' (std_unsat_implies_no_assignment h)`
+    let derivation ← Meta.withLocalDeclD `hCnfUnsat type fun h => do
+      let noExistsCert ← Meta.mkAppM ``LeanHoG.std_unsat_implies_no_assignment #[h]
+      let noExistsHamPath ← Meta.mkAppM ``LeanHoG.no_assignment_implies_no_hamiltonian_path' #[noExistsCert]
+      Meta.mkLambdaFVars #[h] (← instantiateMVars noExistsHamPath)
     let decl := Declaration.axiomDecl {
       name        := declName,
       levelParams := [],
@@ -60,13 +77,10 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) :
     }
     trace[Elab.axiom] "{declName} : {type}"
     Term.ensureNoUnassignedMVars decl
+    -- Past this point nothing but `addDecl` itself can fail.
     addDecl decl
     logWarning m!"added axiom {declName} : {type}"
-    let cnfUnsat ← Qq.elabTermEnsuringTypeQ (mkIdent declName) type
-    let noExistsCert ← Meta.mkAppM ``LeanHoG.std_unsat_implies_no_assignment #[cnfUnsat]
-    let noExistsHamPath ← Meta.mkAppM ``LeanHoG.no_assignment_implies_no_hamiltonian_path' #[noExistsCert]
-    let noExistsType := q(¬ ∃ (u v : Graph.vertex $graph) (p : Path $graph u v), p.isHamiltonian)
-    return (noExistsType, noExistsHamPath, res)
+    return (noExistsType, .app derivation (mkConst declName), res)
 
   | .error => throwError "SAT solver exited with error"
 
