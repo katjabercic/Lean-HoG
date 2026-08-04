@@ -145,7 +145,7 @@ unsafe def findExampleImpl : Tactic.Tactic
               -- Visualize the graph we used to close the goal
               -- TODO: Make this an option
               let vizf ← ``((Graph.toVisualizationFormat $graphIdent))
-              let wis ← `(Widget.widgetInstanceSpec| $(mkIdent `visualize) with $vizf)
+              let wis ← `(Widget.widgetInstanceSpec| $(mkIdent ``visualize) with $vizf)
               let wi : Expr ← Widget.elabWidgetInstanceSpec wis
               let wi ← Widget.evalWidgetInstance wi
               Widget.savePanelWidgetInfo wi.javascriptHash wi.props stx
