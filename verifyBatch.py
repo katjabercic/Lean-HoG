@@ -3,6 +3,8 @@ import os
 import sys
 import subprocess
 import argparse
+import resource
+import time
 
 # File containing a list of ids to verify
 ID_FILE = "graphs.txt"
@@ -61,16 +63,44 @@ def get_ids(listFile):
         ids = map(lambda x : int(x.strip()), lst.readlines())
         return list(ids)
 
-def handleBatch(inputDirName, outputFile, ids, start, stop, reverse):
+def maxRssMiB(usage) -> float:
+    """
+    Peak resident set size of child processes, in MiB.
+
+    `ru_maxrss` is in bytes on macOS and in kilobytes on Linux, so the raw number
+    is off by 1024x between platforms if reported as-is.
+    """
+    if sys.platform == "darwin":
+        return usage.ru_maxrss / (1024 * 1024)
+    return usage.ru_maxrss / 1024
+
+def handleBatch(inputDirName, outputFile, ids, start, stop, reverse) -> bool:
     """
     Verifies the graphs whose ids are in ids at index between start and stop.
+    Returns whether the build succeeded.
     """
     print(f"Doing ids {start} to {stop}.")
     print("    Generating lean file.")
     generateBatch(inputDirName, outputFile, ids, start, stop, reverse)
     print("    Verifying.")
-    subprocess.run(["/usr/bin/time", "--format", "Time %E CPU: User %U Kernel %S Average mem %K Max mem %M", "lake", "build", "verify"])
+    # Timed here rather than by /usr/bin/time: `--format` is GNU coreutils, and
+    # the BSD time on macOS rejects it, so batch timing did not run there at all.
+    before = resource.getrusage(resource.RUSAGE_CHILDREN)
+    wall = time.perf_counter()
+    completed = subprocess.run(["lake", "build", "verify"])
+    wall = time.perf_counter() - wall
+    after = resource.getrusage(resource.RUSAGE_CHILDREN)
+    # `ru_maxrss` is a high-water mark over all children, not an accumulator, so
+    # it is read directly instead of differenced.
+    print(f"Time {wall:.2f}s CPU: User {after.ru_utime - before.ru_utime:.2f} "
+          f"Kernel {after.ru_stime - before.ru_stime:.2f} "
+          f"Max mem {maxRssMiB(after):.1f} MiB")
+    if completed.returncode != 0:
+        # Previously the return code was dropped, so a failed build was recorded
+        # as a completed batch and its timing went into the data as if valid.
+        print(f"    FAILED: lake build verify exited {completed.returncode}.")
     print(f"Done ids {start} to {stop}.")
+    return completed.returncode == 0
 
 def loopCond(start, stop, length, limit, reverse):
     """
@@ -117,7 +147,7 @@ must be present in a directory named graphs. The filename must be <id>.json.
         raise argparse.ArgumentTypeError("batchSize must not be zero.")
     return args
 
-def main():
+def main() -> int:
     args = parse_arguments()
     ids = get_ids(ID_FILE)
     reverse = args.batchSize < 0
@@ -125,10 +155,15 @@ def main():
         args.limit = len(ids) if not reverse else -1
     start = 0 if not reverse else len(ids) - 1
     end = start + args.batchSize
+    failed = 0
     while loopCond(start, end, len(ids), args.limit, reverse):
-        handleBatch(GRAPHS_DIR, VERIFY_LEAN, ids, start, limitedEnd(end, args.limit, reverse), args.batchSize)
+        if not handleBatch(GRAPHS_DIR, VERIFY_LEAN, ids, start, limitedEnd(end, args.limit, reverse), args.batchSize):
+            failed += 1
         start = end
         end = start + args.batchSize
+    if failed:
+        print(f"{failed} batch(es) failed to build; their timings are not valid data.")
+    return 1 if failed else 0
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
