@@ -38,16 +38,25 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) :
     let hpQ := hamiltonianPathOfData graph ⟨path.toList⟩
     -- Add a Hamiltonian path instance from the constructed path
     let hamiltonianPathName := certificateName graphName "HamiltonianPathI"
-    Lean.addAndCompile <| .defnDecl {
-      name := hamiltonianPathName
-      levelParams := []
-      type := q(HamiltonianPath $graph)
-      value := hpQ
-      hints := .regular 0
-      safety := .safe
-    }
-    Lean.Meta.addInstance hamiltonianPathName .global 42
-    let existsHamPath ← Meta.mkAppM ``LeanHoG.HamiltonianPath.path_of_cert #[]
+    -- The name is a function of the graph's, so a second run on the same graph —
+    -- `#check_traceable G` and then the tactic, or the tactic twice — would be
+    -- re-declaring it. The certificate already in the environment is a certificate
+    -- for the same graph, so reuse it rather than failing.
+    unless (← getEnv).contains hamiltonianPathName do
+      Lean.addAndCompile <| .defnDecl {
+        name := hamiltonianPathName
+        levelParams := []
+        type := q(HamiltonianPath $graph)
+        value := hpQ
+        hints := .regular 0
+        safety := .safe
+      }
+      Lean.Meta.addInstance hamiltonianPathName .global 42
+    -- Applied to the certificate by name, not left to instance synthesis: `mkAppM`
+    -- with no arguments returns the bare constant, whose implicit `G` and instance
+    -- are still abstracted, and that only fails later in the kernel.
+    let existsHamPath ← Meta.mkAppOptM ``LeanHoG.HamiltonianPath.path_of_cert
+      #[graph, mkConst hamiltonianPathName]
     let existsType := q(Graph.traceable $graph)
     return (existsType, existsHamPath, res)
 
@@ -91,23 +100,28 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph)) :
 
 syntax (name := checkTraceable) "#check_traceable " ident : command
 /-- `#check_traceable G` runs a SAT solver on the encoding of the Hamiltonian path problem
-    on the graph `G`. If the SAT solver says the problem is unsatisfiable, Lean's built-in
-    verified LRAT checker checks the produced proof. If the checker accepts it, we add an axiom
-    saying there is no satisfying assignment for the encoding.
+    on the graph `G`. It decides traceability either way:
 
-    This is the *command* form: it reports what it found and, when there is a Hamiltonian
-    path, registers it as an instance. It proves nothing about the current goal — see the
-    `check_traceable` tactic for that. The two are independent: the tactic does not require
-    the command to have been run on `G` first.
+    * **SAT.** The satisfying assignment is read back as a Hamiltonian path and registered
+      as a `HamiltonianPath G` instance, which `#show_hamiltonian_path G` will then print.
+    * **UNSAT.** Lean's built-in verified LRAT checker checks the produced proof. If the
+      checker accepts it, we add an axiom saying there is no satisfying assignment for the
+      encoding.
+
+    This is the *command* form: it reports what it found. It proves nothing about the
+    current goal — see the `check_traceable` tactic for that. The two are independent: the
+    tactic does not require the command to have been run on `G` first.
 -/
 @[command_elab checkTraceable]
 unsafe def checkTraceableImpl : Command.CommandElab
   | `(#check_traceable $g) => Command.liftTermElabM do
     let graphName := g.getId
     let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
-    let (declName, _, res) ← searchForHamiltonianPathAux graphName graph
+    let (_, _, res) ← searchForHamiltonianPathAux graphName graph
     match res with
-    | .sat _ => logInfo m!"found Hamiltonian path {declName}"
+    | .sat _ =>
+      logInfo m!"found Hamiltonian path, registered as \
+        {certificateName graphName "HamiltonianPathI"}"
     | .unsat => logInfo m!"no Hamiltonian path found after exhaustive search"
     | .error => throwError "SAT solver exited with error"
 
@@ -119,7 +133,8 @@ unsafe def checkTraceableImpl : Command.CommandElab
 
 open Trestle Model in
 /-- Run the Hamiltonian path search on `g` and add what it establishes to the local
-    context as a hypothesis named `h`. Shared by the `check_traceable` and
+    context as a hypothesis named `h` — `g.traceable` if the solver found a path, the
+    negated existential if it proved there is none. Shared by the `check_traceable` and
     `check_traceablea` tactics.
 -/
 unsafe def assertTraceabilityFact (g : Ident) (h : Name) : Tactic.TacticM Unit :=
@@ -133,21 +148,34 @@ unsafe def assertTraceabilityFact (g : Ident) (h : Name) : Tactic.TacticM Unit :
 
 syntax (name := checkTraceableTactic) "check_traceable " ident (" with" (ppSpace colGt ident))? : tactic
 /-- `check_traceable G` runs a SAT solver on the encoding of the Hamiltonian path problem
-    on the graph `G`. If the SAT solver says the problem is unsatisfiable, Lean's built-in
-    verified LRAT checker checks the produced proof. If the checker accepts it, we add an axiom
-    saying there is no satisfying assignment for the encoding. The tactic uses the new axiom and
-    the encoding correctness theorem to deduce that there is no Hamiltonian path in the graph,
-    then adds that result as a hypothesis to the current context.
+    on the graph `G` and adds what the solver decided to the local context as a hypothesis.
+    It is a decider, not a refuter: it serves goals of both signs, and you do not have to
+    know which way the answer goes before invoking it.
 
-    **This tactic adds a hypothesis; it does not close the goal.** The hypothesis is the
-    unfolded existential, not `¬ G.traceable`, so finish with `assumption` (or use
-    `check_traceablea`, which does that for you):
+    * **SAT.** The satisfying assignment is read back as a Hamiltonian path, and the
+      hypothesis is `G.traceable`. The proof is the path itself — no axiom is involved.
+    * **UNSAT.** Lean's built-in verified LRAT checker checks the produced proof. If the
+      checker accepts it, we add an axiom saying there is no satisfying assignment for the
+      encoding, and use it together with the encoding correctness theorem to derive the
+      hypothesis `¬ ∃ u v (p : Path G u v), p.isHamiltonian`.
+
+    **This tactic adds a hypothesis; it does not close the goal.** Finish with `assumption`,
+    or use `check_traceablea`, which does that for you:
 
     ```lean
+    example : Wheel.traceable := by
+      check_traceable Wheel
+      assumption
+
     example : ¬hog_896.traceable := by
       check_traceable hog_896
       assumption
     ```
+
+    Note the asymmetry between the two hypotheses. In the SAT case it is `G.traceable`
+    on the nose; in the UNSAT case it is the *unfolded* existential rather than
+    `¬ G.traceable`, which is why `assumption` — and not `exact` against the goal as
+    stated — is the right finisher in general.
 
     `check_traceable G with h` names the hypothesis `h` instead of leaving it inaccessible:
 
@@ -158,7 +186,7 @@ syntax (name := checkTraceableTactic) "check_traceable " ident (" with" (ppSpace
     ```
 
     The tactic is self-contained — it does not require `#check_traceable G` to have been
-    run on `G` beforehand.
+    run on `G` beforehand, and does not conflict with it if it has.
 -/
 @[tactic checkTraceableTactic]
 unsafe def checkTraceableTacticImpl : Tactic.Tactic
@@ -169,9 +197,13 @@ unsafe def checkTraceableTacticImpl : Tactic.Tactic
 syntax (name := checkTraceableaTactic) "check_traceablea " ident : tactic
 /-- `check_traceablea G` is `check_traceable G` followed by `assumption`, in the same spirit
     as `simpa` for `simp`: it derives the fact about Hamiltonian paths in `G` and then uses
-    it to close the goal, rather than leaving it in the context.
+    it to close the goal, rather than leaving it in the context. Like `check_traceable`, it
+    decides traceability in both directions:
 
     ```lean
+    example : Wheel.traceable := by
+      check_traceablea Wheel
+
     example : ¬hog_896.traceable := by
       check_traceablea hog_896
     ```
