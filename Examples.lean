@@ -154,4 +154,63 @@ example : Wheel.traceable := by
 example : ∃ (G : Graph), G.traceable ∧ G.vertexSize > 3 ∧ (G.minimumDegree < G.vertexSize / 2) := by
   find_example
 
+-------------------------------------------------------------------
+-- Capstone: traceability is not determined by the degree sequence
+-------------------------------------------------------------------
+
+-- Most of the classical sufficient conditions for traceability read nothing but
+-- the degree sequence: Dirac's `δ(G) ≥ (n-1)/2`, Ore's condition, Chvátal's
+-- condition. None of them can be sharpened into a characterisation, because the
+-- degree sequence does not determine traceability at all. Two graphs from HoG
+-- witness that, and they agree on a good deal more than their degrees.
+--
+-- Both have 7 vertices, 11 edges, degree sequence (5,5,3,3,2,2,2), independence
+-- number 4, vertex connectivity 2 and girth 3, and neither is bipartite. HoG
+-- records one of them as traceable and the other as not. The names below
+-- deliberately do not say which is which: `check_traceable` decides that.
+--
+-- The difference is not something one spots by looking, either. Both graphs have
+-- exactly two vertices of degree 5. Deleting that pair from `Twin2` leaves four
+-- components, {0}, {1}, {2} and {3,4}; deleting it from `Twin1` leaves three,
+-- {0}, {1} and {2,3,4}. Removing two vertices from a Hamiltonian path can leave
+-- at most three pieces, so `Twin2` has no Hamiltonian path. The obstruction sits
+-- in the scattering number, and no condition on degrees can see it.
+
+#download Twin1 56172
+#download Twin2 56196
+#show Twin1
+#show Twin2
+
+#eval Twin1.degreeSequence
+#eval Twin2.degreeSequence
+
+section Capstone
+
+-- Deciding `¬ G.bipartite` with no certificate to hand searches for a
+-- two-colouring, which overruns the default recursion budget.
+set_option maxRecDepth 10000
+
+/-- Traceability is not a function of the degree sequence: there are two
+    connected, non-bipartite graphs with the same degree sequence, one of which
+    is traceable and one of which is not. -/
+theorem traceability_not_determined_by_degree_sequence :
+    ∃ (G H : Graph),
+      G.degreeSequence = H.degreeSequence ∧
+      G.connectedGraph ∧ H.connectedGraph ∧
+      ¬ G.bipartite ∧ ¬ H.bipartite ∧
+      G.traceable ∧ ¬ H.traceable := by
+  refine ⟨Twin1, Twin2, by decide, by decide, by decide, by decide, by decide, ?_, ?_⟩
+  · check_traceablea Twin1
+  · check_traceablea Twin2
+
+end Capstone
+
+-- What the theorem rests on. `Twin1.traceable` is witnessed by the path the
+-- solver returned, so the positive half contributes no axiom. The negative half
+-- does, and it is exactly the unsatisfiability of the encoding of `Twin2` — the
+-- one claim in the proof that comes from the solver rather than from Lean, and
+-- the LRAT checker has accepted its proof. It is named beneath the theorem
+-- because that is where a tactic is allowed to put a declaration.
+#print axioms traceability_not_determined_by_degree_sequence
+
 end LeanHoG
