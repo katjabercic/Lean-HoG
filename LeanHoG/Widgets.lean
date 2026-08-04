@@ -66,7 +66,12 @@ unsafe def elabVisualizeHamiltonianPathCmd : CommandElab
     let gg : Expr ← elabTerm G none
     let hpInst ← mkAppM ``HamiltonianPath #[gg]
     if let .some _ ← synthInstance? hpInst then
-      let vizf ← ``((Graph.toVisualizationFormat $G))
+      -- `buildVisualizationInstance`, not `Graph.toVisualizationFormat`: the latter
+      -- emits only `vertexSize` and `edgeList`, so the path the command exists to
+      -- display was never in the payload and `#show_hamiltonian_path G` drew the
+      -- same picture as `#show G`. The instance is known to exist here, having just
+      -- been synthesized.
+      let vizf ← ``((buildVisualizationInstance $G))
       let wis ← `(Widget.widgetInstanceSpec| $(mkIdent ``visualize) with $vizf)
       let wi : Expr ← Widget.elabWidgetInstanceSpec wis
       let wi ← Widget.evalWidgetInstance wi
