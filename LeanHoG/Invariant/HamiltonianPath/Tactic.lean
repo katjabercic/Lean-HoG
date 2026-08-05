@@ -11,6 +11,28 @@ namespace LeanHoG
 
 open Lean Elab Qq
 
+/-- Whether `declName` already holds a declaration of type `expectedType`, which a
+    previous run on the same graph would have left there and which can therefore be
+    reused instead of declared again.
+
+    The name existing is not on its own evidence that it holds such a declaration: the
+    names below are derived from the graph's, and nothing stops anything else in the
+    environment from having claimed one first. Reusing whatever is there would build a
+    term against the wrong type and only fail later, in the kernel, complaining about a
+    term the user never wrote. So a name held by something of another type is reported
+    here instead; the name is taken either way, and there is nothing useful to do but
+    say so.
+
+    The comparison runs at a new metavariable depth so that a mismatch cannot leave
+    `expectedType`'s metavariables assigned behind it. -/
+private def hasReusableDecl (declName : Name) (expectedType : Expr) : Meta.MetaM Bool := do
+  let some info := (← getEnv).find? declName | return false
+  if ← Meta.withNewMCtxDepth (Meta.isDefEq info.type (← instantiateMVars expectedType)) then
+    return true
+  else
+    throwError "the name {declName} is already taken by a declaration of type\
+      {indentExpr info.type}\nbut this graph needs one of type{indentExpr expectedType}"
+
 open Trestle Model in
 /-- Decide traceability of `graph` with the SAT solver, and return the fact that
     establishes, a proof of it, and the solver's answer.
@@ -59,17 +81,19 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph))
     --
     -- The name is a function of the graph's, so a second run on the same graph —
     -- `#check_traceable G` and then the tactic, or the tactic twice — would be
-    -- re-declaring it. The certificate already in the environment is a certificate
-    -- for the same graph, so reuse it rather than failing.
+    -- re-declaring it. A `HamiltonianPath $graph` already in the environment is a
+    -- certificate for the same graph, so reuse it rather than failing; that it is one,
+    -- and not merely something sitting on the name, is what `hasReusableDecl` checks.
     let hamiltonianPathName := certificateName graphName "HamiltonianPathI"
+    let certType : Q(Type) := q(HamiltonianPath $graph)
     let cert : Expr ←
-      if (← getEnv).contains hamiltonianPathName then
+      if ← hasReusableDecl hamiltonianPathName certType then
         pure (mkConst hamiltonianPathName)
       else if register then do
         Lean.addAndCompile <| .defnDecl {
           name := hamiltonianPathName
           levelParams := []
-          type := q(HamiltonianPath $graph)
+          type := certType
           value := hpQ
           hints := .regular 0
           safety := .safe
@@ -100,12 +124,13 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph))
     let type : Q(Prop) := q(((hamiltonianPathCNF $graph).val.toICnf.toStd).Unsat)
     let noExistsType := q(¬ ∃ (u v : Graph.vertex $graph) (p : Path $graph u v), p.isHamiltonian)
     -- Where the axiom goes. One for this graph already in the environment says
-    -- exactly what is needed, so reuse it; that is the case a second run on the
+    -- exactly what is needed — literally so, which is what `hasReusableDecl` confirms
+    -- before we lean on it — so reuse it; that is the case a second run on the
     -- same graph used to die on. Otherwise declare it, globally for the command and
     -- beneath the enclosing declaration for a tactic, which may not add a name
     -- outside its own prefix.
     let declName : Name ←
-      if (← getEnv).contains globalName ∨ register then
+      if (← hasReusableDecl globalName type) ∨ register then
         pure globalName
       else
         match ← Term.getDeclName? with
@@ -116,7 +141,7 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph))
       let noExistsCert ← Meta.mkAppM ``LeanHoG.std_unsat_implies_no_assignment #[h]
       let noExistsHamPath ← Meta.mkAppM ``LeanHoG.no_assignment_implies_no_hamiltonian_path' #[noExistsCert]
       Meta.mkLambdaFVars #[h] (← instantiateMVars noExistsHamPath)
-    unless (← getEnv).contains declName do
+    unless ← hasReusableDecl declName type do
       let decl := Declaration.axiomDecl {
         name        := declName,
         levelParams := [],
