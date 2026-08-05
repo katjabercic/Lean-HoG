@@ -56,6 +56,7 @@ set_option leanHoG.pythonExecutable <path-to-python>
 ```
 
 Open the file [`Examples.lean`](Examples.lean) to check whether the example graphs load successfully.
+It can also be rendered as a website — see [`LITERATE.md`](LITERATE.md).
 
 ### Downloading graphs
 
