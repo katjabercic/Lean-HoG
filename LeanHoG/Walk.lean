@@ -402,14 +402,10 @@ def isLongestFromTo {G : Graph} (u v : G.vertex) (p : Path G u v) : Prop :=
 
 end Path
 
-@[simp]
-def ClosedWalk.isCycle {G : Graph} {u : G.vertex} : ClosedWalk G u → Bool := fun cw =>
-  let vertices := cw.vertices
-  let edges := cw.edges
-  match vertices with
+def ClosedWalk.isCycle {G : Graph} {u : G.vertex} (cw : ClosedWalk G u) : Bool :=
+  match cw.vertices with
   | [] => true
-  | _ :: vertices =>
-    vertices.all_distinct && edges.all_distinct
+  | _ :: vertices => vertices.all_distinct && cw.edges.all_distinct
 
 structure Cycle (G : Graph) (u : G.vertex) where
   cycle : ClosedWalk G u

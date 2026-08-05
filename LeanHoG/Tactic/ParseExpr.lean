@@ -2,6 +2,7 @@ import Lean
 import LeanHoG.Graph
 import LeanHoG.Tactic.SearchDSL
 import LeanHoG.Tactic.Options
+import LeanHoG.Invariant.HamiltonianCycle.Basic
 import LeanHoG.Invariant.HamiltonianPath.Basic
 import Qq
 
