@@ -83,6 +83,31 @@ load_graph hog_904 "build/graphs/904.json"
 -- #search_hog hog{ traceable = true ∧ numberOfVertices > 3 ∧ minimumDegree < numberOfVertices / 2}
 
 -----------------------------------------
+-- Reading graphs from graph6
+-----------------------------------------
+
+-- The strings printed by `Petersen.g6` and `Wheel.g6` above are graph6, nauty's
+-- encoding of a graph as printable ASCII and the format `geng`, `networkx`,
+-- SageMath and HoG all speak. `load_graph_from_g6` reads one back in, needing
+-- neither HoG nor the network.
+load_graph_from_g6 PetersenFromG6 "IsP@OkWHG"
+#show PetersenFromG6
+#eval PetersenFromG6.numberOfConnectedComponents
+#eval PetersenFromG6.degreeSequence
+
+-- `Graph.toGraph6` encodes a graph under its own vertex labelling. For the
+-- Petersen graph HoG's labelling is the canonical one, so this returns the
+-- string it was read from.
+#eval PetersenFromG6.toGraph6
+
+-- A graph6 file holds one graph per line, which is how `geng` writes a whole
+-- family at once. Each line becomes its own declaration, numbered from zero.
+load_graphs_from_g6_file Sample "examples/hog-sample.g6"
+#show Sample_1
+#eval Sample_1.degreeSequence
+#eval [Sample_0.vertexSize, Sample_1.vertexSize, Sample_2.vertexSize, Sample_3.vertexSize]
+
+-----------------------------------------
 -- Hamiltonian paths
 -----------------------------------------
 

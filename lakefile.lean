@@ -66,3 +66,6 @@ lean_lib LeanHoG where
 
 lean_lib Examples where
   needs := #[LeanHoG]
+
+lean_lib Graph6Tests where
+  needs := #[LeanHoG]
