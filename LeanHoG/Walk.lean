@@ -73,11 +73,27 @@ def vertices {G : Graph} {u v : G.vertex} : Walk G u v -> List G.vertex
   · simp
   · aesop
 
-@[simp] lemma walk_trivial_vertices_length {G : Graph} {u v : G.vertex} (p : Walk G u v)
-  (h : p.isTrivial) : p.vertices.length = 1 := by
-  induction' p with p ih
+@[simp] lemma walk_trivial_vertices_length {G : Graph} {u v : G.vertex} (w : Walk G u v)
+  (h : w.isTrivial) : w.vertices.length = 1 := by
+  induction' w with p ih
   · simp
   · contradiction
+
+lemma vertices_first_cons_tail {G : Graph} {u v : G.vertex} {w : Walk G u v} :
+    w.vertices = u :: w.vertices.tail := by
+  induction w with
+  | here e => simp
+  | step e w ih => simp
+
+/-- STUB, for review — see the plan for `hamiltonian_cycle_to_sat`.
+
+A walk's vertex list ends at its own second endpoint, mirroring
+`vertices_first_cons_tail`'s "starts at its first endpoint". Needed to see that a
+Hamiltonian cycle rebased at vertex `0` closes back on vertex `0`, matching
+`firstAndLastConstraints`. -/
+lemma vertices_getLast? {G : Graph} {u v : G.vertex} (w : Walk G u v) :
+    w.vertices.getLast? = some v := by
+  sorry
 
 def verticesMultiset {G : Graph} {u v : G.vertex} :
   Walk G u v -> Multiset G.vertex := fun w => Multiset.ofList w.vertices
@@ -201,6 +217,107 @@ lemma consecutive_vertices_adjacent {G : Graph} {u v : G.vertex} {w : Walk G u v
           apply Nat.lt_succ_self
         have adj_k_l := @ih k l k_l k_lt_l
         exact adj_k_l
+
+/-- Concatenate two walks sharing an endpoint into one walk. -/
+def append {G : Graph} {a b c : G.vertex} : Walk G a b → Walk G b c → Walk G a c
+  | here _, w2 => w2
+  | step e w1, w2 => step e (w1.append w2)
+
+/-- The vertex list of an appended walk is the two pieces' vertex lists, glued at the shared
+endpoint (so it is not repeated). -/
+lemma vertices_append {G : Graph} {a b c : G.vertex} (w1 : Walk G a b) (w2 : Walk G b c) :
+    (w1.append w2).vertices = w1.vertices ++ w2.vertices.tail := by
+  induction w1 with
+  | here _ =>
+    simp [append, vertices]
+    apply vertices_first_cons_tail
+  | step _ _ ih =>
+    simp [append]
+    apply ih
+
+/-- The edge list of an appended walk is the concatenation of the two pieces' edge lists. -/
+lemma edges_append {G : Graph} {a b c : G.vertex} (w1 : Walk G a b) (w2 : Walk G b c) :
+    (w1.append w2).edges = w1.edges ++ w2.edges := by
+  induction w1 with
+  | here e => simp [append]
+  | step e w1 ih => simp [append]; apply ih
+
+/-- The length of an appended walk is the sum of the two pieces' lengths. -/
+lemma length_append {G : Graph} {a b c : G.vertex} (w1 : Walk G a b) (w2 : Walk G b c) :
+    (w1.append w2).length = w1.length + w2.length := by
+  induction w1 with
+  | here => simp [append]
+  | step _ _ ih => simp +arith [append]; apply ih
+
+/-- A walk through `v` splits at `v` into a walk up to `v` followed by a walk from `v`
+onwards, whose `append` is the original walk. -/
+lemma exists_split {G : Graph} {a b : G.vertex} (w : Walk G a b) {v : G.vertex}
+    (hv : v ∈ w.vertices) :
+    ∃ (w1 : Walk G a v) (w2 : Walk G v b), w = w1.append w2 := by
+  induction w with
+  | here e =>
+    simp at hv
+    subst hv
+    use here v, here v
+    simp [append]
+  | step e w ih =>
+    simp at hv
+    rename_i s t u
+    cases hv with
+    | inl hv =>
+      subst hv
+      use here v
+      use step e w
+      simp [append]
+    | inr hv =>
+      obtain ⟨w1, ⟨w2, h⟩⟩ := ih hv
+      use step e w1
+      use w2
+      simp [append, h]
+
+/-- STUB, for review — see the `HamiltonianCycle.rebase` proof plan.
+
+A vertex is on an appended walk iff it is on one of the two pieces. This is the fact
+that lets us see a rotation `w2.append w1` visits the same vertices as `w1.append w2`
+(rewrite both sides with this lemma; the resulting `∨` is symmetric), without needing
+any case split on whether the pieces are trivial. -/
+lemma mem_vertices_append {G : Graph} {a b c : G.vertex} (w1 : Walk G a b) (w2 : Walk G b c)
+    {x : G.vertex} :
+    x ∈ (w1.append w2).vertices ↔ x ∈ w1.vertices ∨ x ∈ w2.vertices := by
+  induction w1 with
+  | here v => simp [append]; aesop
+  | step e w1 ih => simp [append]; aesop
+
+/-- STUB, for review — see the `HamiltonianCycle.rebase` proof plan.
+
+The "no repeated interior vertex" half of `isCycle` transfers to a rotation: dropping the
+shared endpoint from each of `w1.append w2` and `w2.append w1` leaves the same two pieces
+`w1.vertices.tail`/`w2.vertices.tail`, just concatenated in the other order, so this
+follows from `List.all_distinct_append_comm`. -/
+lemma vertices_tail_append_rotate {G : Graph} {a v : G.vertex} (w1 : Walk G a v) (w2 : Walk G v a)
+    (h : (w1.append w2).vertices.tail.all_distinct) :
+    (w2.append w1).vertices.tail.all_distinct := by
+  have e1 : (w1.append w2).vertices.tail = w1.vertices.tail ++ w2.vertices.tail := by
+    rw [vertices_append, vertices_first_cons_tail (w := w1)]
+    simp
+  have e2 : (w2.append w1).vertices.tail = w2.vertices.tail ++ w1.vertices.tail := by
+    rw [vertices_append, vertices_first_cons_tail (w := w2)]
+    simp
+  rw [e1] at h
+  rw [e2]
+  exact List.all_distinct_append_comm h
+
+/-- STUB, for review — see the `HamiltonianCycle.rebase` proof plan.
+
+The "no repeated edge" half of `isCycle` transfers to a rotation: `edges_append` has no
+shared-endpoint wrinkle (unlike `vertices_append`), so `w1.append w2` and `w2.append w1`
+have edge lists that are literally each other's `List.all_distinct_append_comm` swap. -/
+lemma edges_append_rotate {G : Graph} {a v : G.vertex} (w1 : Walk G a v) (w2 : Walk G v a)
+    (h : (w1.append w2).edges.all_distinct) :
+    (w2.append w1).edges.all_distinct := by
+  rw [edges_append] at h
+  rw [edges_append]
+  exact List.all_distinct_append_comm h
 
 end Walk
 
@@ -406,6 +523,15 @@ def ClosedWalk.isCycle {G : Graph} {u : G.vertex} (cw : ClosedWalk G u) : Bool :
   match cw.vertices with
   | [] => true
   | _ :: vertices => vertices.all_distinct && cw.edges.all_distinct
+
+/-- Since a closed walk's vertex list is never empty, `isCycle` always takes its second
+branch: it is exactly "no repeated interior vertex, no repeated edge". -/
+lemma ClosedWalk.isCycle_eq {G : Graph} {u : G.vertex} (cw : ClosedWalk G u) :
+    cw.isCycle = (cw.vertices.tail.all_distinct && cw.edges.all_distinct) := by
+  unfold ClosedWalk.isCycle
+  simp only [ClosedWalk.vertices, ClosedWalk.edges]
+  rw [Walk.vertices_first_cons_tail (w := cw)]
+  simp
 
 structure Cycle (G : Graph) (u : G.vertex) where
   cycle : ClosedWalk G u
