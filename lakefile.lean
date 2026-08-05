@@ -10,6 +10,11 @@ package «LeanHoG» {
 -- reproducible. See issue #53 for moving back to a release.
 require «trestle» from git "https://github.com/FormalSAT/trestle.git" @ "853ce034ff4a5081d19ccc250d5780d4b7e718ec"
 
+-- Spike: Verso's literate mode renders a `lean_lib` as a static site. Tagged to
+-- match `lean-toolchain`. Note that `literate.toml` and `show_output` only arrive
+-- in v4.29.0, so this version gives us the facet without the config layer.
+require «verso» from git "https://github.com/leanprover/verso.git" @ "v4.28.0"
+
 def widgetDir : FilePath := "widget"
 
 nonrec def Lake.Package.widgetDir (pkg : Package) : FilePath :=

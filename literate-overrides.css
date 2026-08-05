@@ -1,0 +1,57 @@
+/* Spike override for Verso v4.28.0's literate CSS.
+ *
+ * By default `code.css` draws module docs as boxed source comments inside the
+ * code listing: a rounded border, plus `/-!` and `-/` injected as ::before and
+ * ::after content. That is a code-first reading of the file; we want a
+ * document-first one, with the prose as page text between code blocks.
+ *
+ * v4.29.0 adds `docstrings_as_text` to `literate.toml`, which is the supported
+ * way to ask for this. Until the toolchain bump lands, these rules do the same
+ * job. Appended to the generated `code.css` after `verso-html` runs.
+ *
+ * The `width: min-content` in the upstream ::before rule is also a plain bug:
+ * it lets the three characters of "/-!" break after "/-", so the delimiters
+ * render across two lines. Removing the content sidesteps it.
+ */
+
+.code-content .md-text.mod-doc,
+.code-content .verso-text.mod-doc {
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    margin-left: 0;
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+    width: auto;
+    max-width: 42em;
+}
+
+/* Kill the injected delimiters everywhere, not just on module docs. Declaration
+   docstrings keep their box — they belong to the declaration below them — but
+   the `/--` and `-/` glyphs are noise in a rendered document, and the upstream
+   `width: min-content` breaks them across two lines regardless.
+ *
+ * The `.mod-doc` selectors are load-bearing: upstream styles module docs with
+ * `.code-content .md-text.mod-doc::before`, three classes deep. A two-class
+ * override loses to it on specificity and the `/-!` survives, even though the
+ * matching `::after` rule upstream is two classes and does get overridden —
+ * which shows up as a leading delimiter with no trailing one. */
+.code-content .md-text::before,
+.code-content .md-text::after,
+.code-content .verso-text::before,
+.code-content .verso-text::after,
+.code-content .md-text.mod-doc::before,
+.code-content .md-text.mod-doc::after,
+.code-content .verso-text.mod-doc::before,
+.code-content .verso-text.mod-doc::after {
+    content: none;
+}
+
+/* Headings in module docs are section headings for the page, so let them read
+   at document scale rather than inheriting the code box's sizing. */
+.code-content .md-text.mod-doc h1,
+.code-content .md-text.mod-doc h2,
+.code-content .md-text.mod-doc h3 {
+    margin-top: 0.5rem;
+    margin-bottom: 0.75rem;
+}
