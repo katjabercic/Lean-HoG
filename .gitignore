@@ -1,7 +1,5 @@
 *.olean
 .lake
-lake-manifest.json
-/lake-packages
 /archive/*
 widget/node_modules
 build
