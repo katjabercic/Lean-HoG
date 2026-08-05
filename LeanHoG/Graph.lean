@@ -3,6 +3,7 @@ import Batteries.Data.RBMap.Basic
 import Batteries.Data.RBMap.Lemmas
 import Mathlib.Data.Finite.Defs
 import Mathlib.Data.Fintype.Powerset
+import Mathlib.Data.List.Sort
 
 -- This was deprecated and eventually removed from Mathlib for no good
 -- reason and with no good replacemnet (lt_trichotomy is only vaguely
@@ -218,5 +219,15 @@ def Graph.minimumDegree (G : Graph) : Nat :=
 /-- The maximal vertex degree, equals ⊥ for empty graph. -/
 def Graph.maxDegree (G : Graph) : WithBot Nat :=
   Finset.sup (Fin.fintype G.vertexSize).elems (fun v => G.degree v)
+
+/-- The degree sequence of `G`: every vertex degree, in descending order.
+
+    `insertionSort` and not `mergeSort`. The latter is defined by well-founded
+    recursion, which the kernel will not unfold, so `decide` on an equation
+    between two degree sequences gets stuck instead of deciding it. Mathlib's
+    `insertionSort` is a `foldr` and reduces. Any proof that asks `decide` to
+    compare two degree sequences depends on that. -/
+def Graph.degreeSequence (G : Graph) : List Nat :=
+  List.insertionSort (· ≥ ·) (List.ofFn G.degree)
 
 end LeanHoG
