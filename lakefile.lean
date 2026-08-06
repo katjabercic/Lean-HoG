@@ -1,4 +1,5 @@
 import Lake
+
 open Lake DSL System
 
 package «LeanHoG» {
@@ -9,6 +10,8 @@ package «LeanHoG» {
 -- released version yet. Pin, don't track the branch, so builds stay
 -- reproducible. See issue #53 for moving back to a release.
 require «trestle» from git "https://github.com/FormalSAT/trestle.git" @ "853ce034ff4a5081d19ccc250d5780d4b7e718ec"
+
+require «mdgen» from git "https://github.com/Seasawher/mdgen.git" @ "v4.28.0-rc1"
 
 def widgetDir : FilePath := "widget"
 
@@ -66,3 +69,6 @@ lean_lib LeanHoG where
 
 lean_lib Examples where
   needs := #[LeanHoG]
+
+lean_exe examples_md where
+  root := `ExamplesMD
