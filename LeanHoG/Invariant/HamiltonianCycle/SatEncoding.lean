@@ -51,7 +51,7 @@ deriving DecidableEq, IndexType
 
 /-- The first and last position of the cycle should actually have the same vertex. -/
 @[simp] def vertexInAtMostOnePositionExceptEndpoints {n : Nat} (i : Fin n) : PropPred (Var n) := fun τ =>
-  ∀ (j k : Fin (n+1)), j ≠ k ∧ j.val < n ∧ k.val < n → τ ⊨ (vertexAtPos i j)ᶜ ⊔ (vertexAtPos i k)ᶜ
+  ∀ (j k : Fin (n+1)), j ≠ k ∧ 0 < j.val ∧ 0 < k.val → τ ⊨ (vertexAtPos i j)ᶜ ⊔ (vertexAtPos i k)ᶜ
 
 /-- The first and last position of the cycle should actually have the same vertex. -/
 @[simp] def eachVertexInAtMostOnePositionExceptEndpoints {n : Nat} : PropPred (Var n) := fun τ =>
@@ -137,7 +137,7 @@ def vertexClauses (G : Graph) : VCnf G.vertexSize (vertexConstraints G) :=
       for_all U fun i =>
       for_all V fun j =>
       for_all V fun k =>
-        VEncCNF.guard (j ≠ k ∧ j.val < (G.vertexSize) ∧ k.val < (G.vertexSize)) fun _ =>
+        VEncCNF.guard (j ≠ k ∧ 0 < j.val ∧ 0 < k.val) fun _ =>
           addClause (#[mkNeg <| Var.mk i j, mkNeg <| Var.mk i k])
   ])
   |> mapProp (by

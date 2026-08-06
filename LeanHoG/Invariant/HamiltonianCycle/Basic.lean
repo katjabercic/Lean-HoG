@@ -76,16 +76,60 @@ theorem rebase {G : Graph} (hc : HamiltonianCycle G) (v : G.vertex) :
   simp only [Cycle.isHamiltonian, ClosedWalk.vertices, decide_eq_true_eq]
   simpa using hham'
 
-/-- STUB, for review — see the plan for `hamiltonian_cycle_to_sat`.
-
-A Hamiltonian cycle's vertex list has `G.vertexSize + 1` entries: `G.vertexSize` distinct
+/-- A Hamiltonian cycle's vertex list has `G.vertexSize + 1` entries: `G.vertexSize` distinct
 vertices, plus the closing repeat of the base vertex. Mirrors
 `HamiltonianPath.length_eq_num_vertices`; needs `1 < G.vertexSize` for the same reason
 `hamiltonian_cycle_to_sat` does — at `G.vertexSize = 1` the only cycle is the trivial one,
-whose vertex list has length `1`, not `2`. -/
+whose vertex list has length `1`, not `2`.
+
+The count happens on the *tail*: that is the part `isCycle` makes distinct, and Hamiltonicity
+makes it exhaust `G.vertex`, so it is in bijection with `G.vertex` by
+`List.Nodup.getEquivOfForallMemList` — exactly as the path version counts the whole list. -/
 theorem length_eq_num_vertices {G : Graph} (h2 : 1 < G.vertexSize) (hc : HamiltonianCycle G) :
     hc.cycle.cycle.vertices.length = G.vertexSize + 1 := by
-  sorry
+  let l := hc.cycle.cycle.vertices
+  show l.length = G.vertexSize + 1
+  have tad : l.tail.all_distinct :=
+    (Bool.and_eq_true_iff.mp (ClosedWalk.isCycle_eq hc.cycle.cycle ▸ hc.cycle.isCycle)).1
+  have nd : l.tail.Nodup := List.all_distinct_iff_nodup.mp tad
+  have hham : ∀ v : G.vertex, v ∈ l := by
+    have h := hc.isHamiltonian
+    simp [Cycle.isHamiltonian] at h
+    simpa using h
+  have hcons : l = hc.u :: l.tail := Walk.vertices_first_cons_tail
+  -- The cycle is nontrivial: a one-element vertex list cannot contain two distinct vertices,
+  -- and `1 < G.vertexSize` provides two.
+  have htne : l.tail ≠ [] := by
+    intro hnil
+    have h0 := hham ⟨0, by omega⟩
+    have h1 := hham ⟨1, h2⟩
+    rw [hcons, hnil] at h0 h1
+    simp [Fin.ext_iff] at h0 h1
+    omega
+  have hlen1 : l.length ≠ 1 := by
+    have h : 0 < l.tail.length := List.length_pos_of_ne_nil htne
+    simp only [List.length_tail] at h
+    omega
+  -- The base vertex reappears in the tail, as the closing repeat of the cycle.
+  have hu : hc.u ∈ l.tail := by
+    apply List.mem_of_getLast? (a := hc.u)
+    rw [List.getLast?_tail, if_neg hlen1]
+    exact Walk.vertices_getLast? hc.cycle.cycle
+  have hmem : ∀ v : G.vertex, v ∈ l.tail := by
+    intro v
+    have hv := hham v
+    rw [hcons] at hv
+    rcases List.mem_cons.mp hv with h | h
+    · rw [h]; exact hu
+    · exact h
+  have equiv := List.Nodup.getEquivOfForallMemList l.tail nd hmem
+  have htl : l.tail.length = G.vertexSize := by
+    apply Iff.mp Fin.equiv_iff_eq
+    exact Nonempty.intro equiv
+  have hl : l.length = l.tail.length + 1 := by
+    rw [hcons]
+    simp
+  omega
 
 end HamiltonianCycle
 end LeanHoG

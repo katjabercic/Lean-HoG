@@ -22,8 +22,8 @@ Distinctness of an appended list doesn't care which piece comes first: it only d
 on each piece being distinct and the two being disjoint, both symmetric conditions. -/
 theorem all_distinct_append_comm {α : Type} [DecidableEq α] {l1 l2 : List α}
     (h : (l1 ++ l2).all_distinct) : (l2 ++ l1).all_distinct := by
-  sorry
-
+  rw [all_distinct_iff_nodup] at *
+  apply List.nodup_append_comm.mp h
 
 theorem index_of_lt_length_of_exists {α : Type} [DecidableEq α] (xs : List α)
   (_ : xs.all_distinct) (x : α) (h : x ∈ xs) :
@@ -112,6 +112,32 @@ theorem all_distinct_get_inj {α : Type} [DecidableEq α] (l : List α) (d : l.a
   intros i j h
   apply all_distinct_get_injective h
   exact d
+
+/--
+  Distinctness of the tail is injectivity of `get` away from index `0`: if `l.tail` has no
+  repeats, then two *nonzero* indices holding the same element must be equal. Index `0` has
+  to be excluded, as `l` may well repeat its head somewhere in the tail — which is exactly
+  what a cycle's vertex list does.
+-/
+theorem all_distinct_tail_get_inj {α : Type} [DecidableEq α] {l : List α}
+    (h : l.tail.all_distinct) {i j : Fin l.length} (hi : 0 < i.val) (hj : 0 < j.val)
+    (heq : l.get i = l.get j) : i = j := by
+  have hti : i.val - 1 < l.tail.length := by simp only [List.length_tail]; omega
+  have htj : j.val - 1 < l.tail.length := by simp only [List.length_tail]; omega
+  have ei : l.tail[i.val - 1] = l.get i := by
+    rw [List.getElem_tail hti, List.get_eq_getElem]
+    congr 1
+    omega
+  have ej : l.tail[j.val - 1] = l.get j := by
+    rw [List.getElem_tail htj, List.get_eq_getElem]
+    congr 1
+    omega
+  have hij : (⟨i.val - 1, hti⟩ : Fin l.tail.length) = ⟨j.val - 1, htj⟩ := by
+    apply all_distinct_get_inj l.tail h
+    simp only [List.get_eq_getElem]
+    rw [ei, ej, heq]
+  have : i.val - 1 = j.val - 1 := congrArg Fin.val hij
+  exact Fin.ext (by omega)
 
 /-- Given an element [x] of a list [l] and a proof that x ∈ l,
     produce the index of [x] in [l].

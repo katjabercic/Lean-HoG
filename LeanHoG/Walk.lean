@@ -85,15 +85,15 @@ lemma vertices_first_cons_tail {G : Graph} {u v : G.vertex} {w : Walk G u v} :
   | here e => simp
   | step e w ih => simp
 
-/-- STUB, for review — see the plan for `hamiltonian_cycle_to_sat`.
-
-A walk's vertex list ends at its own second endpoint, mirroring
+/-- A walk's vertex list ends at its own second endpoint, mirroring
 `vertices_first_cons_tail`'s "starts at its first endpoint". Needed to see that a
 Hamiltonian cycle rebased at vertex `0` closes back on vertex `0`, matching
 `firstAndLastConstraints`. -/
 lemma vertices_getLast? {G : Graph} {u v : G.vertex} (w : Walk G u v) :
     w.vertices.getLast? = some v := by
-  sorry
+  induction w with
+  | here e => simp
+  | step e w ih => simp only [vertices, List.getLast?_cons, ih, Option.getD_some]
 
 def verticesMultiset {G : Graph} {u v : G.vertex} :
   Walk G u v -> Multiset G.vertex := fun w => Multiset.ofList w.vertices
@@ -325,6 +325,11 @@ def ClosedWalk (G : Graph) (u : G.vertex) : Type := Walk G u u
 
 namespace ClosedWalk
 
+def ofWalk {G : Graph} {u : G.vertex} (w : Walk G u u) : ClosedWalk G u := w
+
+instance {G : Graph} {u : G.vertex} : Coe (Walk G u u) (ClosedWalk G u) where
+  coe := ofWalk
+
 instance {G : Graph} {u : G.vertex} : Repr (ClosedWalk G u) where
   reprPrec c n := Walk.reprWalk.reprPrec c n
 
@@ -341,6 +346,39 @@ def edges {G : Graph} {u : G.vertex} : ClosedWalk G u -> List G.edge :=
 
 instance {G : Graph} {u : G.vertex} {w : ClosedWalk G u} : Fintype w.verticesMultiset := by
   infer_instance
+
+theorem mem_vertices_iff_tail {G : Graph} {u v : G.vertex} {w : ClosedWalk G u} {h : u ≠ v} :
+    v ∈ w.vertices ↔ v ∈ w.vertices.tail := by
+  constructor
+  · intro hv
+    unfold ClosedWalk at w
+    cases w with
+    | here =>
+      simp at hv
+      rw [hv] at h
+      contradiction
+    | step e w =>
+      simp
+      symm at h
+      simp [h] at hv
+      exact hv
+  · apply List.mem_of_mem_tail
+
+theorem mem_vertices_iff_tail' {G : Graph} {u v : G.vertex} {w : ClosedWalk G u} {h : 1 < w.length} :
+    v ∈ w.vertices ↔ v ∈ w.vertices.tail := by
+  constructor
+  · intro hv
+    unfold ClosedWalk at w
+    cases w with
+    | here =>
+      simp at hv
+      simp [length] at h
+    | step e w =>
+      simp at hv
+      cases hv
+      case inl eq => subst eq; simp
+      case inr h => exact h
+  · apply List.mem_of_mem_tail
 
 end ClosedWalk
 

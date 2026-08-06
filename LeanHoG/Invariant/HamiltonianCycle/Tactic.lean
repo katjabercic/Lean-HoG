@@ -3,6 +3,7 @@ import Qq
 import LeanHoG.LoadGraph
 import LeanHoG.Invariant.HamiltonianCycle.SatEncoding
 import LeanHoG.Invariant.HamiltonianCycle.Certificate
+import LeanHoG.Invariant.HamiltonianCycle.Correctness
 import LeanHoG.Tactic.Options
 import LeanHoG.Util.LeanSAT
 
@@ -28,25 +29,70 @@ private def hasReusableDecl (declName : Name) (expectedType : Expr) : Meta.MetaM
     throwError "the name {declName} is already taken by a declaration of type\
       {indentExpr info.type}\nbut this graph needs one of type{indentExpr expectedType}"
 
+/-- What `searchForHamiltonianCycleAux` established about a graph, and how it got there.
+
+    There is deliberately no `error` case: a solver error is reported by throwing, never
+    returned. -/
+inductive HamiltonicityOutcome
+  /-- Hamiltonian, certified by the cycle read back from the solver's assignment. -/
+  | sat
+  /-- Not Hamiltonian, from the LRAT-checked unsatisfiability of the encoding. -/
+  | unsat
+  /-- Hamiltonian without consulting the solver: a one-vertex graph is vacuously so. -/
+  | vacuous
+
+/-- Turn a `HamiltonianCycle graph` certificate into the `graph.isHamiltonian` fact, backed
+    by a declaration named after the graph when `register` says so.
+
+    As with the path version, that declaration is a convenience (reusable across runs,
+    visible to instance synthesis) and never a necessity: the certificate term stands on
+    its own. -/
+private def certifyHamiltonian (graphName : Name) (graph : Q(Graph)) (register : Bool)
+    (hcQ : Q(HamiltonianCycle $graph)) : TermElabM (Expr × Expr) := do
+  let hamiltonianCycleName := certificateName graphName "HamiltonianCycleI"
+  let certType : Q(Type) := q(HamiltonianCycle $graph)
+  let cert : Expr ←
+    if ← hasReusableDecl hamiltonianCycleName certType then
+      pure (mkConst hamiltonianCycleName)
+    else if register then do
+      Lean.addAndCompile <| .defnDecl {
+        name := hamiltonianCycleName
+        levelParams := []
+        type := certType
+        value := hcQ
+        hints := .regular 0
+        safety := .safe
+      }
+      Lean.Meta.addInstance hamiltonianCycleName .global 42
+      pure (mkConst hamiltonianCycleName)
+    else
+      pure hcQ
+  let existsHamCycle ← Meta.mkAppOptM ``LeanHoG.HamiltonianCycle.cycle_of_cert
+    #[graph, cert]
+  return (q(Graph.isHamiltonian $graph), existsHamCycle)
+
 open Trestle Model in
 /-- Decide Hamiltonicity of `graph` with the SAT solver, and return the fact that
-    establishes, a proof of it, and the solver's answer.
+    establishes, a proof of it, and how it was established.
 
     `register` says whether that fact should be backed by a declaration named after
-    the *graph*: the `HamiltonianCycle` instance in the SAT case. In the UNSAT case
-    there is, as yet, no theorem deriving `¬ graph.isHamiltonian` from the encoding
-    being unsatisfiable (that requires `HamiltonianCycle/Correctness.lean`, which does
-    not exist yet — see `HamiltonianPath/Correctness.lean` for what the path version
-    looks like). So in the UNSAT case this only returns the fact that the *encoding*
-    is UNSAT, checked by Lean's verified LRAT checker; it is on the caller to present
-    that honestly rather than as "no Hamiltonian cycle".
+    the *graph*: the `HamiltonianCycle` instance when the graph is Hamiltonian, the
+    axiom asserting the encoding's unsatisfiability when it is not.
+
+    A one-vertex graph is answered without running the solver, and not as an optimisation:
+    `hamiltonianCycleCNF` is unconditionally UNSAT there — `firstAndLastConstraints` puts
+    vertex `0` at positions `0` and `1` both, which `edgeConstraints` then forbids, adjacency
+    being irreflexive — while the graph itself is vacuously Hamiltonian. Consulting the
+    solver would therefore report UNSAT for a Hamiltonian graph. This is also why
+    `no_assignment_implies_no_hamiltonian_cycle'` carries `1 < G.vertexSize`.
 
     See `LeanHoG.Invariant.HamiltonianPath.Tactic.searchForHamiltonianPathAux` for why
     `register` must be `false` from a tactic. -/
 unsafe def searchForHamiltonianCycleAux (graphName : Name) (graph : Q(Graph))
-    (register : Bool) : TermElabM (Expr × Expr × Solver.Res) := do
+    (register : Bool) : TermElabM (Expr × Expr × HamiltonicityOutcome) := do
   let G ← Meta.evalExpr' Graph ``Graph graph
-  if h : 0 < G.vertexSize then
+  if h2 : 1 < G.vertexSize then
+    let h : 0 < G.vertexSize := Nat.zero_lt_of_lt h2
     let enc := (hamiltonianCycleCNF G h).val
     let opts ← getOptions
     let cadicalExe := opts.get leanHoG.solverCmd.name leanHoG.solverCmd.defValue
@@ -94,46 +140,24 @@ unsafe def searchForHamiltonianCycleAux (graphName : Name) (graph : Q(Graph))
                 consecutive on the returned cycle {toString vs}, but are not \
                 adjacent in the graph. {solverBlame}"
       let hcQ := hamiltonianCycleOfData graph ⟨vs⟩
-      -- The certificate to hand to `cycle_of_cert`. As with the path version, a
-      -- declaration is a convenience (reusable, visible to instance synthesis) and
-      -- never a necessity: `hamiltonianCycleOfData` returns a self-contained term.
-      let hamiltonianCycleName := certificateName graphName "HamiltonianCycleI"
-      let certType : Q(Type) := q(HamiltonianCycle $graph)
-      let cert : Expr ←
-        if ← hasReusableDecl hamiltonianCycleName certType then
-          pure (mkConst hamiltonianCycleName)
-        else if register then do
-          Lean.addAndCompile <| .defnDecl {
-            name := hamiltonianCycleName
-            levelParams := []
-            type := certType
-            value := hcQ
-            hints := .regular 0
-            safety := .safe
-          }
-          Lean.Meta.addInstance hamiltonianCycleName .global 42
-          pure (mkConst hamiltonianCycleName)
-        else
-          pure hcQ
-      let existsHamCycle ← Meta.mkAppOptM ``LeanHoG.HamiltonianCycle.cycle_of_cert
-        #[graph, cert]
-      let existsType := q(Graph.isHamiltonian $graph)
-      return (existsType, existsHamCycle, res)
+      let (existsType, existsHamCycle) ← certifyHamiltonian graphName graph register hcQ
+      return (existsType, existsHamCycle, .sat)
 
     | .unsat =>
-      -- The formula is UNSAT, so we will assert an axiom saying so. This is as far as
-      -- we can go without `HamiltonianCycle/Correctness.lean`: unlike the path version,
-      -- there is no theorem yet deriving `¬ graph.isHamiltonian` from this, so the fact
-      -- returned here is the *encoding's* unsatisfiability, not the graph's
-      -- non-Hamiltonicity. Callers must not present the two as the same thing.
+      -- The formula is UNSAT, so we assert an axiom saying so — Lean's verified LRAT checker
+      -- has already accepted the solver's proof of it — and then turn that into the graph's
+      -- non-Hamiltonicity with the correctness theorems from `Correctness.lean`.
       let globalName : Name := .str graphName "hamiltonianCycleCNFUnsat"
-      -- `h` is a proof about the concrete, evaluated `G`; the returned type must instead
-      -- talk about `graph`, the quoted expression the caller wrote. Reflect the same fact
-      -- at that level via `decide`, which is sound here because `h` already tells us it
-      -- reduces to `true`.
+      -- `h`/`h2` are proofs about the concrete, evaluated `G`; the returned type must instead
+      -- talk about `graph`, the quoted expression the caller wrote. Reflect the same facts
+      -- at that level via `decide`, which is sound here because `h`/`h2` already tell us they
+      -- reduce to `true`.
       have hPos : Q(decide (0 < Graph.vertexSize $graph) = true) := (q(Eq.refl true) : Lean.Expr)
       let hQ : Q(0 < Graph.vertexSize $graph) := q(of_decide_eq_true $hPos)
+      have hTwoDec : Q(decide (1 < Graph.vertexSize $graph) = true) := (q(Eq.refl true) : Lean.Expr)
+      let h2Q : Q(1 < Graph.vertexSize $graph) := q(of_decide_eq_true $hTwoDec)
       let type : Q(Prop) := q(((hamiltonianCycleCNF $graph $hQ).val.toICnf.toStd).Unsat)
+      let nonHamType : Q(Prop) := q(¬ Graph.isHamiltonian $graph)
       let declName : Name ←
         if (← hasReusableDecl globalName type) ∨ register then
           pure globalName
@@ -141,6 +165,18 @@ unsafe def searchForHamiltonianCycleAux (graphName : Name) (graph : Q(Graph))
           match ← Term.getDeclName? with
           | some enclosing => pure (enclosing ++ globalName)
           | none => pure globalName
+      -- `fun hUnsat => no_assignment_implies_no_hamiltonian_cycle' h2
+      --                  (std_unsat_implies_no_assignment h hUnsat)`.
+      -- The two theorems disagree on which proof of `0 < G.vertexSize` appears in the
+      -- assignment-free statement they share (`hQ` here, `by omega` from `h2` there); that
+      -- is immaterial, as definitional proof irrelevance makes any two interchangeable.
+      let derivation ← Meta.withLocalDeclD `hCnfUnsat type fun hUnsat => do
+        let noAssignment ← Meta.mkAppM
+          ``LeanHoG.HamiltonianCycle.std_unsat_implies_no_assignment #[hQ, hUnsat]
+        let noHamCycle ← Meta.mkAppM
+          ``LeanHoG.HamiltonianCycle.no_assignment_implies_no_hamiltonian_cycle'
+          #[h2Q, noAssignment]
+        Meta.mkLambdaFVars #[hUnsat] (← instantiateMVars noHamCycle)
       unless ← hasReusableDecl declName type do
         let decl := Declaration.axiomDecl {
           name        := declName,
@@ -152,12 +188,18 @@ unsafe def searchForHamiltonianCycleAux (graphName : Name) (graph : Q(Graph))
         Term.ensureNoUnassignedMVars decl
         addDecl decl
         logWarning m!"added axiom {declName} : {type}"
-      -- TODO(Correctness.lean): once the SAT-correctness proof for Hamiltonian cycles
-      -- exists (mirroring `no_assignment_implies_no_hamiltonian_path'`), derive and
-      -- return `¬ graph.isHamiltonian` here instead of the raw encoding fact.
-      return (type, mkConst declName, res)
+      return (nonHamType, .app derivation (mkConst declName), .unsat)
 
     | .error => throwError "SAT solver exited with error"
+  else if G.vertexSize = 1 then
+    -- Vacuously Hamiltonian, certified directly rather than through the solver; see this
+    -- function's docstring for why the solver must not be asked here.
+    have hOneDec : Q(decide (Graph.vertexSize $graph = 1) = true) := (q(Eq.refl true) : Lean.Expr)
+    let hOne : Q(Graph.vertexSize $graph = 1) := q(of_decide_eq_true $hOneDec)
+    let hcQ : Q(HamiltonianCycle $graph) :=
+      q(HamiltonianCycle.hamiltonian_cycle_on_size_1 $hOne)
+    let (existsType, existsHamCycle) ← certifyHamiltonian graphName graph register hcQ
+    return (existsType, existsHamCycle, .vacuous)
   else
     throwError "cannot search for a Hamiltonian cycle in a graph with no vertices"
 
@@ -170,25 +212,28 @@ syntax (name := checkHamiltonian) "#check_hamiltonian " ident : command
     problem on the graph `G`. On SAT, the satisfying assignment is read back as a
     Hamiltonian cycle and registered as a `HamiltonianCycle G` instance. On UNSAT,
     Lean's built-in verified LRAT checker checks the produced proof and, if it accepts,
-    an axiom asserting the encoding's unsatisfiability is added — but note that
-    deriving `G.isNonHamiltonian` from it is **not yet implemented**
-    (see `searchForHamiltonianCycleAux`), so this command cannot currently prove a
-    graph non-Hamiltonian, only Hamiltonian.
+    an axiom asserting the encoding's unsatisfiability is added; `¬ G.isHamiltonian`
+    follows from it by `HamiltonianCycle/Correctness.lean`.
+
+    A one-vertex graph never reaches the solver — it is vacuously Hamiltonian, which the
+    encoding does not see (see `searchForHamiltonianCycleAux`).
 -/
 @[command_elab checkHamiltonian]
 unsafe def checkHamiltonianImpl : Command.CommandElab
   | `(#check_hamiltonian $g) => Command.liftTermElabM do
     let graphName := g.getId
     let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
-    let (_, _, res) ← searchForHamiltonianCycleAux graphName graph (register := true)
-    match res with
-    | .sat _ =>
+    let (_, _, outcome) ← searchForHamiltonianCycleAux graphName graph (register := true)
+    match outcome with
+    | .sat =>
       logInfo m!"found Hamiltonian cycle, registered as \
         {certificateName graphName "HamiltonianCycleI"}"
+    | .vacuous =>
+      logInfo m!"{graphName} has a single vertex, so it is vacuously Hamiltonian; \
+        registered as {certificateName graphName "HamiltonianCycleI"}"
     | .unsat =>
-      logInfo m!"the encoding is unsatisfiable after exhaustive search, but deriving \
-        non-Hamiltonicity from that is not yet implemented"
-    | .error => throwError "SAT solver exited with error"
+      logInfo m!"the encoding is unsatisfiable after exhaustive search, so {graphName} \
+        has no Hamiltonian cycle"
 
   | _ => throwUnsupportedSyntax
 
@@ -198,9 +243,8 @@ unsafe def checkHamiltonianImpl : Command.CommandElab
 
 open Trestle Model in
 /-- Run the Hamiltonian cycle search on `g` and add what it establishes to the local
-    context as a hypothesis named `h`. On SAT that hypothesis is `g.isHamiltonian`; on
-    UNSAT it is only the raw fact that the SAT encoding is unsatisfiable (see
-    `searchForHamiltonianCycleAux` for why there is nothing stronger to offer yet). -/
+    context as a hypothesis named `h`: `g.isHamiltonian` when a cycle is found (or when `g`
+    is a single vertex), `¬ g.isHamiltonian` when the encoding is refuted. -/
 unsafe def assertHamiltonicityFact (g : Ident) (h : Name) : Tactic.TacticM Unit :=
   Tactic.withMainContext do
     let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
@@ -212,8 +256,7 @@ unsafe def assertHamiltonicityFact (g : Ident) (h : Name) : Tactic.TacticM Unit 
 
 syntax (name := checkHamiltonianTactic) "check_hamiltonian " ident (" with" (ppSpace colGt ident))? : tactic
 /-- `check_hamiltonian G` is the tactic form of `#check_hamiltonian` — see its
-    docstring, and the same caveat about the UNSAT case applies. This tactic adds a
-    hypothesis; it does not close the goal.
+    docstring. This tactic adds a hypothesis; it does not close the goal.
 
     `check_hamiltonian G with h` names the hypothesis `h` instead of leaving it
     inaccessible. -/
