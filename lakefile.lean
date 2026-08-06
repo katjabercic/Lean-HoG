@@ -64,8 +64,7 @@ target buildWidget pkg : Unit := do
 lean_lib LeanHoG where
   needs := #[buildWidget]
 
-lean_lib Examples where
-  needs := #[LeanHoG]
+lean_lib Graph6Tests
 
-lean_lib Graph6Tests where
-  needs := #[LeanHoG]
+lean_lib Examples where
+  needs := #[LeanHoG, Graph6Tests]
