@@ -83,6 +83,42 @@ load_graph hog_904 "build/graphs/904.json"
 -- #search_hog hog{ traceable = true ∧ numberOfVertices > 3 ∧ minimumDegree < numberOfVertices / 2}
 
 -----------------------------------------
+-- Reading graphs from graph6
+-----------------------------------------
+
+-- The strings printed by `Petersen.g6` and `Wheel.g6` above are graph6, nauty's
+-- encoding of a graph as printable ASCII and the format `geng`, `networkx`,
+-- SageMath and HoG all speak. `load_graph_from_g6` reads one back in, needing
+-- neither HoG nor the network. The string below is the Petersen graph in its
+-- textbook labelling: the outer 5-cycle on 0-4, the inner pentagram 5-7-9-6-8,
+-- and a spoke from `i` to `i + 5`.
+load_graph_from_g6 PetersenFromG6 "IheA@GUAo"
+#show PetersenFromG6
+
+-- A graph6 string carries the edge set and nothing else, so the invariants
+-- available on `PetersenFromG6` are the ones computed from the edge set.
+-- Invariants that Lean-HoG reads off a certificate — the number of connected
+-- components, a two-colouring, a Hamiltonian path — have no instance here; a
+-- HoG JSON file supplies those, and the tactics compute them on demand.
+#eval PetersenFromG6.degreeSequence
+
+-- TODO: Prove that it is isomorphic to Petersen once we have a way to express isomorphism.
+
+-- `Graph.toGraph6` encodes a graph under its own vertex labelling, so it returns
+-- the string the graph was read from rather than a canonical form. HoG states
+-- `Petersen` in nauty's canonical labelling, so the two encodings differ even
+-- though the graphs are isomorphic.
+#eval PetersenFromG6.toGraph6
+#eval PetersenFromG6.toGraph6 == Petersen.g6
+
+-- A graph6 file holds one graph per line, which is how `geng` writes a whole
+-- family at once. Each line becomes its own declaration, numbered from zero.
+load_graphs_from_g6_file Sample "examples/hog-sample.g6"
+#show Sample_1
+#eval Sample_1.degreeSequence
+#eval [Sample_0.vertexSize, Sample_1.vertexSize, Sample_2.vertexSize, Sample_3.vertexSize]
+
+-----------------------------------------
 -- Hamiltonian paths
 -----------------------------------------
 

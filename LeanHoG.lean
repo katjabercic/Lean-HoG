@@ -1,6 +1,7 @@
 import LeanHoG.Certificate
 import LeanHoG.Edge
 import LeanHoG.Graph
+import LeanHoG.Graph6
 import LeanHoG.Invariant
 import LeanHoG.JsonData
 import LeanHoG.LoadGraph

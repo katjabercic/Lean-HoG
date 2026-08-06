@@ -2,6 +2,7 @@ import Lean
 import Qq
 
 import LeanHoG.Graph
+import LeanHoG.Graph6
 import LeanHoG.Invariant.G6
 import LeanHoG.Invariant.Bipartite.Certificate
 import LeanHoG.Invariant.ConnectedComponents.Certificate
@@ -129,6 +130,57 @@ unsafe def loadGraphImpl : Elab.Command.CommandElab
     let graphName := graphName.getId
     let jsonData ← loadJSONData JSONData fileName.getString
     loadGraphAux graphName jsonData
+
+  | _ => Elab.throwUnsupportedSyntax
+
+syntax (name := loadGraphFromG6) "load_graph_from_g6" ident str : command
+syntax (name := loadGraphsFromG6File) "load_graphs_from_g6_file" ident str : command
+
+/-- Present bare graph data as a `JSONData` carrying no invariant certificates. -/
+def jsonDataOfGraphData (data : GraphData) : JSONData where
+  hogId := none
+  graph := data
+  canonicalForm? := none
+  connectedComponents? := none
+  hamiltonianPath? := none
+  twoColoring? := none
+  oddClosedWalk? := none
+  neighborhoodMap? := none
+
+/-- `load_graph_from_g6 <ID> <g6>` loads the graph encoded by the graph6 string
+    `<g6>` into the Lean identifier `ID`. -/
+@[command_elab loadGraphFromG6]
+unsafe def loadGraphFromG6Impl : Elab.Command.CommandElab
+  | `(load_graph_from_g6 $graphName $g6) => do
+    let data ← liftExcept <| Graph6.decode g6.getString
+    loadGraphAux graphName.getId (jsonDataOfGraphData data)
+
+  | _ => Elab.throwUnsupportedSyntax
+
+/-- `load_graphs_from_g6_file <ID> <file>` loads every graph in a graph6 file,
+    one per line, into `ID_0`, `ID_1`, … in the order the lines appear. Blank
+    lines and a lone `>>graph6<<` header line are skipped. -/
+@[command_elab loadGraphsFromG6File]
+unsafe def loadGraphsFromG6FileImpl : Elab.Command.CommandElab
+  | `(load_graphs_from_g6_file $graphName $fileName) => do
+    let path := fileName.getString
+    let contents ← IO.FS.readFile path
+    let mut lineNo : Nat := 0
+    let mut count : Nat := 0
+    for raw in contents.splitOn "\n" do
+      lineNo := lineNo + 1
+      let line := raw.trimAscii.toString
+      unless line.isEmpty || line == Graph6.header do
+        match Graph6.decode line with
+        | .error msg => throwError "{path}:{lineNo}: {msg}"
+        | .ok data =>
+          loadGraphAux (graphName.getId.appendAfter s!"_{count}") (jsonDataOfGraphData data)
+          count := count + 1
+    if count = 0 then
+      logWarning m!"{path} contains no graph6 lines"
+    else
+      logInfo m!"loaded {count} graphs from {path} as \
+                 {graphName.getId.appendAfter "_0"} … {graphName.getId.appendAfter s!"_{count - 1}"}"
 
   | _ => Elab.throwUnsupportedSyntax
 

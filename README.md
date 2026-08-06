@@ -76,6 +76,38 @@ You can check that it loaded it with `#check <graphName>`.
 ```
 
 
+### Reading graphs from graph6
+
+[graph6](https://users.cecs.anu.edu.au/~bdm/data/formats.txt) is nauty's encoding of an undirected simple graph as a short string of printable ASCII, and is what `geng`, `nauty`, `networkx`, SageMath and the House of Graphs hand out. HoG's `canonicalForm` field is a graph6 string.
+
+`load_graph_from_g6 <graphName> <g6>` loads the graph encoded by a graph6 string:
+
+```lean
+load_graph_from_g6 Petersen "IsP@OkWHG"
+#show Petersen
+#eval Petersen.numberOfConnectedComponents
+```
+
+`load_graphs_from_g6_file <graphName> <file>` loads every graph in a graph6 file, one per line as `geng` writes them, into `graphName_0`, `graphName_1`, … in the order the lines appear. Blank lines and a lone `>>graph6<<` header line are skipped.
+
+```lean
+load_graphs_from_g6_file Sample "examples/hog-sample.g6"
+#show Sample_0
+```
+
+Each graph in the file becomes a separate compiled declaration, so a file with thousands of lines takes a correspondingly long time to elaborate.
+
+Neither command attaches any invariant certificate, so invariants of a graph read from graph6 are decided by search rather than read off a certificate.
+
+`Graph.toGraph6` goes the other way, encoding a graph under its own vertex labelling:
+
+```lean
+#eval Petersen.toGraph6
+```
+
+Only graph6 is supported; sparse6, the `:`-prefixed format, is not.
+
+
 ### Visualization widget
 
 Lean-HoG can visualize the imported graphs in the Lean infoview using 
