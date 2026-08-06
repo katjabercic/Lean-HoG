@@ -46,13 +46,16 @@ load_graph ThreeFour "examples/cycle3-cycle4.json"
 
 -- Checking bipartiteness with and without certificates
 
--- The next two graphs have respectively 15 and 16 vertices, and their JSON carries
--- neither a two-coloring nor an odd closed walk. Deciding bipartiteness therefore
--- searches the 2^15 and 2^16 maps from vertices to `Fin 2` for a proper one.
+-- The next three graphs have 15, 16 and 16 vertices, and their JSON carries neither
+-- a two-coloring nor an odd closed walk. Deciding bipartiteness therefore searches
+-- the 2^15 and 2^16 maps from vertices to `Fin 2` for a proper one. Poussin and
+-- Hanoi have none; the 4-dimensional hypercube does.
 load_graph PoussinNoCertificates "examples/Poussin-no-certificates.json"
 #eval PoussinNoCertificates.bipartite
 load_graph HanoiNoCertificates "examples/Hanoi2Disks-no-certificates.json"
 #eval HanoiNoCertificates.bipartite
+load_graph Cube4NoCertificates "examples/cube4-no-certificates.json"
+#eval Cube4NoCertificates.bipartite
 
 -- The same two graphs with certificates. Each carries an odd closed walk, which
 -- decides bipartiteness with no search.
