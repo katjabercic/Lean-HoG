@@ -46,18 +46,20 @@ load_graph ThreeFour "examples/cycle3-cycle4.json"
 
 -- Checking bipartiteness with and without certificates
 
--- The next two graphs have respectively 15 and 16 edges.
--- Uncomment the next lines to see the time Lean needs to decide bipartitness without a certificate
--- load_graph PoussinNoCertificates "examples/Poussin-no-certificates.json"
--- #eval PoussinNoCertificates.bipartite
--- load_graph HanoiNoCertificates "examples/Hanoi2Disks-no-certificates.json"
--- #eval HanoiNoCertificates.bipartite
+-- The next two graphs have respectively 15 and 16 vertices, and their JSON carries
+-- neither a two-coloring nor an odd closed walk. Deciding bipartiteness therefore
+-- searches the 2^15 and 2^16 maps from vertices to `Fin 2` for a proper one.
+load_graph PoussinNoCertificates "examples/Poussin-no-certificates.json"
+#eval PoussinNoCertificates.bipartite
+load_graph HanoiNoCertificates "examples/Hanoi2Disks-no-certificates.json"
+#eval HanoiNoCertificates.bipartite
 
--- Using a certificate provides a significant speed up.
+-- The same two graphs with certificates. Each carries an odd closed walk, which
+-- decides bipartiteness with no search.
 load_graph Poussin "examples/Poussin.json"
--- #eval Poussin.bipartite
+#eval Poussin.bipartite
 load_graph Hanoi "examples/Hanoi2Disks.json"
--- #eval Hanoi.bipartite
+#eval Hanoi.bipartite
 
 
 -- Loading and searching for graphs from the House of Graphs
