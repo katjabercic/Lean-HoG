@@ -236,14 +236,12 @@ Consult the (`examples`)[./examples] folder.
 }
 ```
 
-### Bipartite
+### Two-coloring
 
 ```json
-"bipartite" : {
+"twoColoring" : {
   "color" : <map vertices to color, 0 or 1>,
-  "vertex0" : <vertex with color 0>,
-  "vertex1" : <vertex with color 1>,
-},
+}
 ```
 
 ### Odd closed walk
