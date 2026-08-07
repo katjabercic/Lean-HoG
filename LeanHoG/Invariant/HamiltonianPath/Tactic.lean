@@ -11,28 +11,6 @@ namespace LeanHoG
 
 open Lean Elab Qq
 
-/-- Whether `declName` already holds a declaration of type `expectedType`, which a
-    previous run on the same graph would have left there and which can therefore be
-    reused instead of declared again.
-
-    The name existing is not on its own evidence that it holds such a declaration: the
-    names below are derived from the graph's, and nothing stops anything else in the
-    environment from having claimed one first. Reusing whatever is there would build a
-    term against the wrong type and only fail later, in the kernel, complaining about a
-    term the user never wrote. So a name held by something of another type is reported
-    here instead; the name is taken either way, and there is nothing useful to do but
-    say so.
-
-    The comparison runs at a new metavariable depth so that a mismatch cannot leave
-    `expectedType`'s metavariables assigned behind it. -/
-private def hasReusableDecl (declName : Name) (expectedType : Expr) : Meta.MetaM Bool := do
-  let some info := (← getEnv).find? declName | return false
-  if ← Meta.withNewMCtxDepth (Meta.isDefEq info.type (← instantiateMVars expectedType)) then
-    return true
-  else
-    throwError "the name {declName} is already taken by a declaration of type\
-      {indentExpr info.type}\nbut this graph needs one of type{indentExpr expectedType}"
-
 open Trestle Model in
 /-- Decide traceability of `graph` with the SAT solver, and return the fact that
     establishes, a proof of it, and the solver's answer.

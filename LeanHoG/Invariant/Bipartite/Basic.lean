@@ -32,6 +32,9 @@ instance (G : Graph) : Decidable G.bipartite :=
 instance Graph.bipartiteFromTwoColoring (G : Graph) [C : TwoColoring G] : Decidable G.bipartite
 := by apply isTrue; exists C
 
+/-- A two-coloring is a certificate for bipartiteness. -/
+theorem TwoColoring.bipartite {G : Graph} (C : TwoColoring G) : Graph.bipartite G := ⟨C, trivial⟩
+
 /-- Having an odd closed walk is an anti-certificate for bipartiteness. -/
 class OddClosedWalk (G : Graph) where
   vertex : G.vertex
