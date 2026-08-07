@@ -388,9 +388,6 @@ theorem maxPathLength' {G : Graph} {u v : G.vertex} (p : Path G u v) :
   rw [not_le, length_is_num_vertices] at h
   simp_all only [lt_self_iff_false]
 
-def isShortest {G : Graph} {u v : G.vertex} (p : Path G u v) : Prop :=
-  ∀ (u' v': G.vertex) (q : Path G u' v'), p.length ≤ q.length
-
 def isShortestFromTo {G : Graph} (u v : G.vertex) (p : Path G u v) : Prop :=
   ∀ (q : Path G u v), p.length ≤ q.length
 
@@ -448,11 +445,12 @@ def isEulerian {G : Graph} {u : G.vertex} (c : Cycle G u) : Prop :=
 
 end Cycle
 
+/-- A pair of vertices together with a shortest path between them. -/
 class ShortestPath (G : Graph) where
   u : G.vertex
   v : G.vertex
   path : Path G u v
-  isShortest : path.isShortest
+  isShortest : path.isShortestFromTo u v
 
 class LongestPath (G : Graph) where
   u : G.vertex
