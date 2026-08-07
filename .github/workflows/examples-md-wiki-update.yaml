@@ -1,0 +1,17 @@
+name: examples-md-wiki-update
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "Examples.lean"
+jobs:
+  generate-example-md-and-publish:
+    runs-on: ubuntu-slim
+    steps:
+      - name: Install elan
+        run: curl https://elan.lean-lang.org/elan-init.sh -sSf | sh
+      - name: Checkout Lean-HoG
+        uses: actions/checkout@v6
+      - name: Generate Markdown
+        run: lake exe examples_md
