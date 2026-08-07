@@ -9,6 +9,7 @@ import LeanHoG.Invariant.ConnectedComponents.Certificate
 import LeanHoG.Invariant.NeighborhoodMap.Certificate
 
 import LeanHoG.Certificate
+import LeanHoG.Util.Meta
 import LeanHoG.JsonData
 
 import Trestle.Solver.Impl.DimacsCommand

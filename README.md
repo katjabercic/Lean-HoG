@@ -108,6 +108,24 @@ Neither command attaches any invariant certificate, so invariants of a graph rea
 Only graph6 is supported; sparse6, the `:`-prefixed format, is not.
 
 
+### Deciding bipartiteness
+
+Without a certificate, `Graph.bipartite` is decided by enumerating all `2^n` maps `G.vertex → Fin 2`, which is out of reach past a couple of dozen vertices. `#check_bipartite <graphName>` decides it by breadth-first search instead, and registers the certificate for whichever answer it reaches: a `TwoColoring` if the graph is bipartite, an `OddClosedWalk` if it is not. Later invariant queries read the answer off that certificate.
+
+```lean
+load_graph_from_g6 Petersen "IsP@OkWHG"
+#check_bipartite Petersen
+#eval Petersen.bipartite
+```
+
+The command reports what it found. The tactic `check_bipartite <graphName>` puts the fact into a proof, adding `G.bipartite` or `¬ G.bipartite` to the context as a hypothesis; `check_bipartite <graphName> with h` names it, and `check_bipartitea <graphName>` closes the goal with it directly. No solver is involved and no axiom is asserted: the kernel checks the certificate the search produced.
+
+```lean
+example : ¬Petersen.bipartite := by
+  check_bipartitea Petersen
+```
+
+
 ### Visualization widget
 
 Lean-HoG can visualize the imported graphs in the Lean infoview using 

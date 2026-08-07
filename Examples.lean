@@ -4,6 +4,7 @@ import LeanHoG.Widgets
 import LeanHoG.Tactic.SearchDSL
 import LeanHoG.Tactic.Basic
 import LeanHoG.Invariant.HamiltonianPath.Tactic
+import LeanHoG.Invariant.Bipartite.Tactic
 
 namespace LeanHoG
 
@@ -124,6 +125,44 @@ load_graphs_from_g6_file Sample "examples/hog-sample.g6"
 #eval [Sample_0.vertexSize, Sample_1.vertexSize, Sample_2.vertexSize, Sample_3.vertexSize]
 
 -----------------------------------------
+-- Bipartiteness
+-----------------------------------------
+
+-- A graph that arrives without a two-colouring — from graph6, from a JSON file that
+-- omits the field, or from `#download` when HoG records none — leaves `Graph.bipartite`
+-- to the generic `Decidable` instance, which enumerates all `2^n` maps
+-- `G.vertex → Fin 2`. That is why `#eval Cube5.bipartite` is commented out above:
+-- `Cube5` has 32 vertices.
+--
+-- `#check_bipartite` computes a certificate by breadth-first search and registers it as
+-- an instance, and the `#eval` then reads the answer off that certificate.
+#check_bipartite Cube5
+#eval Cube5.bipartite
+
+-- The search roots a tree in each connected component and colours every vertex by the
+-- parity of its distance from that root. Either no edge joins two vertices of the same
+-- colour, and the colouring is a `TwoColoring`, or some edge does, and that edge
+-- together with the two tree paths back to the common ancestor of its endpoints closes
+-- a walk of odd length — an `OddClosedWalk`, which refutes bipartiteness.
+#check_bipartite PetersenFromG6
+#eval PetersenFromG6.bipartite
+
+-- As with Hamiltonian paths, the command only reports what it found, and the tactic of
+-- the same name without the leading `#` puts the fact into a proof. It decides both
+-- directions, and neither direction rests on an axiom or on an external solver.
+example : Cube5.bipartite := by
+  check_bipartitea Cube5
+
+example : ¬PetersenFromG6.bipartite := by
+  check_bipartitea PetersenFromG6
+
+-- `check_bipartite` leaves the fact in the context instead of closing the goal, and
+-- `with h` gives it a name.
+example : ¬PetersenFromG6.bipartite := by
+  check_bipartite PetersenFromG6 with h
+  exact h
+
+-----------------------------------------
 -- Hamiltonian paths
 -----------------------------------------
 
@@ -227,10 +266,6 @@ example : ∃ (G : Graph), G.traceable ∧ G.vertexSize > 3 ∧ (G.minimumDegree
 
 section Capstone
 
--- Deciding `¬ G.bipartite` with no certificate to hand searches for a
--- two-colouring, which overruns the default recursion budget.
-set_option maxRecDepth 10000
-
 /-- Traceability is not a function of the degree sequence: there are two
     connected, non-bipartite graphs with the same degree sequence, one of which
     is traceable and one of which is not. -/
@@ -240,7 +275,9 @@ theorem traceability_not_determined_by_degree_sequence :
       G.connectedGraph ∧ H.connectedGraph ∧
       ¬ G.bipartite ∧ ¬ H.bipartite ∧
       G.traceable ∧ ¬ H.traceable := by
-  refine ⟨Twin1, Twin2, by decide, by decide, by decide, by decide, by decide, ?_, ?_⟩
+  refine ⟨Twin1, Twin2, by decide, by decide, by decide, ?_, ?_, ?_, ?_⟩
+  · check_bipartitea Twin1
+  · check_bipartitea Twin2
   · check_traceablea Twin1
   · check_traceablea Twin2
 
