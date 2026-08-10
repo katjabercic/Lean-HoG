@@ -131,5 +131,35 @@ theorem length_eq_num_vertices {G : Graph} (h2 : 1 < G.vertexSize) (hc : Hamilto
     simp
   omega
 
+open Walk ClosedWalk in
+def hamiltonian_cycle_on_size_1 {G : Graph} (h1 : G.vertexSize = 1) : HamiltonianCycle G where
+  u := ⟨0, Nat.lt_of_sub_eq_succ h1⟩
+  cycle := {
+    cycle := here ⟨0, Nat.lt_of_sub_eq_succ h1⟩
+    isCycle := rfl
+  }
+  isHamiltonian := by
+    simp [Cycle.isHamiltonian]
+    intro v
+    apply Graph.zero_vertex_of_size_one h1
+
+/-- No graph on two vertices is Hamiltonian, so `hamiltonianCycleCNF`'s satisfiability at
+`G.vertexSize = 2` never certifies a cycle — see the discussion in `PLAN.md`.
+
+A Hamiltonian cycle would visit `G.vertexSize + 1 = 3` positions, hence traverse two edges,
+and `ClosedWalk.isCycle` makes those two distinct; but a two-vertex graph has at most one edge
+to offer. -/
+theorem no_hamiltonian_cycle_on_size_2 {G : Graph} (h2 : G.vertexSize = 2) :
+    ¬ G.isHamiltonian := by
+  rintro ⟨u, c, hc⟩
+  have hlen := length_eq_num_vertices (by omega) ⟨u, c, hc⟩
+  simp only [ClosedWalk.vertices, Walk.vertices_edges_length, h2] at hlen
+  have hnd : (Walk.edges c.cycle).Nodup :=
+    List.all_distinct_iff_nodup.mp (Cycle.edges_all_distinct c.isCycle)
+  have hsub : Fintype.card G.edge ≤ Fintype.card G.edgeType := Fintype.card_subtype_le _
+  have := hnd.length_le_card
+  have := Graph.edgeType_size_at_vertexSize_2 h2
+  omega
+
 end HamiltonianCycle
 end LeanHoG

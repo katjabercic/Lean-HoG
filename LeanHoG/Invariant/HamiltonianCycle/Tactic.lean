@@ -40,6 +40,9 @@ inductive HamiltonicityOutcome
   | unsat
   /-- Hamiltonian without consulting the solver: a one-vertex graph is vacuously so. -/
   | vacuous
+  /-- Not Hamiltonian without consulting the solver: no two-vertex graph is, even though
+      the encoding is satisfiable there. -/
+  | twoVertices
 
 /-- Turn a `HamiltonianCycle graph` certificate into the `graph.isHamiltonian` fact, backed
     by a declaration named after the graph when `register` says so.
@@ -79,20 +82,26 @@ open Trestle Model in
     the *graph*: the `HamiltonianCycle` instance when the graph is Hamiltonian, the
     axiom asserting the encoding's unsatisfiability when it is not.
 
-    A one-vertex graph is answered without running the solver, and not as an optimisation:
-    `hamiltonianCycleCNF` is unconditionally UNSAT there — `firstAndLastConstraints` puts
-    vertex `0` at positions `0` and `1` both, which `edgeConstraints` then forbids, adjacency
-    being irreflexive — while the graph itself is vacuously Hamiltonian. Consulting the
-    solver would therefore report UNSAT for a Hamiltonian graph. This is also why
-    `no_assignment_implies_no_hamiltonian_cycle'` carries `1 < G.vertexSize`.
+    Graphs on one and on two vertices are answered without running the solver, and not as an
+    optimisation — at both sizes the encoding disagrees with `Graph.isHamiltonian`:
+
+    * At one vertex `hamiltonianCycleCNF` is unconditionally UNSAT — `firstAndLastConstraints`
+      puts vertex `0` at positions `0` and `1` both, which `edgeConstraints` then forbids,
+      adjacency being irreflexive — while the graph itself is vacuously Hamiltonian. This is
+      also why `no_assignment_implies_no_hamiltonian_cycle'` carries `1 < G.vertexSize`.
+    * At two vertices the encoding is *satisfiable* for the graph with an edge (positions
+      `0, 1, 2` holding `0, 1, 0`), but `ClosedWalk.isCycle` also demands distinct edges and
+      that walk uses `{0,1}` twice, so no two-vertex graph is Hamiltonian
+      (`no_hamiltonian_cycle_on_size_2`). Consulting the solver here would report SAT and then
+      have the kernel reject the certificate it built.
 
     See `LeanHoG.Invariant.HamiltonianPath.Tactic.searchForHamiltonianPathAux` for why
     `register` must be `false` from a tactic. -/
 unsafe def searchForHamiltonianCycleAux (graphName : Name) (graph : Q(Graph))
     (register : Bool) : TermElabM (Expr × Expr × HamiltonicityOutcome) := do
   let G ← Meta.evalExpr' Graph ``Graph graph
-  if h2 : 1 < G.vertexSize then
-    let h : 0 < G.vertexSize := Nat.zero_lt_of_lt h2
+  if h2 : 2 < G.vertexSize then
+    let h : 0 < G.vertexSize := by omega
     let enc := (hamiltonianCycleCNF G h).val
     let opts ← getOptions
     let cadicalExe := opts.get leanHoG.solverCmd.name leanHoG.solverCmd.defValue
@@ -191,6 +200,13 @@ unsafe def searchForHamiltonianCycleAux (graphName : Name) (graph : Q(Graph))
       return (nonHamType, .app derivation (mkConst declName), .unsat)
 
     | .error => throwError "SAT solver exited with error"
+  else if G.vertexSize = 2 then
+    -- Not Hamiltonian, established directly rather than through the solver; see this
+    -- function's docstring for why the solver must not be asked here.
+    have hTwoDec : Q(decide (Graph.vertexSize $graph = 2) = true) := (q(Eq.refl true) : Lean.Expr)
+    let hTwo : Q(Graph.vertexSize $graph = 2) := q(of_decide_eq_true $hTwoDec)
+    return (q(¬ Graph.isHamiltonian $graph),
+      q(HamiltonianCycle.no_hamiltonian_cycle_on_size_2 $hTwo), .twoVertices)
   else if G.vertexSize = 1 then
     -- Vacuously Hamiltonian, certified directly rather than through the solver; see this
     -- function's docstring for why the solver must not be asked here.
@@ -215,8 +231,9 @@ syntax (name := checkHamiltonian) "#check_hamiltonian " ident : command
     an axiom asserting the encoding's unsatisfiability is added; `¬ G.isHamiltonian`
     follows from it by `HamiltonianCycle/Correctness.lean`.
 
-    A one-vertex graph never reaches the solver — it is vacuously Hamiltonian, which the
-    encoding does not see (see `searchForHamiltonianCycleAux`).
+    Graphs on one and on two vertices never reach the solver: the encoding disagrees with
+    `Graph.isHamiltonian` at both sizes, so both are answered directly (see
+    `searchForHamiltonianCycleAux`).
 -/
 @[command_elab checkHamiltonian]
 unsafe def checkHamiltonianImpl : Command.CommandElab
@@ -234,6 +251,9 @@ unsafe def checkHamiltonianImpl : Command.CommandElab
     | .unsat =>
       logInfo m!"the encoding is unsatisfiable after exhaustive search, so {graphName} \
         has no Hamiltonian cycle"
+    | .twoVertices =>
+      logInfo m!"{graphName} has two vertices, so it has no Hamiltonian cycle: covering \
+        both would traverse the single possible edge twice"
 
   | _ => throwUnsupportedSyntax
 
@@ -244,7 +264,8 @@ unsafe def checkHamiltonianImpl : Command.CommandElab
 open Trestle Model in
 /-- Run the Hamiltonian cycle search on `g` and add what it establishes to the local
     context as a hypothesis named `h`: `g.isHamiltonian` when a cycle is found (or when `g`
-    is a single vertex), `¬ g.isHamiltonian` when the encoding is refuted. -/
+    is a single vertex), `¬ g.isHamiltonian` when the encoding is refuted (or when `g` has
+    two vertices). -/
 unsafe def assertHamiltonicityFact (g : Ident) (h : Name) : Tactic.TacticM Unit :=
   Tactic.withMainContext do
     let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)

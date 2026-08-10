@@ -42,6 +42,7 @@ def notInWalk {G : Graph} {u v a b : G.vertex} : Walk G u v → G.adjacent a b �
 
 macro p:term "↑" : term => `(reverse $p)
 
+@[reducible]
 def edgeWalk {G : Graph} {s t : G.vertex} (e : G.adjacent s t) : Walk G s t :=
   step e (here t)
 
@@ -138,10 +139,20 @@ instance {G : Graph} {u v : G.vertex} : Lean.ToJson (Walk G u v) where
   toJson w := Lean.toJson w.edges
 
 lemma edges_length {G : Graph} {u v : G.vertex} {w : Walk G u v} :
-  w.edges.length = w.length := by
+    w.edges.length = w.length := by
   induction w
   · simp
   · simp_all
+
+lemma vertices_length {G : Graph} {u v : G.vertex} {w : Walk G u v} :
+    w.vertices.length = w.length + 1 := by
+  induction w with
+  | here _ => simp
+  | step e w ih => simp [ih]
+
+lemma vertices_edges_length {G : Graph} {u v : G.vertex} {w : Walk G u v} :
+    w.vertices.length = w.edges.length + 1 := by
+  rw [vertices_length, edges_length]
 
 @[simp]
 lemma edges_sublist_left {G : Graph} {u v w : G.vertex} {p : Walk G u w} {adj_u_v : G.adjacent u v}
@@ -605,6 +616,12 @@ def isLongest {G : Graph} (u : G.vertex) (c : Cycle G u) : Prop :=
 
 def isEulerian {G : Graph} {u : G.vertex} (c : Cycle G u) : Prop :=
   ∀ (e : G.edge), e ∈ c.edges
+
+theorem edges_all_distinct {G : Graph} {u : G.vertex} {c : ClosedWalk G u} (hc : c.isCycle) :
+    c.edges.all_distinct := by
+  match (c : Walk G u u) with
+  | Walk.here s => simp
+  | Walk.step e c => simp_all [ClosedWalk.isCycle]
 
 end Cycle
 

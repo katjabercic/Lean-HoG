@@ -16,6 +16,12 @@ set_option leanHoG.pythonExecutable "python"
 -- In the examples, some invariant certificates are omitted on purpose.
 -- Below, they are marked with a comment.
 
+-- The discrete graph on one vertex
+load_graph G1 "examples/one.json"
+#eval G1.connectedGraph
+#eval G1.connected 0 1
+#eval G1.numberOfConnectedComponents
+
 -- The discrete graph on two vertices
 load_graph Two "examples/two.json"
 #eval Two.connectedGraph

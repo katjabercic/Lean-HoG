@@ -14,19 +14,6 @@ open Trestle Encode Model PropFun
    and this file's names would otherwise clash with them. -/
 namespace HamiltonianCycle
 
-open Walk ClosedWalk in
-def hamiltonian_cycle_on_size_1 {G : Graph} (h1 : G.vertexSize = 1) : HamiltonianCycle G where
-  u := ⟨0, Nat.lt_of_sub_eq_succ h1⟩
-  cycle := {
-    cycle := here ⟨0, Nat.lt_of_sub_eq_succ h1⟩
-    isCycle := rfl
-  }
-  isHamiltonian := by
-    simp [Cycle.isHamiltonian]
-    intro v
-    apply Graph.zero_vertex_of_size_one h1
-
-
 /-- Every Hamiltonian cycle in `G` gives a satisfying assignment of `hamiltonianCycleConstraints`.
 Mirrors `HamiltonianPath.hamiltonian_path_to_sat`; the new step here is rotating the given
 cycle so it starts (and ends) at vertex `0`, matching the WLOG built into

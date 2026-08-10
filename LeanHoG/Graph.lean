@@ -4,6 +4,7 @@ import Batteries.Data.RBMap.Lemmas
 import Mathlib.Data.Finite.Defs
 import Mathlib.Data.Fintype.Powerset
 import Mathlib.Data.List.Sort
+import Mathlib.Data.Fintype.BigOperators
 
 -- This was deprecated and eventually removed from Mathlib for no good
 -- reason and with no good replacemnet (lt_trichotomy is only vaguely
@@ -240,6 +241,15 @@ lemma zero_vertex_of_size_one {G : Graph} {v : G.vertex} (h : G.vertexSize = 1) 
   subst h
   apply Fin.fin_one_eq_zero
 
+/-- A graph on two vertices has at most one edge: the only pair `(fst, snd)` of vertices with
+`fst < snd` is `(0, 1)`. -/
+theorem edgeType_size_at_vertexSize_2 {G : Graph} (h2 : G.vertexSize = 2) :
+    Fintype.card G.edgeType ≤ 1 := by
+  simp only [edgeType, h2]
+  -- `Fintype.card (Edge 2) ≤ 1`, a closed computation on the derived `Fintype` instance
+  decide
+
 end Graph
+
 
 end LeanHoG
