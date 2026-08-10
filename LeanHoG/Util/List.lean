@@ -16,9 +16,7 @@ theorem all_distinct_iff_dedup {α : Type} [DecidableEq α] (l : List α) :
   l.all_distinct = true ↔ List.dedup l = l := by
   simp only [all_distinct_iff_nodup, List.dedup_eq_self]
 
-/-- STUB, for review — see the `HamiltonianCycle.rebase` proof plan.
-
-Distinctness of an appended list doesn't care which piece comes first: it only depends
+/-- Distinctness of an appended list doesn't care which piece comes first: it only depends
 on each piece being distinct and the two being disjoint, both symmetric conditions. -/
 theorem all_distinct_append_comm {α : Type} [DecidableEq α] {l1 l2 : List α}
     (h : (l1 ++ l2).all_distinct) : (l2 ++ l1).all_distinct := by

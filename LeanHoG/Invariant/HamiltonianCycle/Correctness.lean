@@ -26,7 +26,7 @@ adjacent to itself — impossible, since adjacency is irreflexive), while a 1-ve
 *vacuously* Hamiltonian on the `HamiltonianCycle`/`Graph.isHamiltonian` side (the trivial
 closed walk has no edges to repeat, so it trivially satisfies `isCycle`). So this theorem is
 simply false at `G.vertexSize = 1`, and every theorem built on it inherits the same
-hypothesis. See the plan for the consequence this has for `Tactic.lean` later. -/
+hypothesis. See `searchForHamiltonianCycleAux` for how `Tactic.lean` avoids this size. -/
 theorem hamiltonian_cycle_to_sat {G : Graph} (h2 : 1 < G.vertexSize) (hc : HamiltonianCycle G) :
     ∃ (τ : PropAssignment (Var G.vertexSize)),
       τ |> hamiltonianCycleConstraints G (by omega) := by

@@ -42,9 +42,7 @@ theorem equivNonHamiltonianDefs (G : Graph) :
   G.isNonHamiltonian ↔ G.isNonHamiltonian' :=
   by simp [Graph.isHamiltonian]
 
-/-- STUB, for review — see the discussion in `HamiltonianCycle/Correctness.lean`.
-
-A Hamiltonian cycle can be re-based at any vertex of `G`: since it is Hamiltonian, `v`
+/-- A Hamiltonian cycle can be re-based at any vertex of `G`: since it is Hamiltonian, `v`
 lies somewhere on it, so cutting the underlying closed walk where it passes through `v`
 and reconnecting the two pieces in the other order gives a closed walk based at `v` with
 the same vertices, hence still Hamiltonian. This is the piece `hamilton_cycle_to_sat`
@@ -144,7 +142,7 @@ def hamiltonian_cycle_on_size_1 {G : Graph} (h1 : G.vertexSize = 1) : Hamiltonia
     apply Graph.zero_vertex_of_size_one h1
 
 /-- No graph on two vertices is Hamiltonian, so `hamiltonianCycleCNF`'s satisfiability at
-`G.vertexSize = 2` never certifies a cycle — see the discussion in `PLAN.md`.
+`G.vertexSize = 2` never certifies a cycle.
 
 A Hamiltonian cycle would visit `G.vertexSize + 1 = 3` positions, hence traverse two edges,
 and `ClosedWalk.isCycle` makes those two distinct; but a two-vertex graph has at most one edge

@@ -286,9 +286,7 @@ lemma exists_split {G : Graph} {a b : G.vertex} (w : Walk G a b) {v : G.vertex}
       use w2
       simp [append, h]
 
-/-- STUB, for review — see the `HamiltonianCycle.rebase` proof plan.
-
-A vertex is on an appended walk iff it is on one of the two pieces. This is the fact
+/-- A vertex is on an appended walk iff it is on one of the two pieces. This is the fact
 that lets us see a rotation `w2.append w1` visits the same vertices as `w1.append w2`
 (rewrite both sides with this lemma; the resulting `∨` is symmetric), without needing
 any case split on whether the pieces are trivial. -/
@@ -299,9 +297,7 @@ lemma mem_vertices_append {G : Graph} {a b c : G.vertex} (w1 : Walk G a b) (w2 :
   | here v => simp [append]; aesop
   | step e w1 ih => simp [append]; aesop
 
-/-- STUB, for review — see the `HamiltonianCycle.rebase` proof plan.
-
-The "no repeated interior vertex" half of `isCycle` transfers to a rotation: dropping the
+/-- The "no repeated interior vertex" half of `isCycle` transfers to a rotation: dropping the
 shared endpoint from each of `w1.append w2` and `w2.append w1` leaves the same two pieces
 `w1.vertices.tail`/`w2.vertices.tail`, just concatenated in the other order, so this
 follows from `List.all_distinct_append_comm`. -/
@@ -318,9 +314,7 @@ lemma vertices_tail_append_rotate {G : Graph} {a v : G.vertex} (w1 : Walk G a v)
   rw [e2]
   exact List.all_distinct_append_comm h
 
-/-- STUB, for review — see the `HamiltonianCycle.rebase` proof plan.
-
-The "no repeated edge" half of `isCycle` transfers to a rotation: `edges_append` has no
+/-- The "no repeated edge" half of `isCycle` transfers to a rotation: `edges_append` has no
 shared-endpoint wrinkle (unlike `vertices_append`), so `w1.append w2` and `w2.append w1`
 have edge lists that are literally each other's `List.all_distinct_append_comm` swap. -/
 lemma edges_append_rotate {G : Graph} {a v : G.vertex} (w1 : Walk G a v) (w2 : Walk G v a)
