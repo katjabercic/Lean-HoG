@@ -8,6 +8,8 @@ import LeanHoG.Tactic.Options
 import LeanHoG.Tactic.ParseExpr
 import LeanHoG.Invariant.HamiltonianPath.Basic
 import LeanHoG.Invariant.HamiltonianPath.Tactic
+import LeanHoG.Invariant.HamiltonianCycle.Basic
+import LeanHoG.Invariant.HamiltonianCycle.Tactic
 
 namespace LeanHoG
 
@@ -81,6 +83,7 @@ unsafe def findExampleImpl : Tactic.Tactic
       try
         let enqs ← decomposeExistsQ goalType
         let mentionsTracability := enqs.any (fun enq => enq.mentionsTracability)
+        let mentionsHamiltonicity := enqs.any (fun enq => enq.mentionsHamiltonicity)
         let hash := hash enqs
         let query := HoGQuery.build enqs
         let graphs ← liftCommandElabM (queryDatabaseForExamplesAux [query] hash)
@@ -110,41 +113,53 @@ unsafe def findExampleImpl : Tactic.Tactic
               goal.withContext do
                 let r ← Lean.Elab.Tactic.elabTermEnsuringType graphIdent goalType
                 goal.assign r
-                -- Now try to simp which will among other things look for instance for e.g. HamiltonianPath
+                -- HoG has answered the query, but its answer is data: for the invariants
+                -- Lean cannot compute it needs a certificate of its own, found with a SAT
+                -- solver. Traceability needs a Hamiltonian path, Hamiltonicity a Hamiltonian
+                -- cycle. Collect what each search establishes, then let `simp_all`/`decide`
+                -- close what is left of the goal.
+                let mut facts : Array (Expr × Expr) := #[]
                 if mentionsTracability then
-                  -- If we want to prove things about tracability we need to search for a Hamiltonian path
-                  -- `register := true`: the SAT case below closes the goal by instance
-                  -- synthesis rather than with the proof term, so the certificate has
-                  -- to be a registered instance and not just a term.
-                  let (val, type, res) ← LeanHoG.searchForHamiltonianPathAux graphIdent.getId r
+                  -- `register := true`: in the SAT case the goal is closed by instance
+                  -- synthesis rather than from the proof term, so the certificate has to be
+                  -- a registered instance and not just a term — which is also why only the
+                  -- UNSAT fact is asserted here. That fact is the unfolded existential;
+                  -- `no_path_not_traceable` below is what turns it into `¬ G.traceable`.
+                  let (type, proof, res) ← LeanHoG.searchForHamiltonianPathAux graphIdent.getId r
                     (register := true)
                   match res with
-                  | .unsat =>
-                    Tactic.liftMetaTactic fun mvarId => do
-                      let mvarIdNew ← mvarId.assert .anonymous val type
-                      let (_, mvarIdNew) ← mvarIdNew.intro1P
-                      return [mvarIdNew]
-                    let ctx ← mkSimpContext (← `(tactic|simp_all only [LeanHoG.Graph.no_path_not_traceable, not_false_eq_true])) false
-                    let (result?, _) ← Meta.simpAll (← getMainGoal) ctx.ctx (simprocs := ctx.simprocs)
-                    match result? with
-                    | none => replaceMainGoal []
-                    | some mvarId => replaceMainGoal [mvarId]
-                    Tactic.evalDecide stx
-                  | _ =>
-                    let ctx ← mkSimpContext (← `(tactic|simp_all only [LeanHoG.Graph.no_path_not_traceable, not_false_eq_true])) false
-                    let (result?, _) ← Meta.simpAll (← getMainGoal) ctx.ctx (simprocs := ctx.simprocs)
-                    match result? with
-                    | none => replaceMainGoal []
-                    | some mvarId => replaceMainGoal [mvarId]
-                    Tactic.evalDecide stx
-                else
-                  let ctx ← mkSimpContext (← `(tactic|simp_all)) false
-                  let (result?, _) ← Meta.simpAll (← getMainGoal) ctx.ctx (simprocs := ctx.simprocs)
-                  match result? with
-                  | none => replaceMainGoal []
-                  | some mvarId =>
-                    replaceMainGoal [mvarId]
-                    Tactic.evalDecide stx
+                  | .unsat => facts := facts.push (type, proof)
+                  | _ => pure ()
+                if mentionsHamiltonicity then
+                  -- Every outcome of the cycle search names the fact it established
+                  -- (`Graph.isHamiltonian` or its negation) and returns a proof of it, so
+                  -- there is nothing to bridge and no need to go through synthesis. Note the
+                  -- two degenerate sizes never reach the solver — see
+                  -- `searchForHamiltonianCycleAux`.
+                  let (type, proof, _) ← LeanHoG.searchForHamiltonianCycleAux graphIdent.getId r
+                    (register := true)
+                  facts := facts.push (type, proof)
+                for (type, proof) in facts do
+                  Tactic.liftMetaTactic fun mvarId => do
+                    let mvarIdNew ← mvarId.assert .anonymous type proof
+                    let (_, mvarIdNew) ← mvarIdNew.intro1P
+                    return [mvarIdNew]
+                -- `no_path_not_traceable` bridges the path search's UNSAT fact to
+                -- `¬ G.traceable`, and `isNonHamiltonian` unfolds the goal's spelling of
+                -- non-Hamiltonicity to the `¬ G.isHamiltonian` the cycle search returns.
+                let closing ←
+                  if mentionsTracability || mentionsHamiltonicity then
+                    `(tactic|simp_all only [LeanHoG.Graph.no_path_not_traceable,
+                      LeanHoG.Graph.isNonHamiltonian, not_false_eq_true])
+                  else
+                    `(tactic|simp_all)
+                let ctx ← mkSimpContext closing false
+                let (result?, _) ← Meta.simpAll (← getMainGoal) ctx.ctx (simprocs := ctx.simprocs)
+                match result? with
+                | none => replaceMainGoal []
+                | some mvarId =>
+                  replaceMainGoal [mvarId]
+                  Tactic.evalDecide stx
                 Lean.logInfo s!"Closed goal using {graphIdent.getId}"
               -- Visualize the graph we used to close the goal
               -- TODO: Make this an option
