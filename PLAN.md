@@ -1,5 +1,10 @@
 # Plan: `HamiltonianCycle` SAT-encoding correctness
 
+**Status: complete (2026-08-10).** Every stage below is done, including stage 7. This file has
+served its purpose and is deleted in the commit that follows this one; it is kept in the history
+as the record of how the development was shaped and why. Docstrings that pointed here have been
+rewritten to stand on their own.
+
 Goal: prove `¬ Graph.isHamiltonian G` from `hamiltonianCycleCNF`'s UNSAT, so
 `HamiltonianCycle/Tactic.lean`'s `.unsat` branch can return that instead of the raw
 "encoding is unsatisfiable" fact it returns today. Lives in
@@ -287,7 +292,38 @@ encoding correct — was also rejected: it is non-standard (a cycle in a simple 
 ≥ 3), and `isCycle` feeds `Graph.girth`, `Cycle.isTriangle`, `ShortestCycle` and `isEulerian`,
 all of which would silently change meaning.
 
-### Stage 7 — the work itself
+### Stage 7 — done
+
+1. ~~A theorem that no two-vertex graph is Hamiltonian.~~ **Done** as
+   `HamiltonianCycle.no_hamiltonian_cycle_on_size_2 : G.vertexSize = 2 → ¬ G.isHamiltonian`
+   (`HamiltonianCycle/Basic.lean`). The counting argument is the one sketched below, but the
+   contradiction is drawn numerically rather than by cases: `length_eq_num_vertices` gives three
+   vertices hence two edges, `isCycle` makes them `Nodup`, and
+   `2 = length ≤ Fintype.card G.edge ≤ Fintype.card G.edgeType ≤ 1` closes it by `omega`. The
+   last inequality is `Graph.edgeType_size_at_vertexSize_2`, which now lives in `Graph.lean`.
+2. ~~Extend `searchForHamiltonianCycleAux`'s split.~~ **Done** exactly as planned: the solver
+   guard is `2 < G.vertexSize`, a new `n = 2` arm returns `¬ Graph.isHamiltonian $graph` from
+   the theorem above (quoted `Graph.vertexSize $graph = 2` built by `of_decide_eq_true`, no
+   solver call and no axiom), `n = 1` stays vacuous and `n = 0` still throws. The fourth
+   `HamiltonicityOutcome` constructor is `twoVertices`.
+3. ~~Re-run the end-to-end check on `examples/path1.json`.~~ **Done**, and extended to every
+   example graph: `one.json` (vacuous), `two.json` and `path1.json` (the new `n = 2` arm, no
+   axiom), `cycle7.json`, `Poussin.json`, `Hanoi2Disks.json`, `cube5.json` (SAT) and
+   `cycle3-cycle4.json` (UNSAT, axiom LRAT-checked). Each was checked both as
+   `#check_hamiltonian G` and as `theorem … := by check_hamiltonian G with h; exact h` with
+   `#print axioms` inspected. `path1.json` no longer fails in the kernel.
+
+Note that `two.json` changed behaviour: with no edges its encoding is genuinely UNSAT, so it
+used to go through the solver and add a `hamiltonianCycleCNFUnsat` axiom. Both two-vertex graphs
+are now answered on vertex count alone, so that fact became proof-carrying — at the cost of
+never consulting the solver at `n = 2` even when it would agree.
+
+Left deliberately undone: committing those checks into `Examples.lean`. The solver-backed ones
+would break `lake build Examples` for anyone without `cadical` on `PATH`. Only `one.json`,
+`two.json` and `path1.json` are solver-free and safe to commit unconditionally, and
+`examples/one.json` plus its `load_graph G1` line are in place already.
+
+The original sketch, kept for the record:
 
 1. A theorem that no two-vertex graph is Hamiltonian: covering both vertices takes the single
    edge twice, so `ClosedWalk.isCycle`'s edge-distinctness half fails. Natural home is
