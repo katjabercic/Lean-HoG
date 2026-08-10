@@ -43,6 +43,9 @@ inductive HamiltonicityOutcome
   /-- Not Hamiltonian without consulting the solver: no two-vertex graph is, even though
       the encoding is satisfiable there. -/
   | twoVertices
+  /-- Not Hamiltonian without consulting the solver: a graph with no vertices has none to
+      base a cycle at, and the encoding cannot even be built. -/
+  | noVertices
 
 /-- Turn a `HamiltonianCycle graph` certificate into the `graph.isHamiltonian` fact, backed
     by a declaration named after the graph when `register` says so.
@@ -82,9 +85,11 @@ open Trestle Model in
     the *graph*: the `HamiltonianCycle` instance when the graph is Hamiltonian, the
     axiom asserting the encoding's unsatisfiability when it is not.
 
-    Graphs on one and on two vertices are answered without running the solver, and not as an
-    optimisation — at both sizes the encoding disagrees with `Graph.isHamiltonian`:
+    Graphs on fewer than three vertices are answered without running the solver, and not as an
+    optimisation — at none of those sizes does the encoding answer for `Graph.isHamiltonian`:
 
+    * At no vertices there is nothing to base a cycle at, so the graph is not Hamiltonian,
+      and `hamiltonianCycleCNF` cannot even be built (it needs `0 < G.vertexSize`).
     * At one vertex `hamiltonianCycleCNF` is unconditionally UNSAT — `firstAndLastConstraints`
       puts vertex `0` at positions `0` and `1` both, which `edgeConstraints` then forbids,
       adjacency being irreflexive — while the graph itself is vacuously Hamiltonian. This is
@@ -217,7 +222,12 @@ unsafe def searchForHamiltonianCycleAux (graphName : Name) (graph : Q(Graph))
     let (existsType, existsHamCycle) ← certifyHamiltonian graphName graph register hcQ
     return (existsType, existsHamCycle, .vacuous)
   else
-    throwError "cannot search for a Hamiltonian cycle in a graph with no vertices"
+    -- No vertices left to be anything else: not Hamiltonian, for want of a vertex to base a
+    -- cycle at. The encoding cannot be asked — it needs `0 < G.vertexSize` to be built at all.
+    have hZeroDec : Q(decide (Graph.vertexSize $graph = 0) = true) := (q(Eq.refl true) : Lean.Expr)
+    let hZero : Q(Graph.vertexSize $graph = 0) := q(of_decide_eq_true $hZeroDec)
+    return (q(¬ Graph.isHamiltonian $graph),
+      q(HamiltonianCycle.no_hamiltonian_cycle_on_size_0 $hZero), .noVertices)
 
 ------------------------------------------
 -- Find Hamiltonian cycle command
@@ -231,8 +241,8 @@ syntax (name := checkHamiltonian) "#check_hamiltonian " ident : command
     an axiom asserting the encoding's unsatisfiability is added; `¬ G.isHamiltonian`
     follows from it by `HamiltonianCycle/Correctness.lean`.
 
-    Graphs on one and on two vertices never reach the solver: the encoding disagrees with
-    `Graph.isHamiltonian` at both sizes, so both are answered directly (see
+    Graphs on fewer than three vertices never reach the solver: the encoding does not answer
+    for `Graph.isHamiltonian` at those sizes, so they are answered directly (see
     `searchForHamiltonianCycleAux`).
 -/
 @[command_elab checkHamiltonian]
@@ -254,6 +264,9 @@ unsafe def checkHamiltonianImpl : Command.CommandElab
     | .twoVertices =>
       logInfo m!"{graphName} has two vertices, so it has no Hamiltonian cycle: covering \
         both would traverse the single possible edge twice"
+    | .noVertices =>
+      logInfo m!"{graphName} has no vertices, so it has no Hamiltonian cycle: there is no \
+        vertex to base one at"
 
   | _ => throwUnsupportedSyntax
 
@@ -265,7 +278,8 @@ open Trestle Model in
 /-- Run the Hamiltonian cycle search on `g` and add what it establishes to the local
     context as a hypothesis named `h`: `g.isHamiltonian` when a cycle is found (or when `g`
     is a single vertex), `¬ g.isHamiltonian` when the encoding is refuted (or when `g` has
-    two vertices). -/
+    two vertices or none). Unlike its path counterpart, this never throws for want of
+    vertices — every graph gets an answer. -/
 unsafe def assertHamiltonicityFact (g : Ident) (h : Name) : Tactic.TacticM Unit :=
   Tactic.withMainContext do
     let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)

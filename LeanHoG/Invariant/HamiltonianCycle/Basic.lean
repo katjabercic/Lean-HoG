@@ -129,6 +129,15 @@ theorem length_eq_num_vertices {G : Graph} (h2 : 1 < G.vertexSize) (hc : Hamilto
     simp
   omega
 
+/-- A graph with no vertices is not Hamiltonian: `Graph.isHamiltonian` asks for a vertex to
+base the cycle at, and there is none. Note this is *not* the vacuous truth that
+`G.vertexSize = 1` gives — the empty existential is false, not true. -/
+theorem no_hamiltonian_cycle_on_size_0 {G : Graph} (h0 : G.vertexSize = 0) :
+    ¬ G.isHamiltonian := by
+  rintro ⟨u, -⟩
+  have := u.isLt
+  omega
+
 open Walk ClosedWalk in
 def hamiltonian_cycle_on_size_1 {G : Graph} (h1 : G.vertexSize = 1) : HamiltonianCycle G where
   u := ⟨0, Nat.lt_of_sub_eq_succ h1⟩
