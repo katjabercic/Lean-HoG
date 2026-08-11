@@ -4,7 +4,7 @@ import LeanHoG.Graph
 namespace LeanHoG
 
 /--
-  JSON encoding of a Hamiltonian path.
+  JSON encoding of a Hamiltonian cycle.
 -/
 structure HamiltonianCycleData : Type where
   /-- Hamiltonian cycle -/

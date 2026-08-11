@@ -115,15 +115,20 @@ theorem std_unsat_implies_no_assignment {G : Graph} (h : 0 < G.vertexSize) :
   apply hICnf
   exact (VEncCNF.toICnf_equisatisfiable (hamiltonianCycleCNF G h)).mpr hConstraints
 
-/-- The version stated in terms of `Graph.isHamiltonian`, ready to plug into
-`HamiltonianCycle.Tactic`'s `.unsat` branch in place of the raw encoding-is-unsatisfiable
-fact it currently returns — once `Tactic.lean` is updated to only reach for this when
-`1 < G.vertexSize` (see the note on `hamiltonian_cycle_to_sat`); `G.vertexSize ≤ 1` needs
-handling separately there.
+/-- The version stated in terms of `Graph.isHamiltonian`. This is what
+`HamiltonianCycle.Tactic`'s `.unsat` branch returns: composed with
+`std_unsat_implies_no_assignment`, it carries the LRAT-checked unsatisfiability of the encoding
+all the way to `¬ G.isHamiltonian`.
 
 `Graph.isHamiltonian` unfolds to `∃ (u : G.vertex) (c : Cycle G u), c.isHamiltonian`, which is
 exactly the fields of the `HamiltonianCycle` class, so this only repackages
-`no_assignment_implies_no_hamiltonian_cycle`. -/
+`no_assignment_implies_no_hamiltonian_cycle`.
+
+The `1 < G.vertexSize` hypothesis is inherited from `hamiltonian_cycle_to_sat`, where it is a
+necessity rather than a convenience — see the note there. `searchForHamiltonianCycleAux` only
+reaches for this theorem under `2 < G.vertexSize`, answering the three smaller sizes directly
+from `no_hamiltonian_cycle_on_size_0`, `hamiltonian_cycle_on_size_1` and
+`no_hamiltonian_cycle_on_size_2`. -/
 theorem no_assignment_implies_no_hamiltonian_cycle' {G : Graph} (h2 : 1 < G.vertexSize) :
     (¬ ∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianCycleConstraints G (by omega)) →
     ¬ G.isHamiltonian := by
