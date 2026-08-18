@@ -12,8 +12,6 @@ import LeanHoG.Certificate
 import LeanHoG.Util.Meta
 import LeanHoG.JsonData
 
-import Trestle.Solver.Impl.DimacsCommand
-import LeanHoG.Invariant.HamiltonianPath.SatEncoding
 import LeanHoG.Invariant.HamiltonianPath.Certificate
 
 namespace LeanHoG
@@ -29,9 +27,7 @@ def liftExcept {α : Type} {m} [Monad m] [MonadError m] : Except String α → m
 def certificateName (graphName: Name) (certName: String) : Name :=
   (.str graphName certName)
 
-instance : Trestle.Solver IO := (Trestle.Solver.Impl.DimacsCommand "kissat")
-
-syntax (name := loadGraph) "load_graph" ident str (" try_ham ")? : command
+syntax (name := loadGraph) "load_graph" ident str : command
 
 unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.CommandElabM Unit := do
   have graphQ := graphOfData jsonData.graph

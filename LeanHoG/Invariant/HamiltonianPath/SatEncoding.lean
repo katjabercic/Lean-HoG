@@ -159,23 +159,10 @@ theorem hamiltonian_path_to_var_assignment {G : Graph} :
   have exists_τ := hamiltonian_path_to_sat G hp
   apply has_hamiltonian_path_to_hamiltonianPath_constraints exists_τ
 
--- unsat_to_no_hamiltonian_path
 theorem no_assignment_implies_no_hamiltonian_path {G : Graph} :
   (¬ ∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianPathConstraints G) →
   (¬ ∃ (_ : HamiltonianPath G), True) := by
   apply imp_neg hamiltonian_path_to_var_assignment
-
-lemma helper {G : Graph} :
-  (∃ (_ : HamiltonianPath G), True) ↔
-  (∃ (u v : G.vertex) (p : Path G u v), p.isHamiltonian) := by
-  apply Iff.intro
-  intro h
-  rcases h with ⟨⟨u, v, p, cond⟩, _⟩
-  use u,v,p,cond
-  intro h
-  rcases h with ⟨u,v,p,cond⟩
-  have hp : HamiltonianPath G := { u := u, v := v, path := p, isHamiltonian := cond }
-  use hp
 
 theorem std_unsat_implies_no_assignment {G : Graph} :
       ((hamiltonianPathCNF G).val.toICnf.toStd).Unsat →
@@ -196,86 +183,5 @@ theorem no_assignment_implies_no_hamiltonian_path' {G : Graph} :
     intro expham
     obtain ⟨u, v, ⟨p, cond⟩⟩ := expham
     cases h { u := u, v := v, path := p, isHamiltonian := cond }
-
-------------------------------------------------------------------------------
--- Turn unsatisfiability of the SAT constraints into nonexistence of a
--- Hamiltonian path.
-
-/--
-  Given a list of vertices of a graph, try to construct a `Path` in the graph from them.
-  If the construction fails, return `none`.
--/
-def buildPath {G : Graph} : Option (List (G.vertex)) → Option (HamiltonianPath G)
-  | none => none
-  | some [] => none
-  | some (v :: vs) =>
-    let rec fold (t : G.vertex) :
-      List (G.vertex) → Option ((s : G.vertex) ×' Path G s t)
-    | [] => none
-    | [v] =>
-      if h : v = t then
-        some ⟨v , (h ▸ Path.trivialPath v)⟩
-      else
-        dbg_trace "[v] not equal to s and t"
-        none
-    | u :: v :: vs =>
-      if h : G.adjacent u v then
-        match fold t (v :: vs) with
-        | some ⟨s, p⟩ =>
-          if h' : s = v then
-            let w := (.step h (h' ▸ p.walk))
-            if h' : Walk.isPath w = true then
-              some ⟨u, ⟨w, h'⟩⟩
-            else
-              dbg_trace "walk not path"
-              none
-          else
-            dbg_trace s!"{s} ≠ {v}"
-            none
-        | none =>
-          dbg_trace "recursive path not found"
-          none
-      else
-        dbg_trace s!"not adjacent {u}, {v}"
-        none
-    match List.getLast? vs with
-    | some t =>
-      match fold t (v :: vs) with
-      | some ⟨u, p⟩ =>
-        if h : p.isHamiltonian then
-          some { u := u, v := t, path := p, isHamiltonian := h }
-        else
-          none
-      | none => none
-    | none => none
-
-def tryFindHamiltonianPath [Solver IO] (G : Graph) :
-  IO (Option (HamiltonianPath G)) := do
-  let enc := (hamiltonianPathCNF G).val
-  let foo := EncCNF.run enc
-  let cnf := foo.2.cnf
-  let map := foo.2.vMap
-  match ← Solver.solve cnf.toICnf with
-  | .error =>
-    IO.println "error"
-    return none
-  | .unsat =>
-    IO.println "unsat"
-    return none
-  | .sat assn =>
-    if h: 0 < G.vertexSize then
-      let mut path : Array (G.vertex) := Array.replicate G.vertexSize ⟨0, h⟩
-      for i in List.fins G.vertexSize do
-        for j in List.fins G.vertexSize do
-          match assn.findEntry? (map (Var.mk i j))  with
-          | none => panic! "wtf"
-          | some (_, true) =>
-            path := path.set! j i
-          | some (_, false) =>
-            path := path
-      let p := buildPath (some path.toList)
-      return p
-    else
-      return none
 
 end LeanHoG

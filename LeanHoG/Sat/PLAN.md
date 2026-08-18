@@ -1,6 +1,6 @@
 # Generalizing the SAT-encoding scaffolding
 
-Status: **Stage 0 done**, Stages 1–6 not started. Mark each stage **Done** as it lands and record
+Status: **Stages 0 and 1 done**, Stages 2–6 not started. Mark each stage **Done** as it lands and record
 what happened under `## Completed`; delete this file when the last one is, and let it live on in
 history — as `PLAN.md` did (`git show 47715c3:PLAN.md`).
 
@@ -550,6 +550,40 @@ exercised — it needs HoG.
 **Remaining for Stage 5 on this point:** nothing for the path search. The cycle search already
 short-circuits its three degenerate sizes, and `searchForTwoColoringAux` still returns a bare
 `Bool`.
+
+### Stage 1 — Dead code and the stray solvers — **Done**
+
+234 lines deleted, 2 added, across 9 files. Everything removed was verified unreferenced first.
+
+- **The `tryFindHamiltonianPath` subtree**, as planned: `tryFindHamiltonianPath` and `buildPath`
+  from `HamiltonianPath/SatEncoding.lean`, `HamiltonianPath.toVisualizationFormat?` and
+  `IO.unsafeGet` from `Widgets.lean`. With them go both stray
+  `instance : Trestle.Solver IO := DimacsCommand "kissat"` declarations
+  (`LoadGraph.lean`, `Widgets.lean`) and the `Trestle.Solver.Impl.DimacsCommand` imports that
+  existed only for them. The library no longer names a second solver binary anywhere, and
+  every path to a solver now goes through `leanHoG.solverCmd` and the LRAT checker.
+- **`try_ham`, an extra find.** `load_graph`'s syntax carried an optional `(" try_ham ")?`
+  that `loadGraphImpl` never matched, so `load_graph G "f" try_ham` fell through to
+  `throwUnsupportedSyntax`. It was the trigger for the subtree above. Removed.
+- **Unused `Correctness.lean` lemmas**, as planned: `Fin.coe`, `Pos.coe`, `Repr (Pos n)`,
+  `hamiltonian_path_to_assignment(_expanded)`, `unsat_to_no_hamiltonian_path(_expanded)`, plus
+  `lemma helper` and the stale `-- unsat_to_no_hamiltonian_path` breadcrumb in
+  `SatEncoding.lean`. `Pos` and `imp_neg` stay — both still used until Stages 2 and 3.
+- **The Python certificate path**: `Download/findHamiltonianPath.py` (which imported a
+  `satEncoding` module that does not exist), `Download/Invariant/HamiltonianPath.py`, and
+  `HamiltonianPathEncoder` with its import in `Download/jsonEncoder.py`.
+- **`LeanHoG/Options.lean` deleted.** Its sole content was `hog.pythonExecutable`, read
+  nowhere; the live option is `leanHoG.pythonExecutable` in `Tactic/Options.lean`. Setting the
+  dead one silently did nothing, so removing it turns a silent no-op into an error. Its import
+  is dropped from `LeanHoG.lean`.
+
+**`Fin.coe` was the one thing worth watching and it was a non-event.** It was
+`@[simp, reducible]` in `namespace LeanHoG`, hence in the default simp set for every file
+importing the library; removing it broke no proof.
+
+Verified: `lake build LeanHoG Graph6Tests SatEncodingTests SolverTests` all pass, **golden CNF
+fixtures unchanged**, and `Examples` still fails at exactly its first `#download` (line 121) —
+the pre-existing environment blocker — with everything before it elaborating.
 
 **One incidental finding.** `import LeanHoG.Tactic` does *not* bring the bipartite commands
 into scope — it pulls in the two Hamiltonian tactic modules but not

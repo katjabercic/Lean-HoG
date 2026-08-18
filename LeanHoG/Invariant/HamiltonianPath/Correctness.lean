@@ -9,20 +9,8 @@ namespace LeanHoG
 
 open Trestle Model PropFun
 
-@[simp, reducible] def Fin.coe {n k : Nat} {h : k < n} : Fin k → Fin n := fun i =>
-  ⟨i, Nat.lt_trans i.isLt h⟩
-
 @[simp, reducible]
 def Pos (n : Nat) := (Fin n) × (Fin n)
-
-def Pos.coe {n k : Nat} {h : k < n} : Pos k → Pos n := fun p =>
-  (⟨p.1, Nat.lt_trans p.1.isLt h⟩,⟨p.2, Nat.lt_trans p.2.is_lt h⟩)
-
-instance (n : Nat) : Repr (Pos n) where
-  reprPrec p _ :=
-    match n with
-    | 0 => s!"()"
-    | _+1 => s!"{p}"
 
 abbrev x {n : Nat} (i j : Fin n) : PropFun (Pos n) := .var (i,j)
 
@@ -375,40 +363,5 @@ theorem hamiltonian_path_to_sat (G : Graph) (hp : HamiltonianPath G) :
   exact τ_sat_ham
 
 lemma imp_neg {P Q : Prop} (h : P → Q) : ¬ Q → ¬ P := by exact fun a a_1 => a (h a_1)
-
-lemma hamiltonian_path_to_assignment {G : Graph} :
-  (∃ (u v : G.vertex) (p : Path G u v), p.isHamiltonian) →
-  (∃ (τ : PropAssignment (Pos G.vertexSize)), τ ⊨ has_hamiltonian_path G) := by
-  intro h
-  let ⟨u, v, p, ham⟩ := h
-  have hp : HamiltonianPath G := { u := u, v := v, path := p, isHamiltonian := ham }
-  apply hamiltonian_path_to_sat G hp
-
-lemma hamiltonian_path_to_assignment_expanded {G : Graph} :
-  (∃ (u v : G.vertex) (p : Path G u v), p.isHamiltonian) →
-  (∃ (τ : PropAssignment (Pos G.vertexSize)),
-    (∀ i, ∃ j, τ ⊨ x i j ∧ (∀ j k, j ≠ k → τ ⊨ (x i j)ᶜ ∨ τ ⊨ (x i k)ᶜ)) ∧
-    (∀ j, ∃ i, τ ⊨ x i j ∧ (∀ i k, i ≠ k → τ ⊨ (x i j)ᶜ ∨ τ ⊨ (x k j)ᶜ)) ∧
-    (∀ k k', k.val + 1 =  k'.val →
-      ∀ i j, ¬ G.adjacent i j → τ ⊨ (x i k)ᶜ ∨ τ ⊨ (x j k')ᶜ))
-  := by
-  intro h
-  let ⟨τ, cond⟩ := hamiltonian_path_to_assignment h
-  apply Exists.intro τ
-  apply Iff.mp satisfies_has_hamiltonian_path_iff cond
-
-theorem unsat_to_no_hamiltonian_path {G : Graph} :
-  (¬ ∃ (τ : PropAssignment (Pos G.vertexSize)), τ ⊨ has_hamiltonian_path G) →
-  (¬ ∃ (u v : G.vertex) (p : Path G u v), p.isHamiltonian) := by
-  apply imp_neg hamiltonian_path_to_assignment
-
-theorem unsat_to_no_hamiltonian_path_expanded {G : Graph} :
-  (¬ ∃ (τ : PropAssignment (Pos G.vertexSize)),
-    (∀ i, ∃ j, τ ⊨ x i j ∧ (∀ j k, j ≠ k → τ ⊨ (x i j)ᶜ ∨ τ ⊨ (x i k)ᶜ)) ∧
-    (∀ j, ∃ i, τ ⊨ x i j ∧ (∀ i k, i ≠ k → τ ⊨ (x i j)ᶜ ∨ τ ⊨ (x k j)ᶜ)) ∧
-    (∀ k k', k.val + 1 =  k'.val →
-      ∀ i j, ¬ G.adjacent i j → τ ⊨ (x i k)ᶜ ∨ τ ⊨ (x j k')ᶜ)) →
-  (¬ ∃ (u v : G.vertex) (p : Path G u v), p.isHamiltonian) := by
-  apply imp_neg hamiltonian_path_to_assignment_expanded
 
 end LeanHoG
