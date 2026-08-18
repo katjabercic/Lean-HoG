@@ -66,5 +66,15 @@ lean_lib LeanHoG where
 
 lean_lib Graph6Tests
 
+-- Golden fixtures for the SAT encodings. Needs neither a solver nor the network, so
+-- unlike `Examples` it can be built on every change; see LeanHoG/Sat/EncodingTests.lean.
+lean_lib SatEncodingTests where
+  globs := #[.one `LeanHoG.Sat.EncodingTests]
+
+-- End-to-end tests for the certificate-producing commands and tactics. Needs a solver
+-- on PATH, but no network, which is what separates it from `Examples`.
+lean_lib SolverTests where
+  globs := #[.one `LeanHoG.Sat.SolverTests]
+
 lean_lib Examples where
   needs := #[LeanHoG, Graph6Tests]
