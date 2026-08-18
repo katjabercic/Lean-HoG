@@ -3,7 +3,6 @@ import LeanHoG.Walk
 import LeanHoG.Invariant.ConnectedComponents.Basic
 import LeanHoG.Invariant.HamiltonianPath.Basic
 import LeanHoG.Invariant.HamiltonianPath.Correctness
-import Lean
 
 import Trestle.Model.PropFun
 import Trestle.Encode.VEncCNF

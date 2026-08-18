@@ -1,0 +1,10 @@
+{
+    "graph" : { "vertexSize" : 1, "edges" : [] },
+    "connectedComponents" : {
+        "val" : 1,
+        "component" : [[0,0]],
+        "root" : [[0, 0]],
+        "next" : [[0, 0]],
+        "distToRoot" : [[0, 0]]
+    }
+}

@@ -351,6 +351,16 @@ def HoGEnquiry.mentionsTracability : HoGEnquiry → Bool
   | .IntegralEnquiry _ => false
   | .FormulaEnquiry _ => false
 
+/-- Whether this enquiry asks about Hamiltonicity. Like `mentionsTracability`, this is what
+tells `find_example` that answering the query is not enough: HoG's answer is data, and Lean
+still needs a Hamiltonian cycle (or the refutation of the encoding) of its own. -/
+def HoGEnquiry.mentionsHamiltonicity : HoGEnquiry → Bool
+  | .BoolEnquiry ⟨.Hamiltonian, _⟩ => true
+  | .BoolEnquiry _ => false
+  | .NumericalEnquiry _ => false
+  | .IntegralEnquiry _ => false
+  | .FormulaEnquiry _ => false
+
 structure InvariantQuery where
   invariantId : Nat
   operator : String

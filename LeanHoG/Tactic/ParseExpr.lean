@@ -2,6 +2,7 @@ import Lean
 import LeanHoG.Graph
 import LeanHoG.Tactic.SearchDSL
 import LeanHoG.Tactic.Options
+import LeanHoG.Invariant.HamiltonianCycle.Basic
 import LeanHoG.Invariant.HamiltonianPath.Basic
 import Qq
 
@@ -26,6 +27,10 @@ def decomposeIntegralInvQ (e : Q(Graph → Nat)) : MetaM IntegralInvariant := do
 def decomposeBoolInvQ (e : Q(Graph → Prop)) : MetaM (BoolInvariant × Bool) := do
   match e with
   | ~q(fun G => Graph.isHamiltonian G) => return (BoolInvariant.Hamiltonian, true)
+  | ~q(fun G => ¬ Graph.isHamiltonian G) => return (BoolInvariant.Hamiltonian, false)
+  -- `isNonHamiltonian` is `¬ isHamiltonian` by definition, but the match above is syntactic
+  -- and will not see through the definition, so both spellings get a case.
+  | ~q(fun G => Graph.isNonHamiltonian G) => return (BoolInvariant.Hamiltonian, false)
   | ~q(fun G => Graph.traceable G) => return (BoolInvariant.Traceable, true)
   | ~q(fun G => ¬ Graph.traceable G) => return (BoolInvariant.Traceable, false)
   | ~q(fun G => Graph.bipartite G) => return (BoolInvariant.Bipartite, true)

@@ -203,6 +203,12 @@ The supported invariants are those Lean-HoG currently implements. They include:
 * `non bipartite`
 * `connected`
 * `Hamiltonian`
+* `non Hamiltonian`
+
+For `traceable`, `non traceable`, `Hamiltonian` and `non Hamiltonian` the database's answer
+is not taken on trust: once a candidate graph is found, `find_example` runs the SAT solver on
+it to obtain a Hamiltonian path or cycle (or a refutation checked by the LRAT checker), and
+closes the goal with that.
 
 #### Example
 

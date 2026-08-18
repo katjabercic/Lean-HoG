@@ -108,7 +108,7 @@ def ConnectedComponentsCertificate.componentEdge' {G : Graph} [C : ConnectedComp
   rw [Batteries.RBNode.all_iff] at compEdge
   rw [Batteries.RBNode.All_def] at compEdge
   have belongs : e.1 ∈ G.edgeSet.1 := by
-    rw [← edge_in_node]
+    rw [← Graph.edge_in_node]
     rw [← Batteries.RBSet.contains_iff]
     exact e.property
   apply compEdge at belongs

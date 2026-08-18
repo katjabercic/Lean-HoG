@@ -5,6 +5,7 @@ namespace PropFun
 
 open Trestle Model PropFun
 
+/-- The disjunction of all the propositional formulas on the list. -/
 @[simp]
 def disj_list {ν : Type} : List (PropFun ν) → PropFun ν
   | [] => PropFun.fls
@@ -25,45 +26,16 @@ def satisfies_disj_list_to_witness {ν : Type} {τ : PropAssignment ν} (ps : Li
 
 lemma satisfies_disj_list {ν : Type} {τ : PropAssignment ν} {ps : List (PropFun ν)} :
   τ ⊨ (disj_list ps) ↔ ∃ p ∈ ps, τ ⊨ p := by
-  apply Iff.intro
-  · intro h
-    induction ps with --p ps ih
-    | nil => contradiction
-    | cons p ps ih =>
-      simp at h
-      cases h with
-      | inl h =>
-        apply Exists.intro p
-        simp
-        assumption
-      | inr h =>
-        have := ih h
-        let ⟨p, p_in_ps, sat⟩ := this
-        apply Exists.intro p
-        simp [p_in_ps]
-        assumption
+  constructor
   · intro h
     induction ps with
-    | nil =>
-      let ⟨p, _, _⟩ := h
-      contradiction
-    | cons q qs ih =>
-      let ⟨p, p_in_ps, sat⟩ := h
-      simp
-      simp at p_in_ps
-      cases p_in_ps with
-      | inl p_eq_q =>
-        apply Or.intro_left
-        rw [← p_eq_q]
-        assumption
-      | inr _ =>
-        apply Or.intro_right
-        apply ih
-        apply Exists.intro p
-        apply And.intro
-        assumption
-        assumption
+    | nil => contradiction
+    | cons p ps ih => aesop
+  · induction ps with
+    | nil => aesop
+    | cons q qs ih => aesop
 
+/-- The conjunction of all the propositional formulas on the list. -/
 @[simp]
 def conj_list {ν : Type} : List (PropFun ν) → PropFun ν
   | [] => PropFun.tr
@@ -85,10 +57,7 @@ lemma satisfies_disj_fls {ν : Type} {τ : PropAssignment ν} {p : PropFun ν} :
     cases h with
     | inl h => exact h
     | inr _ => contradiction
-  · intro h
-    simp
-    apply Or.intro_left
-    exact h
+  · aesop
 
 lemma satisfies_neg_or {ν : Type} {τ : PropAssignment ν} {p q : PropFun ν} :
   ¬ (τ ⊨ pᶜ ∨ τ ⊨ qᶜ) ↔ τ ⊨ p ∧ τ ⊨ q := by

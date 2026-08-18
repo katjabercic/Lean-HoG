@@ -4,6 +4,7 @@ import Batteries.Data.RBMap.Lemmas
 import Mathlib.Data.Finite.Defs
 import Mathlib.Data.Fintype.Powerset
 import Mathlib.Data.List.Sort
+import Mathlib.Data.Fintype.BigOperators
 
 -- This was deprecated and eventually removed from Mathlib for no good
 -- reason and with no good replacemnet (lt_trichotomy is only vaguely
@@ -18,47 +19,49 @@ structure Graph where
   vertexSize : Nat
   edgeSet : EdgeSet vertexSize
 
+namespace Graph
+
 /-- The type of graph vertices -/
 @[reducible]
-def Graph.vertex (G : Graph) := Fin G.vertexSize
+def vertex (G : Graph) := Fin G.vertexSize
 
 /-- The set of all the vertices -/
-def Graph.vertexSet (G : Graph) : Set G.vertex := { u : G.vertex | u = u }
+def vertexSet (G : Graph) : Set G.vertex := { u : G.vertex | u = u }
 
 /-- A finite subset of vertices -/
 @[reducible]
-def Graph.vertexSubset (G : Graph) := Batteries.RBSet G.vertex compare
+def vertexSubset (G : Graph) := Batteries.RBSet G.vertex compare
 
 /-- A map from vertices -/
-def Graph.vertexMap (G : Graph) (α : Type) : Type := Batteries.RBMap G.vertex α compare
+def vertexMap (G : Graph) (α : Type) : Type := Batteries.RBMap G.vertex α compare
 
-lemma Graph.vertexSetFinite (G : Graph) : Set.Finite G.vertexSet := by
+lemma vertexSetFinite (G : Graph) : Set.Finite G.vertexSet := by
   apply Iff.mp Set.finite_coe_iff
   infer_instance
 
 /-- The underlying type of edges, i.e., pairs (i,j) such that j < i < G.vertexSize. -/
 @[reducible]
-def Graph.edgeType (G : Graph) := Edge G.vertexSize
+def edgeType (G : Graph) := Edge G.vertexSize
 
 /-- The type of edges -/
 @[reducible]
-def Graph.edge (G : Graph) := { e : G.edgeType // G.edgeSet.contains e }
+def edge (G : Graph) := { e : G.edgeType // G.edgeSet.contains e }
 
 @[reducible]
-def Graph.edge_compare (G : Graph) := (Edge.linearOrder G.vertexSize).compare
+def edge_compare (G : Graph) := (Edge.linearOrder G.vertexSize).compare
 
 @[reducible]
-def Graph.fst {G : Graph} (e : G.edgeType) : G.vertex := e.fst
+def fst {G : Graph} (e : G.edgeType) : G.vertex := e.fst
 
 @[reducible]
-def Graph.snd {G : Graph} (e : G.edgeType) : G.vertex :=
+def snd {G : Graph} (e : G.edgeType) : G.vertex :=
   ⟨e.snd, e.snd.prop⟩
 
 /-- the number of eges in a graph -/
-def Graph.edgeSize (G : Graph) := Fintype.card G.edge
+def edgeSize (G : Graph) := Fintype.card G.edge
 
 /-- The vertex adjacency relation as a boolean map -/
-def Graph.badjacent {G : Graph} : G.vertex → G.vertex → Bool :=
+def badjacent {G : Graph} : G.vertex → G.vertex → Bool :=
   fun u v =>
     ltByCases u v
       (fun u_lt_v => G.edgeSet.contains (Edge.mk u v u_lt_v))
@@ -66,16 +69,16 @@ def Graph.badjacent {G : Graph} : G.vertex → G.vertex → Bool :=
       (fun v_lt_u => G.edgeSet.contains (Edge.mk v u v_lt_u))
 
 /-- The vertex adjacency relations -/
-def Graph.adjacent {G : Graph} : G.vertex → G.vertex → Prop :=
+def adjacent {G : Graph} : G.vertex → G.vertex → Prop :=
   fun u v => G.badjacent u v
 
 instance (G : Graph) : DecidableRel G.adjacent := by
   intros u v
-  unfold Graph.adjacent
+  unfold adjacent
   infer_instance
 
 /-- Adjacent vertices are connected by an edge -/
-def Graph.adjacentEdge {G : Graph} {u v : G.vertex} :
+def adjacentEdge {G : Graph} {u v : G.vertex} :
   G.adjacent u v → G.edge := by
   apply ltByCases u v
   · intros u_lt_v uv
@@ -90,11 +93,11 @@ def Graph.adjacentEdge {G : Graph} {u v : G.vertex} :
     case property =>  simp_all [not_lt_of_gt v_lt_u, ltByCases, adjacent, badjacent]
 
 /-- Adjacency is irreflexive. -/
-lemma Graph.irreflexiveAdjacent (G : Graph) :
+lemma irreflexiveAdjacent (G : Graph) :
   ∀ (v : G.vertex), ¬ adjacent v v := by simp [ltByCases, adjacent, badjacent]
 
 /-- Adjacency is symmetric. -/
-lemma Graph.symmetricAdjacent (G : Graph) :
+lemma symmetricAdjacent (G : Graph) :
   ∀ (u v : G.vertex), adjacent u v → adjacent v u := by
     intros u v
     apply ltByCases u v <;> (intro h ; simp [ltByCases, h, adjacent, badjacent]) <;> simp [not_lt_of_gt h]
@@ -143,7 +146,7 @@ lemma edge_in_node (G : Graph) (e : G.edgeType) : e ∈ G.edgeSet ↔ e ∈ G.ed
     use a
 
 
-lemma Graph.adj_impl_ex_edge (G: Graph) (u v : G.vertex) (e : G.edge) : (adj : G.adjacent u v) → u < v → G.adjacentEdge adj = e → G.fst e = u ∧ G.snd e = v := by
+lemma adj_impl_ex_edge (G: Graph) (u v : G.vertex) (e : G.edge) : (adj : G.adjacent u v) → u < v → G.adjacentEdge adj = e → G.fst e = u ∧ G.snd e = v := by
   intro adj comp
   unfold adjacentEdge
   simp [comp, ltByCases]
@@ -155,7 +158,7 @@ lemma Graph.adj_impl_ex_edge (G: Graph) (u v : G.vertex) (e : G.edge) : (adj : G
 The problem here is that the RBSet checks for membership using the cmp function while the RBNode checks if we have this exact element
 -/
 /-- An efficient way of checking that a statement holds for all edges. -/
-lemma Graph.all_edges (G : Graph) (p : G.edgeType → Prop) [DecidablePred p] :
+lemma all_edges (G : Graph) (p : G.edgeType → Prop) [DecidablePred p] :
     G.edgeSet.all p = true → ∀ (e : G.edge), p e
   := by
     unfold Batteries.RBSet.all
@@ -177,7 +180,7 @@ lemma Graph.all_edges (G : Graph) (p : G.edgeType → Prop) [DecidablePred p] :
   statements about adjacent vertices, as we can just check all edges instead of
   all pairs of vertices (and skipping the non-adjacent ones).
 -/
-def Graph.all_adjacent_of_edges {G : Graph} (R : G.vertex → G.vertex → Prop) :
+def all_adjacent_of_edges {G : Graph} (R : G.vertex → G.vertex → Prop) :
     (∀ u v, R u v → R v u) →
     (∀ (e : G.edge), R (G.fst e) (G.snd e)) →
     (∀ u v, G.adjacent u v → R u v)
@@ -201,23 +204,23 @@ def Graph.all_adjacent_of_edges {G : Graph} (R : G.vertex → G.vertex → Prop)
 
 /-- The neighborhood of a vertex. -/
 @[reducible]
-def Graph.neighborhood (G : Graph) (v : G.vertex) :=
+def neighborhood (G : Graph) (v : G.vertex) :=
   { u : G.vertex // G.badjacent v u }
 
 /-- The degree of a vertex. -/
-def Graph.degree (G : Graph) (v : G.vertex) : Nat := Fintype.card (G.neighborhood v)
+def degree (G : Graph) (v : G.vertex) : Nat := Fintype.card (G.neighborhood v)
 
 /-- The minimal vertex degree, equals ⊤ for empty graph. -/
-def Graph.minDegree (G : Graph) : WithTop Nat :=
+def minDegree (G : Graph) : WithTop Nat :=
   Finset.inf (Fin.fintype G.vertexSize).elems (fun v => G.degree v)
 
-def Graph.minimumDegree (G : Graph) : Nat :=
+def minimumDegree (G : Graph) : Nat :=
   match G.minDegree with
   | some n => n
   | none => 0
 
 /-- The maximal vertex degree, equals ⊥ for empty graph. -/
-def Graph.maxDegree (G : Graph) : WithBot Nat :=
+def maxDegree (G : Graph) : WithBot Nat :=
   Finset.sup (Fin.fintype G.vertexSize).elems (fun v => G.degree v)
 
 /-- The degree sequence of `G`: every vertex degree, in descending order.
@@ -227,7 +230,26 @@ def Graph.maxDegree (G : Graph) : WithBot Nat :=
     between two degree sequences gets stuck instead of deciding it. Mathlib's
     `insertionSort` is a `foldr` and reduces. Any proof that asks `decide` to
     compare two degree sequences depends on that. -/
-def Graph.degreeSequence (G : Graph) : List Nat :=
+def degreeSequence (G : Graph) : List Nat :=
   List.insertionSort (· ≥ ·) (List.ofFn G.degree)
+
+@[aesop unsafe 50%]
+lemma zero_vertex_of_size_one {G : Graph} {v : G.vertex} (h : G.vertexSize = 1) :
+    v = ⟨0, Nat.lt_of_sub_eq_succ h⟩ := by
+  obtain ⟨vs, es⟩ := G
+  simp at h
+  subst h
+  apply Fin.fin_one_eq_zero
+
+/-- A graph on two vertices has at most one edge: the only pair `(fst, snd)` of vertices with
+`fst < snd` is `(0, 1)`. -/
+theorem edgeType_size_at_vertexSize_2 {G : Graph} (h2 : G.vertexSize = 2) :
+    Fintype.card G.edgeType ≤ 1 := by
+  simp only [edgeType, h2]
+  -- `Fintype.card (Edge 2) ≤ 1`, a closed computation on the derived `Fintype` instance
+  decide
+
+end Graph
+
 
 end LeanHoG
