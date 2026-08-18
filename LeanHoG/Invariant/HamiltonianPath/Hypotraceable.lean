@@ -21,16 +21,16 @@ theorem not_hypotraceable_of_traceable {G : Graph} (h : G.traceable) : ¬ G.hypo
 theorem not_hypotraceable_of_deletion {G : Graph} (v : G.vertex)
     (h : ¬ (G.deleteVertex v).traceable) : ¬ G.hypotraceable := fun hyp => h (hyp.2 v)
 
-/-- A graph with no vertices is hypotraceable, and is answered without the solver: it is not
-traceable for want of a vertex to start at, and the condition on deletions is vacuous because
-there is nothing to delete. The encoding cannot be consulted here anyway — `hamiltonianPathCNF`
-on no vertices has nothing to say about `Graph.traceable`. -/
+/-- A graph with no vertices is hypotraceable: it is not traceable for want of a vertex to
+start at, and the condition on deletions is vacuous because there is nothing to delete.
+
+`searchForHypotraceabilityAux` no longer needs this as a special case — it reaches the same
+conclusion generically, `searchForHamiltonianPathAux` having become total at this size (see
+`no_hamiltonian_path_on_size_0`). It is kept as a statement of the fact in its own right. -/
 theorem hypotraceable_on_size_zero {G : Graph} (h : G.vertexSize = 0) : G.hypotraceable := by
   constructor
-  · rintro ⟨u, -⟩
-    exact absurd u.isLt (by omega)
+  · apply no_hamiltonian_path_on_size_0 h
   · intro v
     exact absurd v.isLt (by omega)
-
 
 end LeanHoG

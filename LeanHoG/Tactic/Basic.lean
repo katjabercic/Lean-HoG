@@ -128,8 +128,8 @@ unsafe def findExampleImpl : Tactic.Tactic
                   let (type, proof, res) ← LeanHoG.searchForHamiltonianPathAux graphIdent.getId r
                     (register := true)
                   match res with
-                  | .unsat => facts := facts.push (type, proof)
-                  | _ => pure ()
+                  | .unsat | .noVertices => facts := facts.push (type, proof)
+                  | .sat => pure ()
                 if mentionsHamiltonicity then
                   -- Every outcome of the cycle search names the fact it established
                   -- (`Graph.isHamiltonian` or its negation) and returns a proof of it, so

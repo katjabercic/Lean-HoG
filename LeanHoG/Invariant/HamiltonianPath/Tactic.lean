@@ -12,9 +12,29 @@ namespace LeanHoG
 
 open Lean Elab Qq
 
+/-- What `searchForHamiltonianPathAux` established about a graph, and how it got there.
+
+    There is deliberately no `error` case: a solver error is reported by throwing, never
+    returned. Mirrors `HamiltonicityOutcome` on the cycle side. -/
+inductive TraceabilityOutcome
+  /-- Traceable, certified by the path read back from the solver's assignment. -/
+  | sat
+  /-- Not traceable, from the LRAT-checked unsatisfiability of the encoding. -/
+  | unsat
+  /-- Not traceable without consulting the solver: a graph with no vertices has none to
+      start a path at, and the encoding cannot answer for it. -/
+  | noVertices
+
 open Trestle Model in
 /-- Decide traceability of `graph` with the SAT solver, and return the fact that
-    establishes, a proof of it, and the solver's answer.
+    establishes, a proof of it, and how it was established.
+
+    A graph with no vertices is answered without running the solver, and not as an
+    optimisation: `hamiltonianPathCNF` is the *empty* CNF there, which is satisfiable, so
+    consulting the solver would take the SAT branch and report a Hamiltonian path in a graph
+    that has no vertices to make one from. `Graph.traceable` is false at this size, by
+    `no_hamiltonian_path_on_size_0`. The cycle search sets aside three sizes for the
+    analogous reason — see `searchForHamiltonianCycleAux`.
 
     `register` says whether that fact should be backed by a declaration named after
     the *graph*: the `HamiltonianPath` instance in the SAT case, the axiom in the
@@ -31,8 +51,17 @@ open Trestle Model in
     one — is named beneath the declaration being elaborated. Either way an
     equivalent declaration already in the environment is reused. -/
 unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph))
-    (register : Bool) : TermElabM (Expr × Expr × Solver.Res) := do
+    (register : Bool) : TermElabM (Expr × Expr × TraceabilityOutcome) := do
   let G ← Meta.evalExpr' Graph ``Graph graph
+  -- The fact the two negative branches establish. Stated unfolded, as `Graph.traceable`'s
+  -- definition, which is what `check_traceable`'s docstring warns about.
+  let noExistsType := q(¬ ∃ (u v : Graph.vertex $graph) (p : Path $graph u v), p.isHamiltonian)
+  if G.vertexSize = 0 then
+    -- Not traceable, established directly rather than through the solver; see this
+    -- function's docstring for why the solver must not be asked here.
+    have hZeroDec : Q(decide (Graph.vertexSize $graph = 0) = true) := (q(Eq.refl true) : Lean.Expr)
+    let hZero : Q(Graph.vertexSize $graph = 0) := q(of_decide_eq_true $hZeroDec)
+    return (noExistsType, q(no_hamiltonian_path_on_size_0 $hZero), .noVertices)
   let enc := (hamiltonianPathCNF G).val
   let opts ← getOptions
   let cadicalExe := opts.get leanHoG.solverCmd.name leanHoG.solverCmd.defValue
@@ -113,7 +142,7 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph))
     let existsHamPath ← Meta.mkAppOptM ``LeanHoG.HamiltonianPath.path_of_cert
       #[graph, cert]
     let existsType := q(Graph.traceable $graph)
-    return (existsType, existsHamPath, res)
+    return (existsType, existsHamPath, .sat)
 
   | .unsat =>
     -- The formula is UNSAT, so we will assert an axiom saying so.
@@ -127,7 +156,6 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph))
     -- once that has succeeded.
     let globalName : Name := .str graphName "hamiltonianPathCNFUnsat"
     let type : Q(Prop) := q(((hamiltonianPathCNF $graph).val.toICnf.toStd).Unsat)
-    let noExistsType := q(¬ ∃ (u v : Graph.vertex $graph) (p : Path $graph u v), p.isHamiltonian)
     -- Where the axiom goes. One for this graph already in the environment says
     -- exactly what is needed — literally so, which is what `hasReusableDecl` confirms
     -- before we lean on it — so reuse it; that is the case a second run on the
@@ -158,7 +186,7 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph))
       -- Past this point nothing but `addDecl` itself can fail.
       addDecl decl
       logWarning m!"added axiom {declName} : {type}"
-    return (noExistsType, .app derivation (mkConst declName), res)
+    return (noExistsType, .app derivation (mkConst declName), .unsat)
 
   | .error => throwError "SAT solver exited with error"
 
@@ -188,11 +216,13 @@ unsafe def checkTraceableImpl : Command.CommandElab
     let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
     let (_, _, res) ← searchForHamiltonianPathAux graphName graph (register := true)
     match res with
-    | .sat _ =>
+    | .sat =>
       logInfo m!"found Hamiltonian path, registered as \
         {certificateName graphName "HamiltonianPathI"}"
     | .unsat => logInfo m!"no Hamiltonian path found after exhaustive search"
-    | .error => throwError "SAT solver exited with error"
+    | .noVertices =>
+      logInfo m!"{graphName} has no vertices, so it has no Hamiltonian path: there is no \
+        vertex to start one at"
 
   | _ => throwUnsupportedSyntax
 
@@ -342,17 +372,12 @@ deletion leaves its own reusable certificate, named after the deletion rather th
 unsafe def searchForHypotraceabilityAux (graphName : Name) (graph : Q(Graph))
     (register : Bool) : TermElabM (Expr × Expr × HypotraceabilityOutcome) := do
   let G ← Meta.evalExpr' Graph ``Graph graph
-  if G.vertexSize = 0 then
-    have hDec : Q(decide (Graph.vertexSize $graph = 0) = true) := (q(Eq.refl true) : Lean.Expr)
-    let hZero : Q(Graph.vertexSize $graph = 0) := q(of_decide_eq_true $hDec)
-    return (q(Graph.hypotraceable $graph), q(hypotraceable_on_size_zero $hZero), .hypotraceable)
   let (_, proofG, resG) ← searchForHamiltonianPathAux graphName graph register
   match resG with
-  | .error => throwError "SAT solver exited with error"
-  | .sat _ =>
+  | .sat =>
     let proof ← Meta.mkAppM ``not_hypotraceable_of_traceable #[proofG]
     return (q(¬ Graph.hypotraceable $graph), proof, .traceable)
-  | .unsat =>
+  | .unsat | .noVertices =>
     let mut proofs : Array Expr := #[]
     -- The index plumbing is built with `Meta` rather than quoted: a `Q(…)` mentioning the
     -- loop variable's literal sends Qq looking for a compile-time value of it and fails in
@@ -366,9 +391,8 @@ unsafe def searchForHypotraceabilityAux (graphName : Name) (graph : Q(Graph))
       let subName : Name := .str graphName s!"deleteVertex{i}"
       let (_, proofSub, resSub) ← searchForHamiltonianPathAux subName sub register
       match resSub with
-      | .error => throwError "SAT solver exited with error"
-      | .sat _ => proofs := proofs.push proofSub
-      | .unsat =>
+      | .sat => proofs := proofs.push proofSub
+      | .unsat | .noVertices =>
         let proof ← Meta.mkAppM ``not_hypotraceable_of_deletion #[v, proofSub]
         return (q(¬ Graph.hypotraceable $graph), proof, .deletionNotTraceable i)
     let forallType : Q(Prop) :=

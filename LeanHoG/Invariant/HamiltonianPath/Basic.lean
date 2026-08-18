@@ -23,6 +23,18 @@ lemma Graph.no_path_not_traceable {G : Graph}
   intro h'
   apply h h'
 
+/-- A graph with no vertices is not traceable: `Graph.traceable` asks for a vertex to start
+the path at, and there is none.
+
+This is the path analogue of `HamiltonianCycle.no_hamiltonian_cycle_on_size_0`, and it is
+needed for the same reason: the encoding does not answer for `Graph.traceable` at this size.
+`hamiltonianPathCNF` on no vertices is the *empty* CNF, which is satisfiable, so a search
+that consulted the solver here would report a Hamiltonian path in the empty graph. See
+`searchForHamiltonianPathAux`, which answers this size directly instead. -/
+theorem no_hamiltonian_path_on_size_0 {G : Graph} (h : G.vertexSize = 0) : ¬ G.traceable := by
+  rintro ⟨u, -⟩
+  exact absurd u.isLt (by omega)
+
 /-- The class representing a Hamiltonian path of a graph `g`
     going from vertex `u` to vertex `v`.
  -/
