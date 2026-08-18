@@ -47,6 +47,7 @@ instance : ToString BoolInvariant where
 inductive NumericalInvariant where
   | AlgebraicConnectivity
   | AverageDegree
+  | Density
   | Index
   | LaplacianLargestEigenvalue
   | SecondLargestEigenvalue
@@ -58,6 +59,7 @@ instance : ToString NumericalInvariant where
     match i with
     | .AlgebraicConnectivity => "AlgebraicConnectivity"
     | .AverageDegree => "AverageDegree"
+    | .Density => "Density"
     | .Index => "Index"
     | .LaplacianLargestEigenvalue => "LaplacianLargestEigenvalue"
     | .SecondLargestEigenvalue => "SecondLargestEigenvalue"
@@ -69,7 +71,6 @@ inductive IntegralInvariant
   | Circumference
   | CliqueNumber
   | Degeneracy
-  | Density
   | Diameter
   | DominationNumber
   | EdgeConnectivity
@@ -78,13 +79,16 @@ inductive IntegralInvariant
   | Girth
   | GroupSize
   | IndependenceNumber
+  | IndependentDominationNumber
   | LengthOfLongestInducedCycle
   | LengthOfLongestInducedPath
   | LengthOfLongestPath
   | MatchingNumber
   | MaximumDegree
   | MinimumDegree
+  | NumberOfArcOrbits
   | NumberOfComponents
+  | NumberOfEdgeOrbits
   | NumberOfEdges
   | NumberOfSpanningTrees
   | NumberOfTriangles
@@ -105,7 +109,6 @@ instance : ToString IntegralInvariant where
     | .Circumference => "Circumference"
     | .CliqueNumber => "CliqueNumber"
     | .Degeneracy => "Degeneracy"
-    | .Density => "Density"
     | .Diameter => "Diameter"
     | .DominationNumber => "DominationNumber"
     | .EdgeConnectivity => "EdgeConnectivity"
@@ -114,13 +117,16 @@ instance : ToString IntegralInvariant where
     | .Girth => "Girth"
     | .GroupSize => "GroupSize"
     | .IndependenceNumber => "IndependenceNumber"
+    | .IndependentDominationNumber => "IndependentDominationNumber"
     | .LengthOfLongestInducedCycle => "LengthOfLongestInducedCycle"
     | .LengthOfLongestInducedPath => "LengthOfLongestInducedPath"
     | .LengthOfLongestPath => "LengthOfLongestPath"
     | .MatchingNumber => "MatchingNumber"
     | .MaximumDegree => "MaximumDegree"
     | .MinimumDegree => "MinimumDegree"
+    | .NumberOfArcOrbits => "NumberOfArcOrbits"
     | .NumberOfComponents => "NumberOfComponents"
+    | .NumberOfEdgeOrbits => "NumberOfEdgeOrbits"
     | .NumberOfEdges => "NumberOfEdges"
     | .NumberOfSpanningTrees => "NumberOfSpanningTrees"
     | .NumberOfTriangles => "NumberOfTriangles"
@@ -156,7 +162,7 @@ def BoolInvariant.toId : BoolInvariant → Nat
   | .Hypohamiltonian => 41
   | .Hypotraceable => 42
   | .Planar => 36
-  | .Regular => 18
+  | .Regular => 17
   | .Traceable => 40
   | .TwinFree => 46
 
@@ -164,6 +170,7 @@ def BoolInvariant.toId : BoolInvariant → Nat
 def NumericalInvariant.toId : NumericalInvariant → Nat
   | .AlgebraicConnectivity => 19
   | .AverageDegree => 2
+  | .Density => 34
   | .Index => 21
   | .LaplacianLargestEigenvalue => 22
   | .SecondLargestEigenvalue => 23
@@ -175,8 +182,7 @@ def IntegralInvariant.toId : IntegralInvariant → Nat
   | .ChromaticNumber => 4
   | .Circumference => 35
   | .CliqueNumber => 5
-  | .Degeneracy => 48
-  | .Density => 34
+  | .Degeneracy => 49
   | .Diameter => 7
   | .DominationNumber => 13
   | .EdgeConnectivity => 8
@@ -185,13 +191,16 @@ def IntegralInvariant.toId : IntegralInvariant → Nat
   | .Girth => 9
   | .GroupSize => 37
   | .IndependenceNumber => 18
+  | .IndependentDominationNumber => 52
   | .LengthOfLongestInducedCycle => 31
   | .LengthOfLongestInducedPath => 25
   | .LengthOfLongestPath => 48
   | .MatchingNumber => 11
   | .MaximumDegree => 10
   | .MinimumDegree => 12
+  | .NumberOfArcOrbits => 51
   | .NumberOfComponents => 26
+  | .NumberOfEdgeOrbits => 50
   | .NumberOfEdges => 14
   | .NumberOfSpanningTrees => 43
   | .NumberOfTriangles => 27
@@ -406,6 +415,7 @@ def boolInvariantToQuery : BoolInvariant → Bool → GraphClassQuery
 def numericalInvariantToQuery : NumericalInvariant → ComparisonOp → Float → InvariantQuery
   | .AlgebraicConnectivity, op, x => ⟨(Invariant.NumericalInvariant .AlgebraicConnectivity).toId, toString op, x⟩
   | .AverageDegree, op, x => ⟨(Invariant.NumericalInvariant .AverageDegree).toId, toString op, x⟩
+  | .Density, op, x => ⟨(Invariant.NumericalInvariant .Density).toId, toString op, x⟩
   | .Index, op, x => ⟨(Invariant.NumericalInvariant .Index).toId, toString op, x⟩
   | .LaplacianLargestEigenvalue, op, x => ⟨(Invariant.NumericalInvariant .LaplacianLargestEigenvalue).toId, toString op, x⟩
   | .SecondLargestEigenvalue, op, x => ⟨(Invariant.NumericalInvariant .SecondLargestEigenvalue).toId, toString op, x⟩
@@ -417,7 +427,6 @@ def integralInvariantToQuery : IntegralInvariant → ComparisonOp → Int → In
   | .Circumference, op, n => ⟨(Invariant.IntegralInvariant .Circumference).toId, toString op, .ofInt n⟩
   | .CliqueNumber, op, n => ⟨(Invariant.IntegralInvariant .CliqueNumber).toId, toString op, .ofInt n⟩
   | .Degeneracy, op, n => ⟨(Invariant.IntegralInvariant .Degeneracy).toId, toString op, .ofInt n⟩
-  | .Density, op, n => ⟨(Invariant.IntegralInvariant .Density).toId, toString op, .ofInt n⟩
   | .Diameter, op, n => ⟨(Invariant.IntegralInvariant .Diameter).toId, toString op, .ofInt n⟩
   | .DominationNumber, op, n => ⟨(Invariant.IntegralInvariant .DominationNumber).toId, toString op, .ofInt n⟩
   | .EdgeConnectivity, op, n => ⟨(Invariant.IntegralInvariant .EdgeConnectivity).toId, toString op, .ofInt n⟩
@@ -426,13 +435,16 @@ def integralInvariantToQuery : IntegralInvariant → ComparisonOp → Int → In
   | .Girth, op, n => ⟨(Invariant.IntegralInvariant .Girth).toId, toString op, .ofInt n⟩
   | .GroupSize, op, n => ⟨(Invariant.IntegralInvariant .GroupSize).toId, toString op, .ofInt n⟩
   | .IndependenceNumber, op, n => ⟨(Invariant.IntegralInvariant .IndependenceNumber).toId, toString op, .ofInt n⟩
+  | .IndependentDominationNumber, op, n => ⟨(Invariant.IntegralInvariant .IndependentDominationNumber).toId, toString op, .ofInt n⟩
   | .LengthOfLongestInducedCycle, op, n => ⟨(Invariant.IntegralInvariant .LengthOfLongestInducedCycle).toId, toString op, .ofInt n⟩
   | .LengthOfLongestInducedPath, op, n => ⟨(Invariant.IntegralInvariant .LengthOfLongestInducedPath).toId, toString op, .ofInt n⟩
   | .LengthOfLongestPath, op, n => ⟨(Invariant.IntegralInvariant .LengthOfLongestPath).toId, toString op, .ofInt n⟩
   | .MatchingNumber, op, n => ⟨(Invariant.IntegralInvariant .MatchingNumber).toId, toString op, .ofInt n⟩
   | .MaximumDegree, op, n => ⟨(Invariant.IntegralInvariant .MaximumDegree).toId, toString op, .ofInt n⟩
   | .MinimumDegree, op, n => ⟨(Invariant.IntegralInvariant .MinimumDegree).toId, toString op, .ofInt n⟩
+  | .NumberOfArcOrbits, op, n => ⟨(Invariant.IntegralInvariant .NumberOfArcOrbits).toId, toString op, .ofInt n⟩
   | .NumberOfComponents, op, n => ⟨(Invariant.IntegralInvariant .NumberOfComponents).toId, toString op, .ofInt n⟩
+  | .NumberOfEdgeOrbits, op, n => ⟨(Invariant.IntegralInvariant .NumberOfEdgeOrbits).toId, toString op, .ofInt n⟩
   | .NumberOfEdges, op, n => ⟨(Invariant.IntegralInvariant .NumberOfEdges).toId, toString op, .ofInt n⟩
   | .NumberOfSpanningTrees, op, n => ⟨(Invariant.IntegralInvariant .NumberOfSpanningTrees).toId, toString op, .ofInt n⟩
   | .NumberOfTriangles, op, n => ⟨(Invariant.IntegralInvariant .NumberOfTriangles).toId, toString op, .ofInt n⟩
@@ -522,7 +534,6 @@ syntax "chromaticNumber" : integral_invariant
 syntax "circumference" : integral_invariant
 syntax "cliqueNumber" : integral_invariant
 syntax "degeneracy" : integral_invariant
-syntax "density" : integral_invariant
 syntax "diameter" : integral_invariant
 syntax "dominationNumber" : integral_invariant
 syntax "edgeConnectivity" : integral_invariant
@@ -531,13 +542,16 @@ syntax "genus" : integral_invariant
 syntax "girth" : integral_invariant
 syntax "groupSize" : integral_invariant
 syntax "independenceNumber" : integral_invariant
+syntax "independentDominationNumber" : integral_invariant
 syntax "lengthOfLongestInducedCycle" : integral_invariant
 syntax "lengthOfLongestInducedPath" : integral_invariant
 syntax "lengthOfLongestPath" : integral_invariant
 syntax "matchingNumber" : integral_invariant
 syntax "maximumDegree" : integral_invariant
 syntax "minimumDegree" : integral_invariant
+syntax "numberOfArcOrbits" : integral_invariant
 syntax "numberOfComponents" : integral_invariant
+syntax "numberOfEdgeOrbits" : integral_invariant
 syntax "numberOfEdges" : integral_invariant
 syntax "numberOfSpanningTrees" : integral_invariant
 syntax "numberOfTriangles" : integral_invariant
@@ -553,6 +567,7 @@ declare_syntax_cat numerical_invariant
 
 syntax "algebraicConnectivity" : numerical_invariant
 syntax "averageDegree" : numerical_invariant
+syntax "density" : numerical_invariant
 syntax "index" : numerical_invariant
 syntax "laplacianLargestEigenvalue" : numerical_invariant
 syntax "secondLargestEigenvalue" : numerical_invariant
@@ -609,7 +624,6 @@ macro_rules
   | `(fmla!{circumference}) => `(ArithExpr.integralInv .Circumference)
   | `(fmla!{cliqueNumber}) => `(ArithExpr.integralInv .CliqueNumber)
   | `(fmla!{degeneracy}) => `(ArithExpr.integralInv .Degeneracy)
-  | `(fmla!{density}) => `(ArithExpr.integralInv .Density)
   | `(fmla!{diameter}) => `(ArithExpr.integralInv .Diameter)
   | `(fmla!{dominationNumber}) => `(ArithExpr.integralInv .DominationNumber)
   | `(fmla!{edgeConnectivity}) => `(ArithExpr.integralInv .EdgeConnectivity)
@@ -618,13 +632,16 @@ macro_rules
   | `(fmla!{girth}) => `(ArithExpr.integralInv .Girth)
   | `(fmla!{groupSize}) => `(ArithExpr.integralInv .GroupSize)
   | `(fmla!{independenceNumber}) => `(ArithExpr.integralInv .IndependenceNumber)
+  | `(fmla!{independentDominationNumber}) => `(ArithExpr.integralInv .IndependentDominationNumber)
   | `(fmla!{lengthOfLongestInducedCycle}) => `(ArithExpr.integralInv .LengthOfLongestInducedCycle)
   | `(fmla!{lengthOfLongestInducedPath}) => `(ArithExpr.integralInv .LengthOfLongestInducedPath)
   | `(fmla!{lengthOfLongestPath}) => `(ArithExpr.integralInv .LengthOfLongestPath)
   | `(fmla!{matchingNumber}) => `(ArithExpr.integralInv .MatchingNumber)
   | `(fmla!{maximumDegree}) => `(ArithExpr.integralInv .MaximumDegree)
   | `(fmla!{minimumDegree}) => `(ArithExpr.integralInv .MinimumDegree)
+  | `(fmla!{numberOfArcOrbits}) => `(ArithExpr.integralInv .NumberOfArcOrbits)
   | `(fmla!{numberOfComponents}) => `(ArithExpr.integralInv .NumberOfComponents)
+  | `(fmla!{numberOfEdgeOrbits}) => `(ArithExpr.integralInv .NumberOfEdgeOrbits)
   | `(fmla!{numberOfEdges}) => `(ArithExpr.integralInv .NumberOfEdges)
   | `(fmla!{numberOfSpanningTrees}) => `(ArithExpr.integralInv .NumberOfSpanningTrees)
   | `(fmla!{numberOfTriangles}) => `(ArithExpr.integralInv .NumberOfTriangles)
@@ -637,6 +654,7 @@ macro_rules
   | `(fmla!{vertexCoverNumber}) => `(ArithExpr.integralInv .VertexCoverNumber)
   | `(fmla!{algebraicConnectivity}) => `(ArithExpr.numericalInv .AlgebraicConnectivity)
   | `(fmla!{averageDegree}) => `(ArithExpr.numericalInv .AverageDegree)
+  | `(fmla!{density}) => `(ArithExpr.numericalInv .Density)
   | `(fmla!{index}) => `(ArithExpr.numericalInv .Index)
   | `(fmla!{laplacianLargestEigenvalue}) => `(ArithExpr.numericalInv .LaplacianLargestEigenvalue)
   | `(fmla!{secondLargestEigenvalue}) => `(ArithExpr.numericalInv .SecondLargestEigenvalue)
@@ -673,6 +691,7 @@ syntax:max "(" hog_query ")" : hog_query
   -- Numerical invariants
   | `(hog{algebraicConnectivity $op $x}) => `([[HoGEnquiry.NumericalEnquiry ⟨.AlgebraicConnectivity, op!{$op}, $x⟩]])
   | `(hog{averageDegree $op $x}) => `([[HoGEnquiry.NumericalEnquiry ⟨.AverageDegree, op!{$op}, $x⟩]])
+  | `(hog{density $op $x}) => `([[HoGEnquiry.NumericalEnquiry ⟨.Density, op!{$op}, $x⟩]])
   | `(hog{index $op $x}) => `([[HoGEnquiry.NumericalEnquiry ⟨.Index, op!{$op}, $x⟩]])
   | `(hog{laplacianLargestEigenvalue $op $x}) => `([[HoGEnquiry.NumericalEnquiry ⟨.LaplacianLargestEigenvalue, op!{$op}, $x⟩]])
   | `(hog{secondLargestEigenvalue $op $x}) => `([[HoGEnquiry.NumericalEnquiry ⟨.SecondLargestEigenvalue, op!{$op}, $x⟩]])
@@ -684,7 +703,6 @@ syntax:max "(" hog_query ")" : hog_query
   | `(hog{circumference $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.Circumference, op!{$op}, $n⟩]])
   | `(hog{cliqueNumber $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.CliqueNumber, op!{$op}, $n⟩]])
   | `(hog{degeneracy $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.Degeneracy, op!{$op}, $n⟩]])
-  | `(hog{density $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.Density, op!{$op}, $n⟩]])
   | `(hog{diameter $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.Diameter, op!{$op}, $n⟩]])
   | `(hog{dominationNumber $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.DominationNumber, op!{$op}, $n⟩]])
   | `(hog{edgeConnectivity $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.EdgeConnectivity, op!{$op}, $n⟩]])
@@ -693,13 +711,16 @@ syntax:max "(" hog_query ")" : hog_query
   | `(hog{girth $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.Girth, op!{$op}, $n⟩]])
   | `(hog{groupSize $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.GroupSize, op!{$op}, $n⟩]])
   | `(hog{independenceNumber $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.IndependenceNumber, op!{$op}, $n⟩]])
+  | `(hog{independentDominationNumber $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.IndependentDominationNumber, op!{$op}, $n⟩]])
   | `(hog{lengthOfLongestInducedCycle $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.LengthOfLongestInducedCycle, op!{$op}, $n⟩]])
   | `(hog{lengthOfLongestInducedPath $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.LengthOfLongestInducedPath, op!{$op}, $n⟩]])
   | `(hog{lengthOfLongestPath $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.LengthOfLongestPath, op!{$op}, $n⟩]])
   | `(hog{matchingNumber $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.MatchingNumber, op!{$op}, $n⟩]])
   | `(hog{maximumDegree $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.MaximumDegree, op!{$op}, $n⟩]])
   | `(hog{minimumDegree $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.MinimumDegree, op!{$op}, $n⟩]])
+  | `(hog{numberOfArcOrbits $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.NumberOfArcOrbits, op!{$op}, $n⟩]])
   | `(hog{numberOfComponents $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.NumberOfComponents, op!{$op}, $n⟩]])
+  | `(hog{numberOfEdgeOrbits $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.NumberOfEdgeOrbits, op!{$op}, $n⟩]])
   | `(hog{numberOfEdges $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.NumberOfEdges, op!{$op}, $n⟩]])
   | `(hog{numberOfSpanningTrees $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.NumberOfSpanningTrees, op!{$op}, $n⟩]])
   | `(hog{numberOfTriangles $op $n}) => `([[HoGEnquiry.IntegralEnquiry ⟨.NumberOfTriangles, op!{$op}, $n⟩]])
