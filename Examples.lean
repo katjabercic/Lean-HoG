@@ -189,8 +189,7 @@ example : Wheel.traceable := by
 -----------------------------------------
 
 -- A graph is *hypohamiltonian* if it is not Hamiltonian, but deleting any single
--- vertex leaves a graph that is — minimally non-Hamiltonian, in that sense. The
--- Petersen graph is the smallest one; there is none on fewer than ten vertices.
+-- vertex leaves a graph that is. The Petersen graph is a standard nontrivial example.
 #check_hypohamiltonian Petersen
 
 #check_hypohamiltonian Cycle7

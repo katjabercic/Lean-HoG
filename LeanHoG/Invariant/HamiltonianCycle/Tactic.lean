@@ -415,7 +415,8 @@ unsafe def searchForHypohamiltonicityAux (graphName : Name) (graph : Q(Graph))
 syntax (name := checkHypohamiltonian) "#check_hypohamiltonian " ident : command
 /-- `#check_hypohamiltonian G` decides whether `G` is hypohamiltonian — has no Hamiltonian
     cycle, while `G - v` has one for every vertex `v` — by running the Hamiltonian cycle search
-    on `G` and on each of its one-vertex deletions. The Petersen graph is the smallest example.
+    on `G` and on each of its one-vertex deletions.
+    The Petersen graph is the smallest nontrivial example.
 
     It reports which of the three ways the answer came out: hypohamiltonian, not
     hypohamiltonian because `G` is itself Hamiltonian, or not hypohamiltonian because some
