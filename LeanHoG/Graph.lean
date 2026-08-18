@@ -249,7 +249,47 @@ theorem edgeType_size_at_vertexSize_2 {G : Graph} (h2 : G.vertexSize = 2) :
   -- `Fintype.card (Edge 2) ≤ 1`, a closed computation on the derived `Fintype` instance
   decide
 
-end Graph
+/-- Delete a given vertex `v` from `G` and return a new graph without it.
 
+Also deletes all the edges which the vertex `v` was part of. -/
+def deleteVertex (G : Graph) (v : G.vertex) : Graph where
+  vertexSize := G.vertexSize - 1
+  edgeSet := EdgeSet.deleteConnections G.edgeSet v
+
+/-- An edge of `G - v` is present exactly when the edge it came from is present in `G`.
+The `Edge` layer's specification, transported to `G.edgeSet.contains`. -/
+lemma contains_deleteVertex {G : Graph} (v : G.vertex) (u w : (G.deleteVertex v).vertex)
+    (huw : u < w) :
+    (G.deleteVertex v).edgeSet.contains (Edge.mk u w huw) = true
+      ↔ G.edgeSet.contains
+          (Edge.mk (Fin.shiftUp v u) (Fin.shiftUp v w) (Fin.shiftUp_lt_shiftUp huw)) = true := by
+  rw [Batteries.RBSet.contains_iff, Batteries.RBSet.contains_iff]
+  show Edge.mk u w huw ∈ EdgeSet.deleteConnections G.edgeSet v ↔ _
+  rw [EdgeSet.mem_deleteConnections']
+  rfl
+
+/-- `G.deleteVertex v` is the subgraph of `G` induced on the vertices other than `v`: two vertices
+of `G - v` are adjacent exactly when the vertices of `G` they stand for are.
+
+Both `Fin.shiftUp` and `Fin.shiftDown` are strictly monotone, so the three `ltByCases` branches of
+`badjacent` line up on the two sides of the iff. -/
+theorem adjacent_deleteVertex {G : Graph} (v : G.vertex) (u w : (G.deleteVertex v).vertex) :
+    (G.deleteVertex v).adjacent u w ↔ G.adjacent (Fin.shiftUp v u) (Fin.shiftUp v w) := by
+  rcases lt_trichotomy u w with h | h | h
+  · simp [adjacent, badjacent, ltByCases, h, Fin.shiftUp_lt_shiftUp h,
+      contains_deleteVertex v u w h]
+  · subst h
+    simp [adjacent, badjacent, ltByCases]
+  · simp [adjacent, badjacent, ltByCases, h, not_lt_of_gt h, Fin.shiftUp_lt_shiftUp h,
+      not_lt_of_gt (Fin.shiftUp_lt_shiftUp h), contains_deleteVertex v w u h]
+
+/-- The other direction of `adjacent_deleteVertex`: adjacency in `G` between vertices other than
+`v` transports down to `G - v`. -/
+theorem adjacent_deleteVertex' {G : Graph} (v : G.vertex) (u w : G.vertex)
+    (hu : u ≠ v) (hw : w ≠ v) :
+    (G.deleteVertex v).adjacent (Fin.shiftDown v u hu) (Fin.shiftDown v w hw) ↔ G.adjacent u w := by
+  rw [adjacent_deleteVertex, Fin.shiftUp_shiftDown, Fin.shiftUp_shiftDown]
+
+end Graph
 
 end LeanHoG

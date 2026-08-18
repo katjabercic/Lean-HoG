@@ -2,6 +2,7 @@ import Lean
 import Qq
 import LeanHoG.LoadGraph
 import LeanHoG.Invariant.HamiltonianPath.SatEncoding
+import LeanHoG.Invariant.HamiltonianPath.Hypotraceable
 import LeanHoG.Tactic.Options
 import LeanHoG.Util.LeanSAT
 
@@ -291,6 +292,183 @@ unsafe def checkTraceableaTacticImpl : Tactic.Tactic
           throwError "check_traceablea derived a fact about Hamiltonian paths in {g}, but it \
             does not close the goal. Use `check_traceable {g} with h` to name it and finish \
             the proof by hand."
+
+  | _ => throwUnsupportedSyntax
+
+------------------------------------------
+-- Hypotraceability
+------------------------------------------
+
+/-- What `searchForHypotraceabilityAux` established, and why. The two negative cases are kept
+apart because they are worth different messages: a graph that is itself traceable fails the
+definition at the first conjunct, and there is nothing more to say, while a graph that fails at
+a particular deletion is worth naming that vertex for. -/
+inductive HypotraceabilityOutcome
+  /-- No Hamiltonian path, but every one-vertex deletion has one. -/
+  | hypotraceable
+  /-- Not hypotraceable: the graph has a Hamiltonian path itself. -/
+  | traceable
+  /-- Not hypotraceable: neither the graph nor the deletion of this vertex has one. -/
+  | deletionNotTraceable (v : Nat)
+
+/-- Assemble `∀ (v : G.vertex), P v` from one proof per vertex, given in index order, as a
+chain of `Fin.cases` bottoming out at `Fin.elim0`.
+
+Built as syntax and elaborated against `expected` rather than assembled as an `Expr`: each
+`Fin.cases` in the chain needs a motive phrased in terms of the next `Fin.succ`, and letting
+the elaborator infer those from the expected type is considerably less work than computing
+them. -/
+private def mkForallVertexProof (expected : Expr) (proofs : Array Expr) : TermElabM Expr := do
+  let mut stx ← `(fun i => Fin.elim0 i)
+  for e in proofs.reverse do
+    let eStx ← Term.exprToSyntax e
+    stx ← `(Fin.cases $eStx $stx)
+  let proof ← Term.elabTerm stx (some expected)
+  Term.synthesizeSyntheticMVarsNoPostponing
+  instantiateMVars proof
+
+/-- Decide hypotraceability of `graph`, and return the fact that establishes, a proof of it,
+and which case it fell into.
+
+The definition is checked in the order it is written. First `graph` itself must fail to be
+traceable; if the solver finds a Hamiltonian path there, that single call settles the question
+and no deletion is looked at. Then each `graph.deleteVertex v` must be traceable, and the first
+one that is not settles it — so a negative answer costs at most as many solver calls as it takes
+to reach the witness, while a positive one costs `graph.vertexSize + 1`.
+
+`register` is passed through to each underlying call, so under `#check_hypotraceable` every
+deletion leaves its own reusable certificate, named after the deletion rather than after
+`graph`. -/
+unsafe def searchForHypotraceabilityAux (graphName : Name) (graph : Q(Graph))
+    (register : Bool) : TermElabM (Expr × Expr × HypotraceabilityOutcome) := do
+  let G ← Meta.evalExpr' Graph ``Graph graph
+  if G.vertexSize = 0 then
+    have hDec : Q(decide (Graph.vertexSize $graph = 0) = true) := (q(Eq.refl true) : Lean.Expr)
+    let hZero : Q(Graph.vertexSize $graph = 0) := q(of_decide_eq_true $hDec)
+    return (q(Graph.hypotraceable $graph), q(hypotraceable_on_size_zero $hZero), .hypotraceable)
+  let (_, proofG, resG) ← searchForHamiltonianPathAux graphName graph register
+  match resG with
+  | .error => throwError "SAT solver exited with error"
+  | .sat _ =>
+    let proof ← Meta.mkAppM ``not_hypotraceable_of_traceable #[proofG]
+    return (q(¬ Graph.hypotraceable $graph), proof, .traceable)
+  | .unsat =>
+    let mut proofs : Array Expr := #[]
+    -- The index plumbing is built with `Meta` rather than quoted: a `Q(…)` mentioning the
+    -- loop variable's literal sends Qq looking for a compile-time value of it and fails in
+    -- `reduceEval`.
+    let vsize : Q(Nat) := q(Graph.vertexSize $graph)
+    for i in [0:G.vertexSize] do
+      let iLit := mkNatLit i
+      let hLt ← Meta.mkDecideProof (← Meta.mkAppM ``LT.lt #[iLit, vsize])
+      let v ← Meta.mkAppM ``Fin.mk #[iLit, hLt]
+      let sub : Q(Graph) ← Meta.mkAppM ``Graph.deleteVertex #[graph, v]
+      let subName : Name := .str graphName s!"deleteVertex{i}"
+      let (_, proofSub, resSub) ← searchForHamiltonianPathAux subName sub register
+      match resSub with
+      | .error => throwError "SAT solver exited with error"
+      | .sat _ => proofs := proofs.push proofSub
+      | .unsat =>
+        let proof ← Meta.mkAppM ``not_hypotraceable_of_deletion #[v, proofSub]
+        return (q(¬ Graph.hypotraceable $graph), proof, .deletionNotTraceable i)
+    let forallType : Q(Prop) :=
+      q(∀ (v : Graph.vertex $graph), Graph.traceable (Graph.deleteVertex $graph v))
+    let forallProof ← mkForallVertexProof forallType proofs
+    let proof ← Meta.mkAppM ``hypotraceable_of_deletions #[proofG, forallProof]
+    return (q(Graph.hypotraceable $graph), proof, .hypotraceable)
+
+syntax (name := checkHypotraceable) "#check_hypotraceable " ident : command
+/-- `#check_hypotraceable G` decides whether `G` is hypotraceable — has no Hamiltonian path,
+    while `G - v` has one for every vertex `v` — by running the Hamiltonian path search on `G`
+    and on each of its one-vertex deletions.
+
+    It reports which of the three ways the answer came out: hypotraceable, not hypotraceable
+    because `G` is traceable, or not hypotraceable because some `G - v` is not. In the last
+    case the vertex is named.
+
+    Each underlying search registers its own certificate, so the deletions are left behind as
+    `G.deleteVertexᵢ.HamiltonianPathI` instances, and the UNSAT halves as axioms named after
+    the graph they refute. Deciding this is `G.vertexSize + 1` solver calls in the positive
+    case, fewer once the answer is settled — see `searchForHypotraceabilityAux`.
+
+    This is the *command* form: it reports what it found and proves nothing about the current
+    goal. Use the `check_hypotraceable` tactic for that.
+-/
+@[command_elab checkHypotraceable]
+unsafe def checkHypotraceableImpl : Command.CommandElab
+  | `(#check_hypotraceable $g) => Command.liftTermElabM do
+    let graphName := g.getId
+    let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
+    let (_, _, outcome) ← searchForHypotraceabilityAux graphName graph (register := true)
+    match outcome with
+    | .hypotraceable =>
+      logInfo m!"{graphName} is hypotraceable: it has no Hamiltonian path, but deleting any \
+        single vertex leaves a graph that has one"
+    | .traceable =>
+      logInfo m!"{graphName} is not hypotraceable: it has a Hamiltonian path"
+    | .deletionNotTraceable v =>
+      logInfo m!"{graphName} is not hypotraceable: it has no Hamiltonian path, but neither \
+        does the graph left by deleting vertex {v}"
+
+  | _ => throwUnsupportedSyntax
+
+/-- Run the hypotraceability search on `g` and add what it establishes to the local context as
+a hypothesis named `h`: `g.hypotraceable`, or `¬ g.hypotraceable`. Shared by the
+`check_hypotraceable` and `check_hypotraceablea` tactics. -/
+unsafe def assertHypotraceabilityFact (g : Ident) (h : Name) : Tactic.TacticM Unit :=
+  Tactic.withMainContext do
+    let graph ← Qq.elabTermEnsuringTypeQ g q(Graph)
+    let (type, proof, _) ← searchForHypotraceabilityAux g.getId graph (register := false)
+    Tactic.liftMetaTactic fun mvarId => do
+      let mvarIdNew ← mvarId.assert h type proof
+      let (_, mvarIdNew) ← mvarIdNew.intro1P
+      return [mvarIdNew]
+
+syntax (name := checkHypotraceableTactic) "check_hypotraceable " ident (" with" (ppSpace colGt ident))? : tactic
+/-- `check_hypotraceable G` decides hypotraceability of `G` with the SAT solver and adds the
+    result to the local context as a hypothesis. Like `check_traceable`, it is a decider rather
+    than a refuter: the hypothesis is `G.hypotraceable` or `¬ G.hypotraceable` depending on how
+    the search came out, so it serves goals of both signs.
+
+    Unlike `check_traceable`, the hypothesis is the fact as stated in both cases — nothing is
+    left unfolded — so `exact` against the goal works as well as `assumption`.
+
+    **This tactic adds a hypothesis; it does not close the goal.** Finish with `assumption`, or
+    use `check_hypotraceablea`. `check_hypotraceable G with h` names the hypothesis.
+
+    Note the asymmetry in what the proof rests on. The positive case needs `¬ G.traceable`,
+    which comes from the solver, so it depends on one unsatisfiability axiom; the Hamiltonian
+    paths in the deletions are actual paths and cost nothing. A negative answer that came from
+    `G` being traceable depends on no axiom at all.
+-/
+@[tactic checkHypotraceableTactic]
+unsafe def checkHypotraceableTacticImpl : Tactic.Tactic
+  | `(tactic|check_hypotraceable $g) => assertHypotraceabilityFact g .anonymous
+  | `(tactic|check_hypotraceable $g with $h) => assertHypotraceabilityFact g h.getId
+  | _ => throwUnsupportedSyntax
+
+syntax (name := checkHypotraceableaTactic) "check_hypotraceablea " ident : tactic
+/-- `check_hypotraceablea G` is `check_hypotraceable G` followed by `assumption`, in the same
+    spirit as `simpa` for `simp`:
+
+    ```lean
+    example : ¬ Petersen.hypotraceable := by
+      check_hypotraceablea Petersen
+    ```
+-/
+@[tactic checkHypotraceableaTactic]
+unsafe def checkHypotraceableaTacticImpl : Tactic.Tactic
+  | `(tactic|check_hypotraceablea $g) => do
+    assertHypotraceabilityFact g .anonymous
+    Tactic.withMainContext do
+      Tactic.liftMetaTactic fun mvarId => do
+        try
+          mvarId.assumption
+          return []
+        catch _ =>
+          throwError "check_hypotraceablea derived a fact about hypotraceability of {g}, but \
+            it does not close the goal. Use `check_hypotraceable {g} with h` to name it and \
+            finish the proof by hand."
 
   | _ => throwUnsupportedSyntax
 

@@ -5,6 +5,7 @@ import LeanHoG.Tactic.SearchDSL
 import LeanHoG.Tactic.Basic
 import LeanHoG.Invariant.HamiltonianPath.Tactic
 import LeanHoG.Invariant.Bipartite.Tactic
+import LeanHoG.Invariant.HamiltonianCycle.Tactic
 
 namespace LeanHoG
 
@@ -49,6 +50,47 @@ load_graph Cube5 "examples/cube5.json"
 load_graph ThreeFour "examples/cycle3-cycle4.json"
 #eval ThreeFour.connectedGraph
 #eval ThreeFour.numberOfConnectedComponents
+
+-- The path of length 3 (on four vertices)
+load_graph Path3 "examples/path3.json"
+#eval Path3.connectedGraph
+#eval Path3.degreeSequence
+
+-----------------------------------------
+-- Deleting a vertex
+-----------------------------------------
+
+-- `G.deleteVertex v` is the subgraph of `G` induced on the vertices other than
+-- `v`. Since the vertices of a graph are `Fin G.vertexSize`, deleting one has to
+-- renumber the survivors: `Fin.shiftDown v` sends a vertex `u ≠ v` of `G` to its
+-- index in `G - v`, leaving the vertices below `v` where they are and dropping
+-- those above `v` by one. `Fin.shiftUp v` is its inverse.
+
+-- Deleting the interior vertex 1 of 0-1-2-3 removes the edges 0-1 and 1-2 and
+-- keeps 2-3, which is renumbered to 1-2. Vertex 0 survives, isolated.
+#eval (Path3.deleteVertex ⟨1, by decide⟩).vertexSize      -- 3
+#eval (Path3.deleteVertex ⟨1, by decide⟩).edgeSet.toList  -- one edge, 1-2
+#eval (Path3.deleteVertex ⟨1, by decide⟩).degreeSequence  -- [1, 1, 0]
+
+-- Deleting either endpoint leaves a path one shorter, renumbered so that the
+-- vertices are again 0, 1, 2.
+#eval (Path3.deleteVertex ⟨0, by decide⟩).edgeSet.toList  -- 0-1, 1-2
+#eval (Path3.deleteVertex ⟨3, by decide⟩).edgeSet.toList  -- 0-1, 1-2
+
+-- Adjacency in `G - v` is decidable just as it is in `G`.
+example : (Path3.deleteVertex ⟨1, by decide⟩).adjacent ⟨1, by decide⟩ ⟨2, by decide⟩ := by
+  decide
+
+example : ¬ (Path3.deleteVertex ⟨1, by decide⟩).adjacent ⟨0, by decide⟩ ⟨1, by decide⟩ := by
+  decide
+
+-- `Graph.adjacent_deleteVertex` states the same facts without computing: two
+-- vertices of `G - v` are adjacent exactly when the vertices of `G` they stand
+-- for are. Here it turns the edge 1-2 of `Path3 - 1` into the edge 2-3 of
+-- `Path3`, because `Fin.shiftUp 1` sends 1 ↦ 2 and 2 ↦ 3.
+example : (Path3.deleteVertex ⟨1, by decide⟩).adjacent ⟨1, by decide⟩ ⟨2, by decide⟩ := by
+  rw [Graph.adjacent_deleteVertex]
+  decide
 
 
 -- Checking bipartiteness with and without certificates
@@ -221,6 +263,25 @@ example : ¬Cross.traceable := by
 -- The tactic reuses that certificate rather than clashing with it.
 example : Wheel.traceable := by
   check_traceablea Wheel
+
+-----------------------------------------
+-- Hypohamiltonicity
+-----------------------------------------
+
+-- A graph is *hypohamiltonian* if it is not Hamiltonian, but deleting any single
+-- vertex leaves a graph that is. The Petersen graph is a standard nontrivial example.
+#check_hypohamiltonian Petersen
+
+#check_hypohamiltonian Cycle7
+
+#check_hypohamiltonian Path3
+
+#check_hypotraceable Petersen
+
+theorem petersen_hypohamiltonian : Petersen.hypohamiltonian := by
+  check_hypohamiltoniana Petersen
+
+#print axioms petersen_hypohamiltonian
 
 ---------------------------------------
 -- Tactics
