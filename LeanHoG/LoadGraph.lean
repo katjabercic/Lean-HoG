@@ -52,7 +52,7 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
       hints := .regular 0
       safety := .safe
     }
-    Elab.Command.liftTermElabM <| Meta.addInstance g6Name .global 42
+    Elab.Command.liftTermElabM <| Meta.addInstance g6Name .global 1000
 
   match jsonData.connectedComponents? with
   | .none => pure ()
@@ -67,7 +67,7 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
       hints := .regular 0
       safety := .safe
     }
-    Elab.Command.liftTermElabM <| Meta.addInstance componentsCertificateName .global 42
+    Elab.Command.liftTermElabM <| Meta.addInstance componentsCertificateName .global 1000
 
   match jsonData.twoColoring? with
   | .none => pure ()
@@ -82,7 +82,7 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
       hints := .regular 0
       safety := .safe
     }
-    Elab.Command.liftTermElabM <| Meta.addInstance TwoColoringName .global 42
+    Elab.Command.liftTermElabM <| Meta.addInstance TwoColoringName .global 1000
 
   match jsonData.oddClosedWalk? with
   | .none => pure ()
@@ -97,7 +97,7 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
       hints := .regular 0
       safety := .safe
     }
-    Elab.Command.liftTermElabM <| Meta.addInstance OddClosedWalkName .global 42
+    Elab.Command.liftTermElabM <| Meta.addInstance OddClosedWalkName .global 1000
 
   match jsonData.neighborhoodMap? with
   | .none => pure ()
@@ -112,7 +112,7 @@ unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.
       hints := .regular 0
       safety := .safe
     }
-    Elab.Command.liftTermElabM <| Meta.addInstance neighborhoodMapName .global 42
+    Elab.Command.liftTermElabM <| Meta.addInstance neighborhoodMapName .global 1000
 
 
 

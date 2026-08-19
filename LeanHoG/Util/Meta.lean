@@ -44,7 +44,7 @@ def certificateTerm (declName : Name) (certType cert : Expr) (register : Bool) :
       hints := .regular 0
       safety := .safe
     }
-    Meta.addInstance declName .global 42
+    Meta.addInstance declName .global 1000
     return mkConst declName
   return cert
 

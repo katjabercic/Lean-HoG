@@ -162,4 +162,15 @@ example : ¬ThreeFour.bipartite := by
   check_bipartite ThreeFour with h
   exact h
 
+/-! ## Registered certificates are reachable by instance synthesis
+
+Registering a certificate is only useful if synthesis finds it afterwards, which depends
+on the priority `addInstance` is given. Both registration paths are covered: `load_graph`
+reading a certificate out of a graph's JSON, and the `#check_*` commands producing one. -/
+
+#synth TwoColoring Path1          -- from `examples/path1.json`, via `load_graph`
+#synth HamiltonianPath Cycle7     -- from `#check_traceable`
+#synth HamiltonianCycle Cycle7    -- from `#check_hamiltonian`
+#synth TwoColoring Cube5          -- from `#check_bipartite`
+
 end LeanHoG.Sat.SolverTests
