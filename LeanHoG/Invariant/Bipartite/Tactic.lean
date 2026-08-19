@@ -1,41 +1,12 @@
 import Lean
 import Qq
-import LeanHoG.LoadGraph
+import LeanHoG.Util.Meta
 import LeanHoG.Invariant.Bipartite.Certificate
 import LeanHoG.Invariant.Bipartite.Search
 
 namespace LeanHoG
 
 open Lean Elab Qq
-
-/-- The term to use as a certificate of type `certType`: the declaration `declName` if
-    it already holds one for this graph, a fresh declaration under that name if
-    `register` is set, and otherwise `cert` itself.
-
-    `#check_bipartite` wants a declaration, since registering a reusable certificate is
-    the whole point of the command.
-
-    The `check_bipartite` tactics must not ask for one. Lean elaborates declarations in
-    parallel and lets each add only names beneath its own prefix, so a named theorem
-    cannot introduce `G.TwoColoringI` and fails with `cannot add declaration ... as it
-    is restricted to the prefix ...`. With `register := false` the certificate goes
-    into the proof term directly. -/
-private def certificateTerm (declName : Name) (certType : Expr) (cert : Expr)
-    (register : Bool) : TermElabM Expr := do
-  if ← hasReusableDecl declName certType then
-    return mkConst declName
-  if register then
-    Lean.addAndCompile <| .defnDecl {
-      name := declName
-      levelParams := []
-      type := certType
-      value := cert
-      hints := .regular 0
-      safety := .safe
-    }
-    Meta.addInstance declName .global 42
-    return mkConst declName
-  return cert
 
 /-- Decide bipartiteness of `graph` by breadth-first search, and return the fact that
     establishes, a proof of it, and which way the answer went.

@@ -1,7 +1,8 @@
 import Lean
 import Qq
-import LeanHoG.LoadGraph
+import LeanHoG.Util.Meta
 import LeanHoG.Invariant.HamiltonianPath.SatEncoding
+import LeanHoG.Invariant.HamiltonianPath.Certificate
 import LeanHoG.Invariant.HamiltonianPath.Hypotraceable
 import LeanHoG.Tactic.Options
 import LeanHoG.Util.LeanSAT
@@ -42,14 +43,12 @@ open Trestle Model in
     reusable certificate is the whole point of the command and
     `#show_hamiltonian_path` looks the instance up by name.
 
-    The `check_traceable` tactics must not ask for one. Lean elaborates declarations
-    in parallel and lets each add only names beneath its own prefix, so a named
-    theorem cannot introduce `G.HamiltonianPathI` and fails with `cannot add
-    declaration ... as it is restricted to the prefix ...`. With
-    `register := false` the certificate is placed in the proof term directly, and
-    the axiom — which has to be a declaration, there being no other way to assert
-    one — is named beneath the declaration being elaborated. Either way an
-    equivalent declaration already in the environment is reused. -/
+    The `check_traceable` tactics must not ask for one, because a named theorem may only
+    add names beneath its own prefix — see `certificateTerm`, which handles the SAT case.
+    The axiom is the other half: it *has* to be a declaration, there being no other way to
+    assert one, so under `register := false` it is named beneath the declaration being
+    elaborated rather than after the graph. Either way an equivalent declaration already in
+    the environment is reused. -/
 unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph))
     (register : Bool) : TermElabM (Expr × Expr × TraceabilityOutcome) := do
   let G ← Meta.evalExpr' Graph ``Graph graph
@@ -109,33 +108,13 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph))
               returned path {toString vs}, but are not adjacent in the graph. \
               {solverBlame}"
     let hpQ := hamiltonianPathOfData graph ⟨path.toList⟩
-    -- The certificate to hand to `path_of_cert`. `hamiltonianPathOfData` returns a
-    -- self-contained term, so a declaration is a convenience and never a necessity:
-    -- it makes the certificate reusable and visible to instance synthesis.
-    --
-    -- The name is a function of the graph's, so a second run on the same graph —
-    -- `#check_traceable G` and then the tactic, or the tactic twice — would be
-    -- re-declaring it. A `HamiltonianPath $graph` already in the environment is a
-    -- certificate for the same graph, so reuse it rather than failing; that it is one,
-    -- and not merely something sitting on the name, is what `hasReusableDecl` checks.
-    let hamiltonianPathName := certificateName graphName "HamiltonianPathI"
+    -- The certificate to hand to `path_of_cert`. The name is a function of the graph's, so
+    -- a second run on the same graph — `#check_traceable G` and then the tactic, or the
+    -- tactic twice — would be re-declaring it; `certificateTerm` reuses an existing
+    -- `HamiltonianPath $graph` rather than failing.
     let certType : Q(Type) := q(HamiltonianPath $graph)
-    let cert : Expr ←
-      if ← hasReusableDecl hamiltonianPathName certType then
-        pure (mkConst hamiltonianPathName)
-      else if register then do
-        Lean.addAndCompile <| .defnDecl {
-          name := hamiltonianPathName
-          levelParams := []
-          type := certType
-          value := hpQ
-          hints := .regular 0
-          safety := .safe
-        }
-        Lean.Meta.addInstance hamiltonianPathName .global 42
-        pure (mkConst hamiltonianPathName)
-      else
-        pure hpQ
+    let cert ← certificateTerm (certificateName graphName "HamiltonianPathI") certType
+      hpQ register
     -- Applied to the certificate explicitly, not left to instance synthesis: `mkAppM`
     -- with no arguments returns the bare constant, whose implicit `G` and instance
     -- are still abstracted, and that only fails later in the kernel.
@@ -340,22 +319,6 @@ inductive HypotraceabilityOutcome
   | traceable
   /-- Not hypotraceable: neither the graph nor the deletion of this vertex has one. -/
   | deletionNotTraceable (v : Nat)
-
-/-- Assemble `∀ (v : G.vertex), P v` from one proof per vertex, given in index order, as a
-chain of `Fin.cases` bottoming out at `Fin.elim0`.
-
-Built as syntax and elaborated against `expected` rather than assembled as an `Expr`: each
-`Fin.cases` in the chain needs a motive phrased in terms of the next `Fin.succ`, and letting
-the elaborator infer those from the expected type is considerably less work than computing
-them. -/
-private def mkForallVertexProof (expected : Expr) (proofs : Array Expr) : TermElabM Expr := do
-  let mut stx ← `(fun i => Fin.elim0 i)
-  for e in proofs.reverse do
-    let eStx ← Term.exprToSyntax e
-    stx ← `(Fin.cases $eStx $stx)
-  let proof ← Term.elabTerm stx (some expected)
-  Term.synthesizeSyntheticMVarsNoPostponing
-  instantiateMVars proof
 
 /-- Decide hypotraceability of `graph`, and return the fact that establishes, a proof of it,
 and which case it fell into.

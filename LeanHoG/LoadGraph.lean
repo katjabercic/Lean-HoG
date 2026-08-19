@@ -23,10 +23,6 @@ def liftExcept {α : Type} {m} [Monad m] [MonadError m] : Except String α → m
   | .ok res => pure res
   | .error msg => throwError msg
 
-/-- A Lean name for a certicicate -/
-def certificateName (graphName: Name) (certName: String) : Name :=
-  (.str graphName certName)
-
 syntax (name := loadGraph) "load_graph" ident str : command
 
 unsafe def loadGraphAux (graphName : Name) (jsonData : JSONData) : Elab.Command.CommandElabM Unit := do

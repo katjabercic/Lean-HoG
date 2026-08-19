@@ -1,6 +1,6 @@
 import Lean
 import Qq
-import LeanHoG.LoadGraph
+import LeanHoG.Util.Meta
 import LeanHoG.Invariant.HamiltonianCycle.SatEncoding
 import LeanHoG.Invariant.HamiltonianCycle.Certificate
 import LeanHoG.Invariant.HamiltonianCycle.Correctness
@@ -34,31 +34,15 @@ inductive HamiltonicityOutcome
   | noVertices
 
 /-- Turn a `HamiltonianCycle graph` certificate into the `graph.isHamiltonian` fact, backed
-    by a declaration named after the graph when `register` says so.
+    by a declaration named after the graph when `register` says so — see `certificateTerm`.
 
-    As with the path version, that declaration is a convenience (reusable across runs,
-    visible to instance synthesis) and never a necessity: the certificate term stands on
-    its own. -/
+    Called from two places: the SAT branch, and the one-vertex graph, which is vacuously
+    Hamiltonian and gets its certificate without the solver. -/
 private def certifyHamiltonian (graphName : Name) (graph : Q(Graph)) (register : Bool)
     (hcQ : Q(HamiltonianCycle $graph)) : TermElabM (Expr × Expr) := do
-  let hamiltonianCycleName := certificateName graphName "HamiltonianCycleI"
   let certType : Q(Type) := q(HamiltonianCycle $graph)
-  let cert : Expr ←
-    if ← hasReusableDecl hamiltonianCycleName certType then
-      pure (mkConst hamiltonianCycleName)
-    else if register then do
-      Lean.addAndCompile <| .defnDecl {
-        name := hamiltonianCycleName
-        levelParams := []
-        type := certType
-        value := hcQ
-        hints := .regular 0
-        safety := .safe
-      }
-      Lean.Meta.addInstance hamiltonianCycleName .global 42
-      pure (mkConst hamiltonianCycleName)
-    else
-      pure hcQ
+  let cert ← certificateTerm (certificateName graphName "HamiltonianCycleI") certType
+    hcQ register
   let existsHamCycle ← Meta.mkAppOptM ``LeanHoG.HamiltonianCycle.cycle_of_cert
     #[graph, cert]
   return (q(Graph.isHamiltonian $graph), existsHamCycle)
@@ -336,19 +320,6 @@ inductive HypohamiltonicityOutcome
   | hamiltonian
   /-- Not hypohamiltonian: neither the graph nor the deletion of this vertex is Hamiltonian. -/
   | deletionNotHamiltonian (v : Nat)
-
-/-- Assemble `∀ (v : G.vertex), P v` from one proof per vertex, in index order, as a chain of
-`Fin.cases` bottoming out at `Fin.elim0`. See
-`LeanHoG.Invariant.HamiltonianPath.Tactic.mkForallVertexProof`, of which this is a copy — it is
-`private` there. -/
-private def mkForallVertexProof (expected : Expr) (proofs : Array Expr) : TermElabM Expr := do
-  let mut stx ← `(fun i => Fin.elim0 i)
-  for e in proofs.reverse do
-    let eStx ← Term.exprToSyntax e
-    stx ← `(Fin.cases $eStx $stx)
-  let proof ← Term.elabTerm stx (some expected)
-  Term.synthesizeSyntheticMVarsNoPostponing
-  instantiateMVars proof
 
 /-- Decide hypohamiltonicity of `graph`, and return the fact that establishes, a proof of it,
 and which case it fell into.
