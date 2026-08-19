@@ -2,6 +2,7 @@ import Qq
 import LeanHoG.JsonData
 import LeanHoG.Edge
 import LeanHoG.Graph
+import LeanHoG.Walk
 import LeanHoG.Util.RB
 
 namespace LeanHoG
@@ -28,6 +29,18 @@ def graphOfData (D : GraphData) : Q(Graph) :=
   have arrQ : Array Q(LeanHoG.Edge $vertexSize) := D.edges.map (LeanHoG.edgeOfData vertexSize)
   have edges : Q(EdgeSet $vertexSize) := build_RBSet arrQ q(Edge.linearOrder $vertexSize)
   q(Graph.mk $vertexSize $edges)
+
+/-- Construct a quoted walk from a list of graph vertices. -/
+def walkOfVertexList (G : Q(Graph)) (t : Q(Graph.vertex $G)) :
+    List Q(Graph.vertex $G) → ((s : Q(Graph.vertex $G)) ×' Q(Walk $G $s $t))
+  | [] => panic! "walkOfVertexList: no vertices; the caller must pass at least the endpoint"
+  | [v] =>
+    let h : Q($v = $t) := (q(Eq.refl $v) : Lean.Expr)
+    ⟨v, q($h ▸ .here $v)⟩
+  | u :: v :: vs =>
+    let ⟨s, w⟩ := walkOfVertexList G t (v :: vs)
+    let h : Q(decide (@Graph.adjacent $G $u $s) = true) := (q(Eq.refl true) : Lean.Expr)
+    ⟨u, q(.step (of_decide_eq_true $h) $w)⟩
 
 def forallFin {n : Nat} (p : Fin n → Prop) [DecidablePred p] := decide (∀ x, p x)
 
