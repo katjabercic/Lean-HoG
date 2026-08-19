@@ -6,7 +6,7 @@ import LeanHoG.Invariant.HamiltonianCycle.Certificate
 import LeanHoG.Invariant.HamiltonianCycle.Correctness
 import LeanHoG.Invariant.HamiltonianCycle.Hypohamiltonian
 import LeanHoG.Tactic.Options
-import LeanHoG.Util.LeanSAT
+import LeanHoG.Sat.Driver
 
 import Trestle.Encode.EncCNF
 
@@ -78,15 +78,10 @@ unsafe def searchForHamiltonianCycleAux (graphName : Name) (graph : Q(Graph))
   if h2 : 2 < G.vertexSize then
     let h : 0 < G.vertexSize := by omega
     let enc := (hamiltonianCycleCNF G h).val
-    let opts ← getOptions
-    let cadicalExe := opts.get leanHoG.solverCmd.name leanHoG.solverCmd.defValue
-    let timeoutSec := opts.get leanHoG.solverTimeout.name leanHoG.solverTimeout.defValue
-    let maxCertMB := opts.get leanHoG.maxCertificateSize.name leanHoG.maxCertificateSize.defValue
-    let solver := SolverWithLRAT cadicalExe #["--no-binary", "--lrat=true"]
-      { timeoutSec := timeoutSec, maxProofBytes := maxCertMB * 1024 * 1024 }
+    let cfg ← solverConfig
     let cnf := Encode.EncCNF.toICnf enc
     let (_, s) := Encode.EncCNF.run enc
-    let res ← solver.solve cnf
+    let res ← cfg.solver.solve cnf
     match res with
     | .sat assn =>
       -- Build a Hamiltonian cycle from the solution given by the SAT solver.
@@ -103,7 +98,7 @@ unsafe def searchForHamiltonianCycleAux (graphName : Name) (graph : Q(Graph))
       -- a Hamiltonian cycle before building a certificate out of it — see the parallel
       -- check in `HamiltonianPath.Tactic.searchForHamiltonianPathAux`.
       let vs := cycle.toList
-      let solverBlame := m!"The solver named by `leanHoG.solverCmd` ({cadicalExe}) is \
+      let solverBlame := m!"The solver named by `leanHoG.solverCmd` ({cfg.cmd}) is \
         not answering correctly."
       if vs.dropLast.mergeSort (· ≤ ·) ≠ List.range G.vertexSize then
         throwError "the SAT solver returned an assignment that does not describe a \

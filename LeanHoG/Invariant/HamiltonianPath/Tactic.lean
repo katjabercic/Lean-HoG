@@ -5,7 +5,7 @@ import LeanHoG.Invariant.HamiltonianPath.SatEncoding
 import LeanHoG.Invariant.HamiltonianPath.Certificate
 import LeanHoG.Invariant.HamiltonianPath.Hypotraceable
 import LeanHoG.Tactic.Options
-import LeanHoG.Util.LeanSAT
+import LeanHoG.Sat.Driver
 
 import Trestle.Encode.EncCNF
 
@@ -62,15 +62,10 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph))
     let hZero : Q(Graph.vertexSize $graph = 0) := q(of_decide_eq_true $hZeroDec)
     return (noExistsType, q(no_hamiltonian_path_on_size_0 $hZero), .noVertices)
   let enc := (hamiltonianPathCNF G).val
-  let opts ← getOptions
-  let cadicalExe := opts.get leanHoG.solverCmd.name leanHoG.solverCmd.defValue
-  let timeoutSec := opts.get leanHoG.solverTimeout.name leanHoG.solverTimeout.defValue
-  let maxCertMB := opts.get leanHoG.maxCertificateSize.name leanHoG.maxCertificateSize.defValue
-  let solver := SolverWithLRAT cadicalExe #["--no-binary", "--lrat=true"]
-    { timeoutSec := timeoutSec, maxProofBytes := maxCertMB * 1024 * 1024 }
+  let cfg ← solverConfig
   let cnf := Encode.EncCNF.toICnf enc
   let (_, s) := Encode.EncCNF.run enc
-  let res ← solver.solve cnf
+  let res ← cfg.solver.solve cnf
   match res with
   | .sat assn =>
     -- Build a Hamiltonian path from the solution given by the SAT solver
@@ -92,7 +87,7 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph))
     -- as far as reporting that it registered a certificate first. Checking here
     -- reports what actually went wrong, and stops before anything claims success.
     let vs := path.toList
-    let solverBlame := m!"The solver named by `leanHoG.solverCmd` ({cadicalExe}) is \
+    let solverBlame := m!"The solver named by `leanHoG.solverCmd` ({cfg.cmd}) is \
       not answering correctly."
     if vs.mergeSort (· ≤ ·) ≠ List.range G.vertexSize then
       throwError "the SAT solver returned an assignment that does not describe a \
