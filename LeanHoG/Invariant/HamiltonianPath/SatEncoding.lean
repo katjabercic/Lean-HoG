@@ -2,7 +2,7 @@ import LeanHoG.Graph
 import LeanHoG.Walk
 import LeanHoG.Invariant.ConnectedComponents.Basic
 import LeanHoG.Invariant.HamiltonianPath.Basic
-import LeanHoG.Invariant.HamiltonianPath.Correctness
+import LeanHoG.Util.List
 
 import Trestle.Model.PropFun
 import Trestle.Encode.VEncCNF
@@ -193,21 +193,6 @@ theorem hamiltonian_path_to_sat {G : Graph} (hp : HamiltonianPath G) :
 
   use τ
   exact ⟨τ_vertex, τ_positions, τ_edge⟩
-
-abbrev posToVar {n : Nat} : Pos n → Var n := fun ⟨i,j⟩ => ⟨i,j⟩
-abbrev varToPos {n : Nat} : Var n → Pos n := fun ⟨i,j⟩ => ⟨i,j⟩
-
-@[simp] def posToVarAssignment {n : Nat} : PropAssignment (Pos n) → PropAssignment (Var n) :=
-  fun τ => τ ∘ varToPos
-
-def has_hamiltonian_path_to_hamiltonianPath_constraints {G : Graph} :
-  (∃ (τ : PropAssignment (Pos G.vertexSize)), τ ⊨ has_hamiltonian_path G) →
-  (∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianPathConstraints G) := by
-  intro h
-  rcases h with ⟨τ, h⟩
-  let σ := (posToVarAssignment τ)
-  exists σ
-  aesop
 
 /-- State the correctness theorem in terms of the constraints defined above. -/
 theorem hamiltonian_path_to_var_assignment {G : Graph} :

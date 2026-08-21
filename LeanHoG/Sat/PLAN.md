@@ -1,8 +1,8 @@
 # Generalizing the SAT-encoding scaffolding
 
-Status: **Stages 0, 1 and 2 done, Stage 3 in progress** (Step 3a done, 3b next), Stages 4–6 not
-started. Mark each stage **Done** as it lands and record what happened under `## Completed`;
-delete this file when the last one is, and let it live on in history — as `PLAN.md` did
+Status: **Stages 0, 1 and 2 done, Stage 3 in progress** (Steps 3a and 3b done, 3c next),
+Stages 4–6 not started. Mark each stage **Done** as it lands and record what happened under
+`## Completed`; delete this file when the last one is, and let it live on in history — as `PLAN.md` did
 (`git show 47715c3:PLAN.md`).
 
 ## Context
@@ -269,7 +269,7 @@ over.
 
 This is the only step that can fail in an interesting way, and it is revertible on its own.
 
-### Step 3b — delete the `Pos` layer
+### Step 3b — delete the `Pos` layer — **Done**
 
 Now unreferenced, verified by grep: `Pos`, `x`, `a`, `b`, `c`, `d`, `e`, the ten
 `satisfies_*_iff` lemmas, `at_least_one_at_pos` and friends, `no_non_edges`,
@@ -292,10 +292,12 @@ breakage is a missed reference and appears as an unknown identifier.
 ### Step 3c — move the correctness theorems and flip the import
 
 Move `hamiltonian_path_to_sat`, `no_assignment_implies_no_hamiltonian_path` and
-`no_assignment_implies_no_hamiltonian_path'` out of `SatEncoding.lean` into `Correctness.lean`,
-change `Correctness.lean` to import `SatEncoding` instead of the reverse, and add
-`import LeanHoG.Invariant.HamiltonianPath.Correctness` to `Tactic.lean`, which uses
-`no_assignment_implies_no_hamiltonian_path'` and currently gets it transitively.
+`no_assignment_implies_no_hamiltonian_path'` out of `SatEncoding.lean` into `Correctness.lean`.
+Since 3b deleted that file outright, this **recreates** it, importing `SatEncoding` — which is the
+inversion the stage was after, arrived at by construction rather than by editing an import line.
+Re-add `import LeanHoG.Invariant.HamiltonianPath.Correctness` to
+`LeanHoG/Invariant/HamiltonianPath.lean` and to `Tactic.lean`, which uses
+`no_assignment_implies_no_hamiltonian_path'` and would otherwise get it transitively.
 
 Drop `hamiltonian_path_to_var_assignment`: with the new theorem it is a one-line wrapper, and the
 cycle side has no counterpart — its `no_assignment_implies_no_hamiltonian_cycle` goes straight to
@@ -752,3 +754,27 @@ than a step in the chain from a Hamiltonian path to a satisfying assignment.
 
 **Verified:** `lake build LeanHoG SatEncodingTests SolverTests Graph6Tests` clean, golden CNF
 fixtures unmoved (this step adds a `Prop` and emits no clause), no `sorryAx`.
+
+### Stage 3, Step 3b — The `Pos` layer deleted — **Done**
+
+440 lines out, one line in, and every deletion was on the list the plan drew up: exactly the
+`~440` predicted. `lake build LeanHoG SatEncodingTests SolverTests Graph6Tests` clean on the first
+attempt, fixtures unmoved.
+
+**`Correctness.lean` did not shrink — it went.** The plan listed its contents declaration by
+declaration without noticing that the list was the *whole file*: all 365 lines, from `Pos` at `:13`
+to `hamiltonian_path_to_sat_pos`, were the second formalization. There was nothing left to leave
+behind, so the file is deleted here and recreated by 3c holding the `Var`-level theorems. That is
+tidier than the import edit 3c originally called for: the inversion the stage wanted
+(`Basic → SatEncoding → Correctness`) now happens by construction, in a new file that imports
+`SatEncoding` because it always should have.
+
+**One import had been travelling on `Correctness`'s back.** `SatEncoding.lean` uses
+`List.all_distinct_get_injective` and `List.get_of_mem` but never imported `LeanHoG.Util.List`; it
+was reaching them through `Correctness`. Now direct — the one line added. `Mathlib.Data.List.ProdSigma`,
+which `Correctness` also pulled in, turns out to be needed by nothing that survives.
+
+The simp-set worry came to nothing, as predicted: `SatHelpers.lean`'s two `@[simp]` attributes were
+both on `disj_list`/`conj_list` themselves, and no proof anywhere was leaning on them. Dropping the
+`LeanHoG.PropFun` namespace that several files shadowed `Trestle.Model.PropFun` with likewise broke
+nothing.
