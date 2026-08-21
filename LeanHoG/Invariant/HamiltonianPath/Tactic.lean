@@ -73,7 +73,7 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph))
     let mut path : Array Nat := Array.replicate G.vertexSize 0
     for i in List.fins G.vertexSize do
       for j in List.fins G.vertexSize do
-        match assn.findEntry? (s.vMap (Var.mk i j))  with
+        match assn.findEntry? (s.vMap (Sat.Grid.Var.mk i j))  with
         | none => throwError "invalid index ({i},{j})"
         | some (_, true) => path := path.set! j i
         | some (_, false) => continue

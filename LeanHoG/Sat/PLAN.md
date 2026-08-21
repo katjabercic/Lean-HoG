@@ -1,7 +1,7 @@
 # Generalizing the SAT-encoding scaffolding
 
-Status: **Stages 0–3 done, Stage 4 in progress** (`Sat/Grid.lean` landed; the two encodings not
-yet migrated), Stages 5–6 not started. Mark each stage **Done** as it
+Status: **Stages 0–3 done, Stage 4 in progress** (`Sat/Grid.lean` landed, path encoding
+migrated; the cycle encoding is next), Stages 5–6 not started. Mark each stage **Done** as it
 lands and record what happened under `## Completed`; delete this file when the last one is, and let
 it live on in history — as `PLAN.md` did (`git show 47715c3:PLAN.md`).
 

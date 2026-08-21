@@ -10,56 +10,34 @@ import LeanHoG.Util.TrestleStd
 namespace LeanHoG
 
 open Lean Trestle Encode VEncCNF Meta Model PropFun
+open Sat
 
-/-- `Var i j = true` means: "at position j on the path is vertex i". -/
-structure Var (n : Nat) where
-  vertex : Fin n
-  pos : Fin n
-deriving DecidableEq, IndexType
+/-- The variables of the path encoding: an `n × n` grid, where `Var.mk i j` means "at position
+`j` on the path is vertex `i`".
 
-@[simp] def vertexAtPos {n : Nat} (i j : Fin n) : PropFun (Var n) :=
-  Var.mk i j
+A Hamiltonian path visits each of the `n` vertices exactly once, so it has exactly as many
+positions as vertices. That is the whole of what distinguishes this encoding from the cycle's,
+which is `n × (n + 1)` because its last position repeats its first. -/
+abbrev Var (n : Nat) := Grid.Var n n
 
-@[simp] def positionHasAVertex {n : Nat} (j : Fin n) : PropPred (Var n) := fun τ =>
-  ∃ (i : Fin n), τ ⊨ vertexAtPos i j
+abbrev VCnf (n : Nat) := Grid.VCnf n n
 
-@[simp] def eachPositionHasAVertex {n : Nat} : PropPred (Var n) := fun τ =>
-  ∀ (j : Fin n), positionHasAVertex j τ
+/-- Each vertex is at some position, and no vertex is at two positions.
 
-@[simp] def vertexIsAtSomePosition {n : Nat} (i : Fin n) : PropPred (Var n) := fun τ =>
-  ∃ (j : Fin n), τ ⊨ vertexAtPos i j
-
-@[simp] def eachVertexIsAtSomePosition {n : Nat} : PropPred (Var n) := fun τ =>
-  ∀ (i : Fin n), vertexIsAtSomePosition i τ
-
-@[simp] def vertexInAtMostOnePosition {n : Nat} (i : Fin n) : PropPred (Var n) := fun τ =>
-  ∀ (j k : Fin n), j ≠ k → τ ⊨ (vertexAtPos i j)ᶜ ⊔ (vertexAtPos i k)ᶜ
-
-@[simp] def eachVertexInAtMostOnePosition {n : Nat} : PropPred (Var n) := fun τ =>
-  ∀ (i : Fin n), vertexInAtMostOnePosition i τ
-
-@[simp] def atMostOneVertexAtPosition {n : Nat} (j : Fin n) : PropPred (Var n) := fun τ =>
-  ∀ (i k : Fin n), i ≠ k → τ ⊨ (vertexAtPos i j)ᶜ ⊔ (vertexAtPos k j)ᶜ
-
-@[simp] def atMostOneVertexInEachPosition {n : Nat} : PropPred (Var n) := fun τ =>
-  ∀ (i : Fin n), atMostOneVertexAtPosition i τ
-
-/-- Encode that if two vertices are consecutive on the path, they are adjacent. -/
-@[simp] def nonAdjacentVerticesNotConsecutive {G : Graph} : PropPred (Var G.vertexSize) := fun τ =>
-  ∀ (k k': Fin G.vertexSize), k.val + 1 = k'.val →
-    ∀ (i j : Fin G.vertexSize), ¬G.adjacent i j →
-      (τ ⊨ ((vertexAtPos i k)ᶜ ⊔ (vertexAtPos j k')ᶜ))
-
+Unlike the cycle, the path exempts no position, so this is `Grid.rowAmo` rather than
+`Grid.rowAmoOn`. -/
 @[simp] def vertexConstraints (G : Graph) : PropPred (Var G.vertexSize) := fun τ =>
-  (τ |> eachVertexIsAtSomePosition) ∧
-  (τ |> eachVertexInAtMostOnePosition)
+  (τ |> Grid.rowNonempty G.vertexSize G.vertexSize) ∧
+  (τ |> Grid.rowAmo G.vertexSize G.vertexSize)
 
+/-- Each position holds some vertex, and no position holds two vertices. -/
 @[simp] def positionConstraints (G : Graph) : PropPred (Var G.vertexSize) := fun τ =>
-  (τ |> eachPositionHasAVertex) ∧
-  (τ |> atMostOneVertexInEachPosition)
+  (τ |> Grid.colNonempty G.vertexSize G.vertexSize) ∧
+  (τ |> Grid.colAmo G.vertexSize G.vertexSize)
 
+/-- Vertices at consecutive positions on the path are adjacent in `G`. -/
 @[simp] def edgeConstraints (G : Graph) : PropPred (Var G.vertexSize) := fun τ =>
-  (τ |> nonAdjacentVerticesNotConsecutive)
+  (τ |> Grid.consecutiveRelated G.vertexSize G.vertexSize G.adjacent)
 
 @[simp] def hamiltonianPathConstraints (G : Graph) : PropPred (Var G.vertexSize) := fun τ =>
   (τ |> vertexConstraints G) ∧ (τ |> positionConstraints G) ∧ (τ |> edgeConstraints G)
@@ -69,59 +47,36 @@ deriving DecidableEq, IndexType
 
 open Encode VEncCNF LitVar
 
-abbrev VCnf (n : Nat) := VEncCNF (Var n) Unit
-
-@[simp] def verticesAtPosition {n : Nat} (j : Fin n) : List (Literal <| Var n) :=
-  List.finRange n |>.map (mkPos <| Var.mk · j)
-
-@[simp] def vertexAtPositions {n : Nat} (i : Fin n) : List (Literal <| Var n) :=
-  List.finRange n |>.map (mkPos <| Var.mk i ·)
+/-! Each builder below is an assembly of `LeanHoG/Sat/Grid.lean` atoms and says nothing about how
+a clause is emitted. The choice of atoms and the `seq` order are what fix the emitted DIMACS, so
+they match the hand-written encoding they replace arm for arm; the `mapProp`s only restate the
+resulting `Prop` as the bundle above, which provably cannot change a byte. -/
 
 def vertexClauses (G : Graph) : VCnf G.vertexSize (vertexConstraints G) :=
-  (let U := Array.finRange G.vertexSize
-  seq[
-    for_all U fun i =>
-      addClause (List.toArray (vertexAtPositions i)),
-    for_all U fun i =>
-    for_all U fun j =>
-    for_all U fun k =>
-      VEncCNF.guard (j ≠ k) fun _ =>
-        addClause (#[mkNeg <| Var.mk i j, mkNeg <| Var.mk i k])
+  (seq[
+    Grid.rowNonemptyClauses G.vertexSize G.vertexSize,
+    Grid.rowAmoClauses G.vertexSize G.vertexSize
   ])
   |> mapProp (by
     ext τ
-    simp [Clause.toPropFun, Array.finRange]
+    simp
   )
 
 def positionClauses (G : Graph) : VCnf G.vertexSize (positionConstraints G) :=
-  (let U := Array.finRange G.vertexSize
-  seq[
-    for_all U fun j =>
-      addClause (List.toArray (verticesAtPosition j)),
-    for_all U fun j =>
-    for_all U fun i =>
-    for_all U fun k =>
-      VEncCNF.guard (i ≠ k) fun _ =>
-        addClause (#[mkNeg <| Var.mk i j, mkNeg <| Var.mk k j])
+  (seq[
+    Grid.colNonemptyClauses G.vertexSize G.vertexSize,
+    Grid.colAmoClauses G.vertexSize G.vertexSize
   ])
   |> mapProp (by
     ext τ
-    simp [Clause.toPropFun, Array.finRange]
+    simp
   )
 
 def edgeClauses (G : Graph) : VCnf G.vertexSize (edgeConstraints G) :=
-  ( let U := Array.finRange G.vertexSize
-    for_all U fun k =>
-    for_all U fun k' =>
-      VEncCNF.guard (k.val + 1 = k'.val) fun _ =>
-        for_all U fun i =>
-        for_all U fun j =>
-          VEncCNF.guard (¬G.adjacent i j) fun _ =>
-            addClause (#[mkNeg <| Var.mk i k, mkNeg <| Var.mk j k'])
-  )
+  (Grid.consecutiveRelatedClauses G.vertexSize G.vertexSize G.adjacent)
   |> mapProp (by
     ext τ
-    simp [Clause.toPropFun, Array.finRange]
+    simp
   )
 
 def hamiltonianPathCNF (G : Graph) : VCnf G.vertexSize (hamiltonianPathConstraints G) :=

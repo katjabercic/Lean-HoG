@@ -42,6 +42,8 @@ open Trestle Trestle.Encode
 load_graph Path3 "examples/path3.json"
 load_graph Cycle7 "examples/cycle7.json"
 load_graph_from_g6 Petersen "IheA@GUAo"
+load_graph G1 "examples/one.json"
+load_graph_from_g6 NoVertices "?"
 
 /-- The CNF of the Hamiltonian *path* encoding of `G`. -/
 def pathCnf (G : Graph) : ICnf := EncCNF.toICnf (hamiltonianPathCNF G).val
@@ -87,6 +89,51 @@ repeating its first vertex at the last position. -/
 #guard (cycleCnf Petersen (by decide)).maxVar = 110
 #guard (cycleCnf Petersen (by decide)).size = 2613
 #guard (Solver.Dimacs.formatFormula (cycleCnf Petersen (by decide))).hash = 11179074814633449769
+
+/-! ### The degenerate sizes
+
+Neither is covered by the three graphs above, and both are load-bearing for the search
+tactics rather than merely small.
+
+A 0-vertex graph encodes to the *empty* CNF, which is satisfiable — that is what
+`searchForHamiltonianPathAux` relies on to answer traceability at size 0 without a solver.
+
+A 1-vertex graph's cycle CNF is unconditionally UNSAT, which is why
+`hamiltonian_cycle_to_sat` and everything built on it carry `1 < G.vertexSize` rather than
+`0 < G.vertexSize`. It is UNSAT only because the position loop reaches `k = 0, k' = 1`, so
+`edgeConstraints` forbids vertex `0` from being adjacent to itself while the two pinning
+clauses demand exactly that. Narrowing that loop — an `i < j` optimisation, say, or ranging
+over `m - 1` — would silently make a 1-vertex graph satisfiable, and `#check_hamiltonian`
+would then register a certificate the kernel rejects later. Hence the full text, not just
+the count:
+
+    p cnf 2 6 / 1 2 0 / 1 0 / 2 0 / -1 -2 0 / 1 0 / 2 0
+-/
+
+#guard NoVertices.vertexSize = 0
+#guard (pathCnf NoVertices).size = 0
+
+#guard G1.vertexSize = 1
+#guard (cycleCnf G1 (by decide)).maxVar = 2
+#guard (cycleCnf G1 (by decide)).size = 6
+#guard (Solver.Dimacs.formatFormula (cycleCnf G1 (by decide))).hash = 4870943102142356345
+
+/-! ### What the hashes cannot see
+
+`mapProp` is `fun ⟨e, he⟩ => ⟨e, h ▸ he⟩`: it rewrites the `Prop` a `VEncCNF` is indexed by
+and passes the encoding through untouched. So a `sorry` in any of the encodings' `mapProp`
+obligations would emit byte-identical clauses and leave every guard above passing — while
+that index is exactly what carries soundness into the solver's UNSAT branch, through
+`VEncCNF.std_unsat_no_assignment`. Assert the axioms rather than printing them, so that a
+`sorryAx` fails the build here instead of being discovered downstream. -/
+
+/-- info: 'LeanHoG.hamiltonianPathCNF' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms LeanHoG.hamiltonianPathCNF
+
+/-- info: 'LeanHoG.HamiltonianCycle.hamiltonianCycleCNF' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms LeanHoG.HamiltonianCycle.hamiltonianCycleCNF
 
 /-! ### Diagnostics
 
