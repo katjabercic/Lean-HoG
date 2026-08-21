@@ -1,5 +1,6 @@
 import LeanHoG.Graph
 import LeanHoG.Invariant.HamiltonianPath.Basic
+import LeanHoG.Sat.Grid
 
 import Trestle.Model.PropFun
 import Trestle.Encode.VEncCNF

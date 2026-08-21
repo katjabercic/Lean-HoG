@@ -1,6 +1,7 @@
 # Generalizing the SAT-encoding scaffolding
 
-Status: **Stages 0–3 done**, Stage 4 next, Stages 5–6 not started. Mark each stage **Done** as it
+Status: **Stages 0–3 done, Stage 4 in progress** (`Sat/Grid.lean` landed; the two encodings not
+yet migrated), Stages 5–6 not started. Mark each stage **Done** as it
 lands and record what happened under `## Completed`; delete this file when the last one is, and let
 it live on in history — as `PLAN.md` did (`git show 47715c3:PLAN.md`).
 
@@ -333,25 +334,45 @@ abbrev VCnf (n m : Nat) := VEncCNF (Var n m) Unit
 @[simp] def at' {n m} (i : Fin n) (j : Fin m) : PropFun (Var n m) := Var.mk i j
 ```
 
-Five atoms, each a `@[simp]` `PropPred` paired with a `VCnf` builder carrying **its own**
-`mapProp` — never one `mapProp` per bundle:
+Atoms, each a `@[simp]` `PropPred` paired with a `VCnf` builder carrying **its own** `mapProp` —
+never one `mapProp` per bundle. *(Table corrected against the file as built; see the Completed
+entry for why each parameter the first draft proposed was dropped.)*
 
 | Atom | Meaning | Path | Cycle |
 |---|---|---|---|
 | `rowNonempty` | every row occupies some column | ✓ | ✓ |
 | `colNonempty` | every column holds some row | ✓ | ✓ |
-| `rowAmo (p : Fin m → Prop)` | no row in two distinct columns satisfying `p` | `fun _ => True` | `fun j => 0 < j.val` |
-| `colSeparated (R : Fin n → Fin n → Prop)` | no two `R`-related rows share a column | `R := (· ≠ ·)` | `R := (· ≠ ·)` |
-| `acrossColumns (rel) (R)` | rows in `rel`-related columns are `R`-related | `rel := (·+1 = ·)`, `R := G.adjacent` | same |
-| `pinned (pins : List (Fin n × Fin m))` | listed rows fixed in listed columns | — | `[(0,0), (0,n)]` |
+| `rowAmoOn (p : Fin m → Prop)` | no row in two distinct columns both satisfying `p` | — | `fun j => 0 < j.val` |
+| `rowAmo` | no row in two distinct columns | ✓ | — |
+| `colAmo` | no column holds two distinct rows | ✓ | ✓ |
+| `consecutiveRelated (R : Fin n → Fin n → Prop)` | rows in consecutive columns are `R`-related | `R := G.adjacent` | same |
+| `pin (i) (j)` | row `i` fixed in column `j` | — | ×2 |
 
-`colAmo := colSeparated (· ≠ ·)` as an `abbrev`. Add
-`@[simp] lemma rowAmo_true : rowAmo n m (fun _ => True) = …` so the path side's correctness proof
-never sees the vacuous `True →` hypotheses.
+**Do not parameterize the last three further, and do not spell consecutivity as `(· + 1 = ·)`.**
+`(· + 1 = ·)` on `Fin m` is *modular*, so it would relate the last column to the first — turning
+the path encoding into a cycle one, which adds clauses and makes `hamiltonian_path_to_sat` false
+rather than merely slow. It must be `k.val + 1 = k'.val`. The reason to keep it, `colAmo`'s `i ≠ k`,
+and `pin`'s single cell concrete is the same in all three cases: the correctness proofs close
+against those exact shapes (`simp [hk]` on `hk : k.val + 1 = k'.val`; `exact hik (hcon.1.symm.trans
+hcon.2)` needing an `i ≠ k`; `constructor` needing a literal `∧`), and an opaque parameter leaves
+those steps nothing to match.
+
+**`rowAmo` is a second `def` reached by `mapProp`, not a `@[simp] lemma`.** The first draft proposed
+`@[simp] lemma rowAmo_true : rowAmo n m (fun _ => True) = …` so the path never sees vacuous `True →`
+hypotheses. Don't: its LHS competes with `@[simp] def rowAmoOn`'s own unfolding equation, whose LHS
+`rowAmoOn ?n ?m ?p` also matches, and between equal-priority candidates simp's choice is
+unspecified. Deriving the unconditional `rowAmo` from `rowAmoOnClauses _ _ (fun _ => True)` through
+a second `mapProp` gives the path a constraint that is *syntactically* what it was before the
+factoring, so nothing has to fire in the right order — and `mapProp` provably cannot change bytes.
 
 Both encodings then become a `seq[…] |> mapProp (by aesop)` over these atoms —
-`hamiltonianCycleCNF` already has that shape. The `namespace HamiltonianCycle` workaround the cycle
-file apologises for (`SatEncoding.lean:13-18`) goes away.
+`hamiltonianCycleCNF` already has that shape.
+
+**`namespace HamiltonianCycle` does *not* go away**, as this plan claimed before Stage 3 settled
+the question. Keeping the five bundle names per property — which is what keeps this stage out of the
+correctness proofs — means both files still declare `Var`, `VCnf`, `vertexConstraints`,
+`positionConstraints`, `edgeConstraints` and the three clause builders. The namespace stays; its
+apology comment gets rewritten to say that the grid part has landed and the bundles are what remain.
 
 **Why the `mapProp` obligations do not get harder.** Trestle's `guard` spec is
 `fun τ => ∀ (h : p), P h τ` (`VEncCNF.lean:238`) — **the `Decidable` instance does not appear in
@@ -367,6 +388,33 @@ generically in `G`, so none of this costs anything at tactic-invocation time.
 (`Trestle/Encode/EncCNF.lean:232`) derives `vMap` purely from `IndexType`, whose derived instance
 for a two-field structure goes through the `Fin n × Fin m` proxy and `Fin.pair x y = x * m + y`.
 A non-empty diff means clause emission was reordered — find out why before proceeding.
+
+**But the hashes have two blind spots, and both need closing in this stage.**
+
+1. **A `sorry` in a `mapProp` obligation is invisible to them.** `mapProp` is
+   `fun ⟨e,he⟩ => ⟨e, h ▸ he⟩`: it touches only the `Prop` index, so a sorried obligation emits
+   byte-identical clauses and every `#guard` still passes — while that index is exactly what carries
+   soundness into the `.unsat` branch, via `std_unsat_no_assignment`. Close it by asserting the
+   axioms rather than printing them:
+   ```lean
+   /-- info: 'LeanHoG.hamiltonianPathCNF' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+   #guard_msgs in
+   #print axioms LeanHoG.hamiltonianPathCNF
+   ```
+2. **Nothing is pinned below four vertices.** Two degenerate sizes are load-bearing for the tactics'
+   short-circuits: the path CNF on 0 vertices is empty and therefore SAT (which is what
+   `searchForHamiltonianPathAux`'s docstring rests on), and the cycle CNF on 1 vertex is
+   unconditionally UNSAT (`no_assignment_implies_no_hamiltonian_cycle'`, and the `1 < G.vertexSize`
+   hypothesis everywhere downstream). The 1-vertex case is UNSAT *only* because the column loop
+   reaches `k = 0, k' = 1`; narrowing that loop would silently make a 1-vertex graph SAT and
+   `#check_hamiltonian` would then register a certificate the kernel later rejects. `NoVertices` and
+   `G1` already exist in `SolverTests.lean`.
+
+**One thing no fixture can catch at all:** on the path side `Var n n` has both dimensions equal, so
+transposing the arguments in the solver readback (`HamiltonianPath/Tactic.lean:76`) typechecks and
+moves no hash. `SolverTests` is the only target that reaches it. After this stage,
+`grep -rn 'Var.mk' --include=*.lean LeanHoG/` should return `Sat/Grid.lean` plus exactly the two
+`Tactic.lean` readback lines — that invariant is the point of keeping `pin` in the shared file.
 
 ## Stage 5 — The search and tactic combinators
 

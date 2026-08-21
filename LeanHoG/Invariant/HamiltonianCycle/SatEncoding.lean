@@ -2,6 +2,7 @@ import LeanHoG.Graph
 import LeanHoG.Walk
 import LeanHoG.Invariant.ConnectedComponents.Basic
 import LeanHoG.Invariant.HamiltonianCycle.Basic
+import LeanHoG.Sat.Grid
 
 import Trestle.Model.PropFun
 import Trestle.Encode.VEncCNF
