@@ -260,7 +260,7 @@ lemma cast_eq {n m : Nat} (h : n = m) (i j : Fin n) (eq : Fin.cast h i = Fin.cas
   simp_all only [Fin.cast_eq_self]
 
 set_option maxHeartbeats 400000
-theorem hamiltonian_path_to_sat (G : Graph) (hp : HamiltonianPath G) :
+theorem hamiltonian_path_to_sat_pos (G : Graph) (hp : HamiltonianPath G) :
   ∃ (τ : PropAssignment (Pos G.vertexSize)),
   τ ⊨ has_hamiltonian_path G := by
   let n := G.vertexSize

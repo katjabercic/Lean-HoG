@@ -135,6 +135,65 @@ def hamiltonianPathCNF (G : Graph) : VCnf G.vertexSize (hamiltonianPathConstrain
 --------------------------------------------------------------------------------
 -- Now produce an assignment from a Hamiltonian path
 
+/-- Every Hamiltonian path in `G` gives a satisfying assignment of
+`hamiltonianPathConstraints`: read the path off as "vertex `i` sits at position `j`".
+
+Mirrors `HamiltonianCycle.hamiltonian_cycle_to_sat`, and is shorter than it in two ways.
+There is no rotation step, the path encoding fixing no vertex; and the at-most-one-position
+constraint holds of every position rather than all but the endpoints, so distinctness of the
+whole vertex list settles it where the cycle needs distinctness of the tail. -/
+theorem hamiltonian_path_to_sat {G : Graph} (hp : HamiltonianPath G) :
+    ∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianPathConstraints G := by
+  let n := G.vertexSize
+  let l := hp.path.walk.vertices
+  have l_len : n = l.length := by
+    apply Eq.symm HamiltonianPath.length_eq_num_vertices
+  let τ : PropAssignment (Var G.vertexSize) := fun ⟨i, j⟩ =>
+    if l.get (Fin.cast l_len j) = i then true else false
+  have τ_vertex : τ |> vertexConstraints G := by
+    constructor
+    · intro i
+      obtain ⟨j, hj⟩ := List.get_of_mem (hp.isHamiltonian i)
+      use (Fin.cast l_len.symm j)
+      simp only [List.get_eq_getElem] at hj
+      simpa [τ, hj]
+    · simp
+      intro i j k hjk
+      by_contra
+      have had : l.all_distinct := by apply hp.path.isPath
+      simp [τ] at this
+      have hinj := List.all_distinct_get_injective
+        (h := had)
+        (i := Fin.cast l_len j)
+        (j := Fin.cast l_len k)
+      simp [this] at hinj
+      contradiction
+
+  have τ_positions : τ |> positionConstraints G := by
+    constructor
+    · intro j
+      set i := l[j] with h
+      use i
+      simpa [τ]
+    · intro j i i' hne
+      by_contra
+      simp [τ] at this
+      have : i = i' := by rw [← this.1, ← this.2]
+      contradiction
+
+  have τ_edge : τ |> edgeConstraints G := by
+    simp
+    intro k k' hk i i' hi
+    by_contra
+    simp [τ] at this
+    have hadj' : G.adjacent (l.get (Fin.cast l_len k)) (l.get (Fin.cast l_len k')) := by
+      apply Walk.consecutive_vertices_adjacent
+      simp [hk]
+    aesop
+
+  use τ
+  exact ⟨τ_vertex, τ_positions, τ_edge⟩
+
 abbrev posToVar {n : Nat} : Pos n → Var n := fun ⟨i,j⟩ => ⟨i,j⟩
 abbrev varToPos {n : Nat} : Var n → Pos n := fun ⟨i,j⟩ => ⟨i,j⟩
 
@@ -156,8 +215,7 @@ theorem hamiltonian_path_to_var_assignment {G : Graph} :
   (∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianPathConstraints G) := by
   intro h
   rcases h with ⟨hp,_⟩
-  have exists_τ := hamiltonian_path_to_sat G hp
-  apply has_hamiltonian_path_to_hamiltonianPath_constraints exists_τ
+  exact hamiltonian_path_to_sat hp
 
 theorem no_assignment_implies_no_hamiltonian_path {G : Graph} :
   (¬ ∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianPathConstraints G) →

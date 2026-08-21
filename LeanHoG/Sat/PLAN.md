@@ -1,8 +1,9 @@
 # Generalizing the SAT-encoding scaffolding
 
-Status: **Stages 0, 1 and 2 done**, Stages 3–6 not started. Mark each stage **Done** as it lands and record
-what happened under `## Completed`; delete this file when the last one is, and let it live on in
-history — as `PLAN.md` did (`git show 47715c3:PLAN.md`).
+Status: **Stages 0, 1 and 2 done, Stage 3 in progress** (Step 3a done, 3b next), Stages 4–6 not
+started. Mark each stage **Done** as it lands and record what happened under `## Completed`;
+delete this file when the last one is, and let it live on in history — as `PLAN.md` did
+(`git show 47715c3:PLAN.md`).
 
 ## Context
 
@@ -209,24 +210,108 @@ already exists and is already used by the current proof: `List.all_distinct_tail
 friends in `Util/List.lean`, `Walk.consecutive_vertices_adjacent`,
 `HamiltonianPath.length_eq_num_vertices`.
 
-Then delete `Pos`, `x/a/b/c/d/e`, the `satisfies_*_iff` lemmas, `has_hamiltonian_path`, all of
-`SatHelpers.lean`, and from `SatEncoding.lean` the bridge `posToVar`/`varToPos`/
-`posToVarAssignment`/`has_hamiltonian_path_to_hamiltonianPath_constraints` (`:138-160`). Invert the
-file dependency to match the cycle side (`Basic → SatEncoding → Correctness`; today the path side is
-`Basic → SatHelpers → Correctness → SatEncoding`, with all the `Var`-level theorems stranded in
-`SatEncoding.lean`). Update `LeanHoG/Invariant/HamiltonianPath.lean`.
-
 **Keep `Var`, `hamiltonianPathConstraints` and `hamiltonianPathCNF` byte-for-byte unchanged** so the
 Stage 0 fixtures cannot move.
 
 Net: ~440 lines out, ~110 in, and the two encodings become structurally symmetric — worth as much as
 the line count, since the current asymmetry is itself a trap.
 
-**Verify:** golden fixtures identical (this stage touches only `Prop`s; if the CNF moved, an
-encoding edit slipped in). `set_option maxHeartbeats 400000` (`Correctness.lean:274`) should become
-unnecessary — if the new proof still needs it, the rewrite is not faithful. Then `#print axioms
-traceability_not_determined_by_degree_sequence` (`Examples.lean`) must list exactly what it did
-before, with no `sorryAx`.
+### The sequencing constraint that shapes this stage
+
+The new theorem **cannot be written in `Correctness.lean` first.** `Correctness.lean` cannot see
+`Var`: on the path side `SatEncoding.lean` imports `Correctness.lean`, not the other way round.
+So the new proof has to be born in `SatEncoding.lean`, where both are in scope, and move to
+`Correctness.lean` only once the `Pos` layer is gone and the import can be flipped. Hence three
+steps rather than one, with all the proof risk isolated in the first.
+
+### Step 3a — prove the new theorem in `SatEncoding.lean`, delete nothing — **Done**
+
+Add, immediately below `hamiltonianPathCNF`:
+
+```lean
+theorem hamiltonian_path_to_sat {G : Graph} (hp : HamiltonianPath G) :
+    ∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianPathConstraints G
+```
+
+(the old `Pos` version takes `G` explicitly; make it implicit to match the cycle). Then rewire
+`hamiltonian_path_to_var_assignment` to call it, leaving the whole `Pos` chain in place but
+unreferenced.
+
+Model it on `hamiltonian_cycle_to_sat` (`HamiltonianCycle/Correctness.lean:30-94`) minus the
+`rebase` and `firstAndLastConstraints` halves. Two of the three conjuncts should port almost
+verbatim — `positionConstraints` is byte-identical between the two encodings, and
+`edgeConstraints` differs only in the position type — and the third is *simpler* than the
+cycle's, because the path's at-most-one-position constraint has no `0 < j` guard, so the two
+`hj hk` hypotheses the cycle threads through disappear.
+
+**Derisk the plumbing before the proofs.** Write the skeleton with `sorry` for each of the three
+`have`s and check it elaborates first. That settles the `Fin.cast` direction (`l_len : n =
+l.length`, so `Fin.cast l_len : Fin n → Fin l.length`), the field order in
+`fun ⟨i, j⟩ => if l.get (Fin.cast l_len j) = i …` (`i` is the vertex, `j` the position), and
+that the final `exact ⟨_, _, _⟩` matches `hamiltonianPathConstraints`' three conjuncts — none of
+which is worth discovering while also debugging a proof.
+
+Lemmas confirmed present, so nothing new has to be proved about `List` or `Walk`:
+
+| Need | Use |
+|---|---|
+| every vertex is on the path | `hp.isHamiltonian`, directly — no `Bool` unfolding, unlike the cycle |
+| a position for each vertex | `List.get_of_mem`, or `List.all_distinct_exists_mem` (`Util/List.lean:292`) |
+| positions are distinct | `List.all_distinct_list_get_inj` (`:261`) — the whole-list analogue of the cycle's `all_distinct_tail_get_inj` |
+| consecutive vertices adjacent | `Walk.consecutive_vertices_adjacent` (`Walk.lean:190`), stated for any `Walk G u v` |
+| the list has `G.vertexSize` entries | `HamiltonianPath.length_eq_num_vertices` |
+
+**Verify:** `lake build LeanHoG SatEncodingTests SolverTests`. Golden fixtures unchanged — this
+step adds a `Prop` and touches no clause. `#print axioms petersen_hypohamiltonian` unchanged, and
+no `sorryAx` anywhere. `set_option maxHeartbeats 400000` should not be needed by the new proof; if
+it is, the rewrite is not faithful to the cycle's and is worth re-examining rather than papering
+over.
+
+This is the only step that can fail in an interesting way, and it is revertible on its own.
+
+### Step 3b — delete the `Pos` layer
+
+Now unreferenced, verified by grep: `Pos`, `x`, `a`, `b`, `c`, `d`, `e`, the ten
+`satisfies_*_iff` lemmas, `at_least_one_at_pos` and friends, `no_non_edges`,
+`has_hamiltonian_path`, `get_subst`, `helper'`, `cast_eq`, the old `Pos`-based
+`hamiltonian_path_to_sat_pos` (renamed from `hamiltonian_path_to_sat` in 3a, which handed the
+clean name to the new theorem); from `SatEncoding.lean` the bridge `posToVar`, `varToPos`,
+`posToVarAssignment`, `has_hamiltonian_path_to_hamiltonianPath_constraints`; and all of
+`SatHelpers.lean` together with its import in `LeanHoG/Invariant/HamiltonianPath.lean:6`.
+
+Nothing outside these three files refers to any of them — checked against `Examples.lean`,
+`Graph6Tests.lean` and both test libraries. `SatHelpers.lean` carries only two `@[simp]`
+attributes, both on `disj_list`/`conj_list` themselves, so removing it cannot perturb the default
+simp set for unrelated goals. Deleting the file also removes the `LeanHoG.PropFun` namespace,
+which several files shadow `Trestle.Model.PropFun` with; that should only reduce ambiguity, but it
+is the one thing here worth a build to confirm.
+
+**Verify:** `lake build LeanHoG SatEncodingTests SolverTests Graph6Tests`. Pure deletion, so any
+breakage is a missed reference and appears as an unknown identifier.
+
+### Step 3c — move the correctness theorems and flip the import
+
+Move `hamiltonian_path_to_sat`, `no_assignment_implies_no_hamiltonian_path` and
+`no_assignment_implies_no_hamiltonian_path'` out of `SatEncoding.lean` into `Correctness.lean`,
+change `Correctness.lean` to import `SatEncoding` instead of the reverse, and add
+`import LeanHoG.Invariant.HamiltonianPath.Correctness` to `Tactic.lean`, which uses
+`no_assignment_implies_no_hamiltonian_path'` and currently gets it transitively.
+
+Drop `hamiltonian_path_to_var_assignment`: with the new theorem it is a one-line wrapper, and the
+cycle side has no counterpart — its `no_assignment_implies_no_hamiltonian_cycle` goes straight to
+the `∃ _, True` form. Mirroring that leaves both sides with the same three theorems.
+
+**Verify:** `lake build LeanHoG SatEncodingTests SolverTests Graph6Tests`, plus `#print axioms`
+unchanged. Pure code motion.
+
+### Deliberately not in this stage
+
+`no_assignment_implies_no_hamiltonian_path'` still returns the *unfolded* existential where the
+cycle's returns `¬ G.isHamiltonian`. That asymmetry is what forces `Graph.no_path_not_traceable`
+and its appearance in `find_example`'s `simp_all only [...]` set, and it is documented in
+`check_traceablea`'s docstring as a user-visible wart. Changing it would alter the fact the tactic
+returns, and `find_example` — which cannot be built without network access here — is one of the
+callers. It is a behaviour change, not a refactor; keep it separate.
 
 ## Stage 4 — `LeanHoG/Sat/Grid.lean`
 
@@ -642,3 +727,28 @@ into scope — it pulls in the two Hamiltonian tactic modules but not
 `LeanHoG.Invariant.Bipartite.Tactic`, which is reachable only via `LeanHoG.Invariant`.
 `Examples.lean:7` already works around this with a separate import. Another instance of the
 ad-hoc wiring this refactor is meant to tidy; not fixed here, as it is out of Stage 0's scope.
+
+### Stage 3, Step 3a — The `Var`-level path theorem — **Done**
+
+`hamiltonian_path_to_sat` now lives at `HamiltonianPath/SatEncoding.lean:145`, proved directly
+against `Var`/`PropAssignment`, and `hamiltonian_path_to_var_assignment` closes with one `exact`
+onto it. The old `Pos`-based proof was renamed `hamiltonian_path_to_sat_pos` rather than deleted,
+so this step touches no other declaration and 3b stays a pure deletion.
+
+It came out at ~50 lines against the cycle's 65, and the plan's prediction held: the
+`positionConstraints` and `edgeConstraints` halves ported nearly verbatim, and the
+at-most-one-position half really is simpler than the cycle's, since the path constraint has no
+`0 < j` guard to thread `hj hk` through. `set_option maxHeartbeats 400000` was not needed.
+
+The distinctness step went to `List.all_distinct_get_injective` (`Util/List.lean:73`), the version
+generic in the element type, rather than `all_distinct_list_get_inj` (`:261`) as the table above
+suggested. The latter is specialized to `List (Fin n)` and states injectivity in the `≠` direction;
+the goal here arrives as an equality of two `get`s, so the generic one applies with no plumbing.
+
+**What this actually buys, beyond the line count.** The live proof no longer goes through the
+`aesop` at `SatEncoding.lean:209`, the `Pos`→`Var` bridge that the plan's opening section names
+as the fragile point standing between here and Stage 4. It is dead code as of this commit rather
+than a step in the chain from a Hamiltonian path to a satisfying assignment.
+
+**Verified:** `lake build LeanHoG SatEncodingTests SolverTests Graph6Tests` clean, golden CNF
+fixtures unmoved (this step adds a `Prop` and emits no clause), no `sorryAx`.
