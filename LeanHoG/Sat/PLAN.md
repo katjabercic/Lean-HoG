@@ -1,9 +1,8 @@
 # Generalizing the SAT-encoding scaffolding
 
-Status: **Stages 0, 1 and 2 done, Stage 3 in progress** (Steps 3a and 3b done, 3c next),
-Stages 4–6 not started. Mark each stage **Done** as it lands and record what happened under
-`## Completed`; delete this file when the last one is, and let it live on in history — as `PLAN.md` did
-(`git show 47715c3:PLAN.md`).
+Status: **Stages 0–3 done**, Stage 4 next, Stages 5–6 not started. Mark each stage **Done** as it
+lands and record what happened under `## Completed`; delete this file when the last one is, and let
+it live on in history — as `PLAN.md` did (`git show 47715c3:PLAN.md`).
 
 ## Context
 
@@ -188,7 +187,7 @@ declaration rather than re-declaring, and a `check_traceable` inside a *named* `
 (`HamiltonianPath/Tactic.lean:24-32` documents the prefix restriction that `withUnsatAxiom` now
 implements).
 
-## Stage 3 — Rewrite `HamiltonianPath/Correctness.lean` in the cycle's style
+## Stage 3 — Rewrite `HamiltonianPath/Correctness.lean` in the cycle's style — **Done**
 
 `HamiltonianCycle/Correctness.lean` (141 lines) proves `hamiltonian_cycle_to_sat` directly against
 `Var`/`PropPred`. `HamiltonianPath/Correctness.lean` (414 lines) instead builds a **second, parallel
@@ -289,7 +288,7 @@ is the one thing here worth a build to confirm.
 **Verify:** `lake build LeanHoG SatEncodingTests SolverTests Graph6Tests`. Pure deletion, so any
 breakage is a missed reference and appears as an unknown identifier.
 
-### Step 3c — move the correctness theorems and flip the import
+### Step 3c — move the correctness theorems and flip the import — **Done**
 
 Move `hamiltonian_path_to_sat`, `no_assignment_implies_no_hamiltonian_path` and
 `no_assignment_implies_no_hamiltonian_path'` out of `SatEncoding.lean` into `Correctness.lean`.
@@ -778,3 +777,49 @@ The simp-set worry came to nothing, as predicted: `SatHelpers.lean`'s two `@[sim
 both on `disj_list`/`conj_list` themselves, and no proof anywhere was leaning on them. Dropping the
 `LeanHoG.PropFun` namespace that several files shadowed `Trestle.Model.PropFun` with likewise broke
 nothing.
+
+### Stage 3, Step 3c — `Correctness.lean` recreated over `SatEncoding` — **Done**
+
+The three theorems moved verbatim out of `SatEncoding.lean` into a new 103-line
+`Correctness.lean` that imports `SatEncoding`, completing the inversion to
+`Basic → SatEncoding → Correctness`. Final shape of the split, and the point of the whole stage:
+
+| File | Before Stage 3 | After | Holds |
+|---|---|---|---|
+| `SatEncoding.lean` | 179 | 132 | `Var`, the three constraint families, the three clause defs, `hamiltonianPathCNF` |
+| `Correctness.lean` | 365 (all `Pos`) | 103 | `hamiltonian_path_to_sat` and the two `no_assignment_implies_*` theorems |
+| `SatHelpers.lean` | 75 | — | gone |
+
+619 lines across the three files becomes 235. The stage's own deletion figure is the 440 of 3b;
+the net is −384, the difference being 3a's new proof and the docstrings that came with it.
+
+`hamiltonian_path_to_var_assignment` is gone, as planned. What made it redundant is that both
+`no_assignment_*` theorems are now written in the cycle's idiom (`intro hno hex; obtain …;
+exact hno (…)`), three lines each; the primed one also loses the `simp at contr` / `cases` dance
+it needed while going through the wrapper.
+
+**`Tactic.lean`'s new import is load-bearing, not tidiness.** `:133` reaches
+`no_assignment_implies_no_hamiltonian_path'` through `Meta.mkAppM` on a `Name`, so the
+declaration has to be in the environment; a missing import would fail at tactic-run time, not
+at compile time. `SolverTests` runs cadical over both the command and the tactic branch, so
+this is exercised rather than merely type-checked.
+
+**Two redundant imports dropped from `SatEncoding.lean`.** `LeanHoG.Walk` and
+`LeanHoG.Invariant.ConnectedComponents.Basic` had no uses in the file — `Walk`'s last user was
+deleted in Stage 1, and `ConnectedComponents` was already dead before this work. Removing them
+cannot break a downstream file relying on the transitive import, because both still arrive by a
+chain the file keeps: `SatEncoding → HamiltonianPath.Basic → Walk → ConnectedComponents.Basic`.
+They were duplicate edges in the import graph. `SatEncoding.lean` is now four imports.
+
+**The same two are still on the cycle side**, at `HamiltonianCycle/SatEncoding.lean:2`, with
+zero uses of `Walk.`/`ClosedWalk` in that file. Left alone here as it is outside the path-side
+stage; fold it into Stage 4, which touches both encodings anyway.
+
+**Verified:** `lake build LeanHoG SatEncodingTests SolverTests Graph6Tests` clean, fixtures
+unmoved, and all three theorems depend on `[propext, Classical.choice, Quot.sound]` — no
+`sorryAx`, and the same footprint the `Pos`-based chain had.
+
+**Where this leaves Stage 4.** The `aesop` bridging `Pos` to `Var`, named in this plan's opening
+section as *the* fragile point standing in the way of a shared grid encoding, no longer exists in
+any form. `hamiltonianPathCNF` and `hamiltonianCycleCNF` are now the only two things that know
+about their variable types, and their correctness theorems have the same shape on both sides.

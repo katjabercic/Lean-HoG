@@ -2,6 +2,7 @@ import Lean
 import Qq
 import LeanHoG.Util.Meta
 import LeanHoG.Invariant.HamiltonianPath.SatEncoding
+import LeanHoG.Invariant.HamiltonianPath.Correctness
 import LeanHoG.Invariant.HamiltonianPath.Certificate
 import LeanHoG.Invariant.HamiltonianPath.Hypotraceable
 import LeanHoG.Tactic.Options
