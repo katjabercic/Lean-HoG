@@ -1,6 +1,4 @@
 import LeanHoG.Graph
-import LeanHoG.Walk
-import LeanHoG.Invariant.ConnectedComponents.Basic
 import LeanHoG.Invariant.HamiltonianCycle.Basic
 import LeanHoG.Sat.Grid
 
@@ -11,185 +9,114 @@ import LeanHoG.Util.TrestleStd
 
 namespace LeanHoG
 
-/- Namespaced (rather than bare in `LeanHoG` like `HamiltonianPath`'s encoding) because
-    the two encodings currently duplicate identically-named definitions (`Var`, `VCnf`,
-    `vertexClauses`, `positionConstraints`, ...) that would otherwise clash. The
-    duplication itself — a generic `n` vertices × `m` positions grid encoding shared by
-    both — is a refactor for later; this namespace just keeps the two from colliding in
-    the meantime. -/
+/- Still namespaced, though the encoding it used to hold is now shared. `LeanHoG/Sat/Grid.lean`
+    owns the variables and the clauses; what is left here is the per-property assembly, and its
+    five bundle names (`vertexConstraints`, `positionConstraints`, `edgeConstraints`, ...) are
+    the same on both sides, because both `Correctness.lean` files address them by those names.
+    So the two files still collide, and this keeps them apart. -/
 namespace HamiltonianCycle
 
 open Lean Trestle Encode VEncCNF Meta Model PropFun
+open Sat
 
-/-- `Var i j = true` means: "at position j on the cycle is vertex i".
+/-! This encoding is the `n × (n + 1)` grid: `Grid.Var G.vertexSize (G.vertexSize + 1)`, where
+`Grid.Var.mk i j` means "at position `j` on the cycle is vertex `i`". A cycle on `n` vertices has
+`n + 1` positions, because it closes up by repeating its first vertex at the last one.
 
-The graph has `n` vertices and there are `n+1` positions on the cycle.
--/
-structure Var (n : Nat) where
-  vertex : Fin n
-  pos : Fin (n + 1)
-deriving DecidableEq, IndexType
+That extra column is the source of both remaining differences from the path encoding, which is the
+square grid. A vertex may occupy two positions when they are the first and the last, so the
+at-most-one-position constraint exempts column `0` — `Grid.rowAmoOn` rather than `Grid.rowAmo`. And
+since a Hamiltonian cycle passes through every vertex anyway, vertex `0` can be pinned into both of
+those positions without loss of generality, which shrinks the search space.
 
-/-- Encode that vertex `i` is at position `j` on the cycle (of length `n`, as the first and last vertex repeat). -/
-@[simp] def vertexAtPos {n : Nat} (i : Fin n) (j : Fin (n+1)) : PropFun (Var n) :=
-  Var.mk i j
+Both dimensions are written out at every use below rather than hidden behind an abbreviation,
+because the pair of them *is* the difference between the two encodings. -/
 
-/-- There is some vertex at position `j` on the cycle. -/
-@[simp] def positionHasAVertex {n : Nat} (j : Fin (n+1)) : PropPred (Var n) := fun τ =>
-  ∃ (i : Fin n), τ ⊨ vertexAtPos i j
+/-- Each vertex is at some position, and no vertex is at two positions — except the endpoints,
+which are the same position on the cycle and so hold the same vertex. -/
+@[simp] def vertexConstraints (G : Graph) :
+    PropPred (Grid.Var G.vertexSize (G.vertexSize + 1)) := fun τ =>
+  (τ |> Grid.rowNonempty G.vertexSize (G.vertexSize + 1)) ∧
+  (τ |> Grid.rowAmoOn G.vertexSize (G.vertexSize + 1) (fun j => 0 < j.val))
 
-/-- There is some vertex at every position on the cycle. -/
-@[simp] def eachPositionHasAVertex {n : Nat} : PropPred (Var n) := fun τ =>
-  ∀ (j : Fin (n+1)), positionHasAVertex j τ
+/-- Each position holds some vertex, and no position holds two vertices. -/
+@[simp] def positionConstraints (G : Graph) :
+    PropPred (Grid.Var G.vertexSize (G.vertexSize + 1)) := fun τ =>
+  (τ |> Grid.colNonempty G.vertexSize (G.vertexSize + 1)) ∧
+  (τ |> Grid.colAmo G.vertexSize (G.vertexSize + 1))
 
-/-- The vertex `i` is at some position on the cycle. -/
-@[simp] def vertexIsAtSomePosition {n : Nat} (i : Fin n) : PropPred (Var n) := fun τ =>
-  ∃ (j : Fin (n+1)), τ ⊨ vertexAtPos i j
+/-- Vertices at consecutive positions on the cycle are adjacent in `G`. -/
+@[simp] def edgeConstraints (G : Graph) :
+    PropPred (Grid.Var G.vertexSize (G.vertexSize + 1)) := fun τ =>
+  (τ |> Grid.consecutiveRelated G.vertexSize (G.vertexSize + 1) G.adjacent)
 
-/-- Each vertex is at some position on the cycle. -/
-@[simp] def eachVertexIsAtSomePosition {n : Nat} : PropPred (Var n) := fun τ =>
-  ∀ (i : Fin n), vertexIsAtSomePosition i τ
-
-/-- The first and last position of the cycle should actually have the same vertex. -/
-@[simp] def vertexInAtMostOnePositionExceptEndpoints {n : Nat} (i : Fin n) : PropPred (Var n) := fun τ =>
-  ∀ (j k : Fin (n+1)), j ≠ k ∧ 0 < j.val ∧ 0 < k.val → τ ⊨ (vertexAtPos i j)ᶜ ⊔ (vertexAtPos i k)ᶜ
-
-/-- The first and last position of the cycle should actually have the same vertex. -/
-@[simp] def eachVertexInAtMostOnePositionExceptEndpoints {n : Nat} : PropPred (Var n) := fun τ =>
-  ∀ (i : Fin n), vertexInAtMostOnePositionExceptEndpoints i τ
-
-/-- There is at most one vertex at position `j`. -/
-@[simp] def atMostOneVertexAtPosition {n : Nat} (j : Fin (n+1)) : PropPred (Var n) := fun τ =>
-  ∀ (i k : Fin n), i ≠ k → τ ⊨ (vertexAtPos i j)ᶜ ⊔ (vertexAtPos k j)ᶜ
-
-/-- There is at most one vertex at every position of the cycle. -/
-@[simp] def atMostOneVertexInEachPosition {n : Nat} : PropPred (Var n) := fun τ =>
-  ∀ (j : Fin (n+1)), atMostOneVertexAtPosition j τ
-
-/-- Encode that if two vertices are consecutive on the cycle, they are adjacent. -/
-@[simp] def nonAdjacentVerticesNotConsecutive {G : Graph} : PropPred (Var G.vertexSize) := fun τ =>
-  ∀ (k k': Fin (G.vertexSize+1)), k.val + 1 = k'.val →
-    ∀ (i j : Fin G.vertexSize), ¬G.adjacent i j →
-      (τ ⊨ ((vertexAtPos i k)ᶜ ⊔ (vertexAtPos j k')ᶜ))
-
--- These constraints are just because of efficiency
--- We declare that the starting and ending vertex must be vertex 0,
--- since we know that the cycle must go through it anyway, we can do it
--- without loss of generality.
-
-/-- WLOG the cycle starts with vertex `0`, as we can always relabel the vertices so it does. -/
-@[simp] def cycleStartsAtVertex0 (G : Graph) (h : 0 < G.vertexSize) :
-    PropPred (Var G.vertexSize) := fun τ =>
-  τ ⊨ (vertexAtPos ⟨0, h⟩ 0)
-
-/-- WLOG the cycle ends with vertex `0`, as we can always relabel the vertices so it does. -/
-@[simp] def cycleEndsAtVertex0 (G : Graph) (h : 0 < G.vertexSize) :
-    PropPred (Var G.vertexSize) := fun τ =>
-  τ ⊨ (vertexAtPos ⟨0, h⟩ ⟨G.vertexSize, lt_add_one G.vertexSize⟩)
-
-/-- The constraints on the vertices of a graph `G`:
-
-- each vertex of the graph `G` is at some position on the cycle.
-- each vertex is at some position on the cycle, except the endpoints. -/
-@[simp] def vertexConstraints (G : Graph) : PropPred (Var G.vertexSize) := fun τ =>
-  (τ |> eachVertexIsAtSomePosition) ∧
-  (τ |> eachVertexInAtMostOnePositionExceptEndpoints)
-
-/-- The constraints on the positions of a cycle:
-
-- there is a vertex at each position.
-- there is at most one vertex at each position. -/
-@[simp] def positionConstraints (G : Graph) : PropPred (Var G.vertexSize) := fun τ =>
-  (τ |> eachPositionHasAVertex) ∧
-  (τ |> atMostOneVertexInEachPosition)
-
-/-- The constraints on the edges of a graph `G`:
-
-- if two vertices are consecutive on the cycle, they are adjacent. -/
-@[simp] def edgeConstraints (G : Graph) : PropPred (Var G.vertexSize) := fun τ =>
-  (τ |> nonAdjacentVerticesNotConsecutive)
-
-@[simp] def firstAndLastConstraints (G : Graph) (h : 0 < G.vertexSize) : PropPred (Var G.vertexSize) := fun τ =>
-  (τ |> cycleStartsAtVertex0 G h) ∧ (τ |> cycleEndsAtVertex0 G h)
+/-- WLOG the cycle starts and ends at vertex `0`. `h` is needed only to name that vertex; the
+grid atoms take the index already built, which is what keeps `Grid.lean` free of `Fin` literals
+and of any `NeZero` hypothesis. -/
+@[simp] def firstAndLastConstraints (G : Graph) (h : 0 < G.vertexSize) :
+    PropPred (Grid.Var G.vertexSize (G.vertexSize + 1)) := fun τ =>
+  (τ |> Grid.pin G.vertexSize (G.vertexSize + 1) ⟨0, h⟩ 0) ∧
+  (τ |> Grid.pin G.vertexSize (G.vertexSize + 1) ⟨0, h⟩ ⟨G.vertexSize, lt_add_one G.vertexSize⟩)
 
 /-- A graph has a Hamiltonian cycle if it satisfies all of the above constraints. -/
-@[simp] def hamiltonianCycleConstraints (G : Graph) (h : 0 < G.vertexSize) : PropPred (Var G.vertexSize) := fun τ =>
-  (τ |> vertexConstraints G) ∧ (τ |> positionConstraints G) ∧ (τ |> edgeConstraints G) ∧ (τ |> firstAndLastConstraints G h)
+@[simp] def hamiltonianCycleConstraints (G : Graph) (h : 0 < G.vertexSize) :
+    PropPred (Grid.Var G.vertexSize (G.vertexSize + 1)) := fun τ =>
+  (τ |> vertexConstraints G) ∧ (τ |> positionConstraints G) ∧
+  (τ |> edgeConstraints G) ∧ (τ |> firstAndLastConstraints G h)
 
 ----------------------------------------------------------------------------------------
 -- Express the problem as a CNF
 
 open Encode VEncCNF LitVar
 
-abbrev VCnf (n : Nat) := VEncCNF (Var n) Unit
+/-! Each builder below is an assembly of `LeanHoG/Sat/Grid.lean` atoms and says nothing about how
+a clause is emitted. The choice of atoms and the `seq` order are what fix the emitted DIMACS, so
+they match the hand-written encoding they replace arm for arm; the `mapProp`s only restate the
+resulting `Prop` as the bundle above, which provably cannot change a byte. -/
 
-@[simp] def verticesAtPosition {n : Nat} (j : Fin (n+1)) : List (Literal <| Var n) :=
-  List.finRange n |>.map (mkPos <| Var.mk · j)
-
-@[simp] def vertexAtPositions {n : Nat} (i : Fin n) : List (Literal <| Var n) :=
-  List.finRange (n+1) |>.map (mkPos <| Var.mk i ·)
-
-def vertexClauses (G : Graph) : VCnf G.vertexSize (vertexConstraints G) :=
-  ( let U := Array.finRange G.vertexSize
-    let V := Array.finRange (G.vertexSize+1)
-    seq[
-      for_all U fun i =>
-        addClause (List.toArray (vertexAtPositions i)),
-      for_all U fun i =>
-      for_all V fun j =>
-      for_all V fun k =>
-        VEncCNF.guard (j ≠ k ∧ 0 < j.val ∧ 0 < k.val) fun _ =>
-          addClause (#[mkNeg <| Var.mk i j, mkNeg <| Var.mk i k])
-  ])
-  |> mapProp (by
-    ext τ
-    simp [Clause.toPropFun, Array.finRange]
-  )
-
-def positionClauses (G : Graph) : VCnf G.vertexSize (positionConstraints G) :=
-  ( let U := Array.finRange G.vertexSize
-    let V := Array.finRange (G.vertexSize+1)
-    seq[
-      for_all V fun j =>
-        addClause (List.toArray (verticesAtPosition j)),
-      for_all V fun j =>
-      for_all U fun i =>
-      for_all U fun k =>
-        VEncCNF.guard (i ≠ k) fun _ =>
-          addClause (#[mkNeg <| Var.mk i j, mkNeg <| Var.mk k j])
-  ])
-  |> mapProp (by
-    ext τ
-    simp [Clause.toPropFun, Array.finRange]
-  )
-
-def edgeClauses (G : Graph) : VCnf G.vertexSize (edgeConstraints G) :=
-  ( let U := Array.finRange G.vertexSize
-    let V := Array.finRange (G.vertexSize+1)
-    for_all V fun k =>
-    for_all V fun k' =>
-      VEncCNF.guard (k.val + 1 = k'.val) fun _ =>
-        for_all U fun i =>
-        for_all U fun j =>
-          VEncCNF.guard (¬G.adjacent i j) fun _ =>
-            addClause (#[mkNeg <| Var.mk i k, mkNeg <| Var.mk j k'])
-  )
-  |> mapProp (by
-    ext τ
-    simp [Clause.toPropFun, Array.finRange]
-  )
-
-def firstAndLastVertexClauses (G : Graph) (h : 0 < G.vertexSize) : VCnf G.vertexSize (firstAndLastConstraints G h) :=
+def vertexClauses (G : Graph) :
+    Grid.VCnf G.vertexSize (G.vertexSize + 1) (vertexConstraints G) :=
   (seq[
-    addClause #[mkPos <| Var.mk ⟨0, h⟩ 0],
-    addClause #[mkPos <| Var.mk ⟨0, h⟩ ⟨G.vertexSize, lt_add_one G.vertexSize⟩]
+    Grid.rowNonemptyClauses G.vertexSize (G.vertexSize + 1),
+    Grid.rowAmoOnClauses G.vertexSize (G.vertexSize + 1) (fun j => 0 < j.val)
   ])
   |> mapProp (by
     ext τ
-    simp [Clause.toPropFun]
+    simp
   )
 
-def hamiltonianCycleCNF (G : Graph) (h : 0 < G.vertexSize) : VCnf G.vertexSize (hamiltonianCycleConstraints G h) :=
+def positionClauses (G : Graph) :
+    Grid.VCnf G.vertexSize (G.vertexSize + 1) (positionConstraints G) :=
+  (seq[
+    Grid.colNonemptyClauses G.vertexSize (G.vertexSize + 1),
+    Grid.colAmoClauses G.vertexSize (G.vertexSize + 1)
+  ])
+  |> mapProp (by
+    ext τ
+    simp
+  )
+
+def edgeClauses (G : Graph) :
+    Grid.VCnf G.vertexSize (G.vertexSize + 1) (edgeConstraints G) :=
+  (Grid.consecutiveRelatedClauses G.vertexSize (G.vertexSize + 1) G.adjacent)
+  |> mapProp (by
+    ext τ
+    simp
+  )
+
+def firstAndLastVertexClauses (G : Graph) (h : 0 < G.vertexSize) :
+    Grid.VCnf G.vertexSize (G.vertexSize + 1) (firstAndLastConstraints G h) :=
+  (seq[
+    Grid.pinClauses G.vertexSize (G.vertexSize + 1) ⟨0, h⟩ 0,
+    Grid.pinClauses G.vertexSize (G.vertexSize + 1) ⟨0, h⟩ ⟨G.vertexSize, lt_add_one G.vertexSize⟩
+  ])
+  |> mapProp (by
+    ext τ
+    simp
+  )
+
+def hamiltonianCycleCNF (G : Graph) (h : 0 < G.vertexSize) :
+    Grid.VCnf G.vertexSize (G.vertexSize + 1) (hamiltonianCycleConstraints G h) :=
   (seq[
     vertexClauses G, positionClauses G, edgeClauses G, firstAndLastVertexClauses G h
   ])

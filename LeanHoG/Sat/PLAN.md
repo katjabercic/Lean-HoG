@@ -1,7 +1,6 @@
 # Generalizing the SAT-encoding scaffolding
 
-Status: **Stages 0–3 done, Stage 4 in progress** (`Sat/Grid.lean` landed, path encoding
-migrated; the cycle encoding is next), Stages 5–6 not started. Mark each stage **Done** as it
+Status: **Stages 0–4 done**, Stage 5 next, Stage 6 not started. Mark each stage **Done** as it
 lands and record what happened under `## Completed`; delete this file when the last one is, and let
 it live on in history — as `PLAN.md` did (`git show 47715c3:PLAN.md`).
 
@@ -315,7 +314,7 @@ and its appearance in `find_example`'s `simp_all only [...]` set, and it is docu
 returns, and `find_example` — which cannot be built without network access here — is one of the
 callers. It is a behaviour change, not a refactor; keep it separate.
 
-## Stage 4 — `LeanHoG/Sat/Grid.lean`
+## Stage 4 — `LeanHoG/Sat/Grid.lean` — **Done**
 
 ```lean
 /-- `Var n m` is "row `i` occupies column `j`" of an `n × m` Boolean grid. Rows are the
@@ -871,3 +870,92 @@ unmoved, and all three theorems depend on `[propext, Classical.choice, Quot.soun
 section as *the* fragile point standing in the way of a shared grid encoding, no longer exists in
 any form. `hamiltonianPathCNF` and `hamiltonianCycleCNF` are now the only two things that know
 about their variable types, and their correctness theorems have the same shape on both sides.
+
+### Stage 4 — One grid encoding for both properties — **Done**
+
+Four commits: `bf5204c` the shared file, `19f6791` the path, `b35224b` a correction to it, and
+this one for the cycle. Final shape:
+
+| File | Before | After |
+|---|---|---|
+| `LeanHoG/Sat/Grid.lean` | — | 234 |
+| `HamiltonianPath/SatEncoding.lean` | 132 | 88 |
+| `HamiltonianCycle/SatEncoding.lean` | 198 | 126 |
+
+Roughly line-neutral, which was never the point. The point is that the variable numbering, the
+clause order and the literal order now exist in exactly one place, `#guard`ed at the point of
+definition, instead of twice with a comment apologising for it. Neither encoding file now contains
+a clause; each says which atoms its property is the conjunction of, and nothing about emission.
+
+**The two encodings now differ in exactly what actually distinguishes them.** The path is
+`Grid.Var n n`; the cycle is `Grid.Var n (n+1)`, and both remaining differences follow from that
+extra column: a vertex may occupy two positions when they are the first and last, so the cycle
+takes `rowAmoOn (fun j => 0 < j.val)` where the path takes `rowAmo`; and vertex `0` can be pinned
+into both without loss of generality, which is two `Grid.pin`s.
+
+**Byte-identity held throughout, and for the cycle it was proved before anything was written.**
+The whole proposed cycle encoding was built through `lake env lean --stdin` and run against the
+pinned hashes first; all four reproduced, so the commit was a transcription of a verified design
+rather than an experiment. Both correctness proofs kept every one of their proof scripts — the
+only edits either `Correctness.lean` took were type ascriptions and an `open`.
+
+**Three corrections to this plan's own sketch, each of which would have cost real time.**
+
+1. The atom table spelled consecutivity `(· + 1 = ·)`. On `Fin m` that is *modular*, so it would
+   have related the last column to the first — turning the path encoding into a cycle one, adding
+   clauses, and making `hamiltonian_path_to_sat` **false** rather than merely slow. It must be
+   `k.val + 1 = k'.val`, and it is better not parameterized at all.
+2. It proposed a `@[simp] lemma rowAmo_true` so the path would never see vacuous `True →`
+   hypotheses. That lemma's left-hand side competes with `@[simp] def rowAmoOn`'s own unfolding
+   equation, and between equal-priority candidates simp's choice is unspecified. Deriving an
+   unconditional `rowAmo` from `rowAmoOnClauses _ _ (fun _ => True)` through a second `mapProp`
+   instead gives the path a constraint *syntactically* identical to its old one, so nothing has to
+   fire in the right order — and `mapProp` provably cannot change bytes.
+3. It promised `namespace HamiltonianCycle` would go away. It cannot, and the reason is the
+   decision that made this stage cheap: keeping the five bundle names per property is what kept
+   the stage out of the correctness proofs, and those names are the same on both sides. The
+   namespace stays, with its comment rewritten from an apology to a statement of what remains.
+
+**Three atoms are deliberately less general than they look, and undoing that breaks proofs, not
+bytes.** `colAmo` takes no relation because the cycle's `τ_positions` feeds an `i = k` to a
+hypothesis shaped `i ≠ k`; consecutivity is concrete because the path's `τ_edge` closes with
+`simp [hk]` against `k.val + 1 = k'.val`; `pin` is one cell rather than a list because
+`firstAndLastConstraints` must stay a literal `∧` for `constructor` to split it. Each also avoids
+a decidability obligation on a lambda. All three are recorded in `Grid.lean`'s docstrings.
+
+**A detour worth remembering.** The path migration first kept `abbrev Var (n) := Grid.Var n n` to
+spare `Correctness.lean` four type ascriptions. That was wrong twice over: an `abbrev` carries the
+type but not the constructor, so `Var.mk` was an unknown constant — which is why the readback had
+to say `Sat.Grid.Var.mk`, and which made the alias's own docstring describe a name that did not
+exist. And the reasoning was over-extended from the bundles: bundles are addressed *inside proofs*,
+so replacing them rewrites proof steps, whereas a type alias is only a spelling in a statement.
+`b35224b` removed both aliases; every use site now spells its dimensions, which is where the
+difference between the two encodings belongs.
+
+**Two blind spots in the golden fixtures, found and closed.** `mapProp` rewrites only the `Prop` a
+`VEncCNF` is indexed by, so a `sorry` in any obligation would emit byte-identical clauses and leave
+every `#guard` passing — while that index is exactly what carries soundness into the `.unsat`
+branch. Both CNFs now assert their axioms with `#guard_msgs` instead of printing them. And nothing
+was pinned below four vertices, though the 0-vertex path CNF being empty-and-SAT and the 1-vertex
+cycle CNF being unconditionally UNSAT are what the tactics' short-circuits and every
+`1 < G.vertexSize` hypothesis rest on; both are now fixtures, the latter as full DIMACS text,
+because it is UNSAT only by virtue of the position loop reaching `k = 0, k' = 1`.
+
+**On construction cost**, since the atoms take decidability through a parameter and rebuild their
+index ranges inside the loops where the old code hoisted them: measured head-to-head in one process
+on `examples/cube5.json` (32 vertices), path 864ms–1.14s old against 1.04–1.07s new, cycle
+481–589ms old against 455–515ms new. No difference outside noise. The graphs that could show a
+constant factor live in `Examples.lean`, which needs the network; it was run on a networked host
+after each commit and passed.
+
+**One invariant to preserve.** `Var.mk` now appears in code only in `Sat/Grid.lean` and in the two
+solver-readback loops. Its argument order is what the `IndexType` numbering reads, and on the path
+side `Grid.Var n n` makes a transposition *typecheck* and move no hash — so `SolverTests` is the
+only thing standing between a swapped readback and a garbage certificate. Keep it confined.
+
+Also folded in here, as this plan scheduled: the two redundant imports on the cycle side
+(`LeanHoG.Walk`, `LeanHoG.Invariant.ConnectedComponents.Basic`), unused and still reachable
+transitively.
+
+Still deferred, deliberately: dropping the cycle namespace (pure ripple, no bearing on the grid),
+and Trestle's `Encode/Cardinality` AMO clauses, which are the one change that *must* alter the CNF.

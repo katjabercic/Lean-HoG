@@ -8,10 +8,12 @@ import Trestle.Encode.VEncCNF
 namespace LeanHoG
 
 open Trestle Encode Model PropFun
+open Sat
 
-/- Namespaced for the same reason `Var` and friends are in `SatEncoding.lean`: the analogous
-   `HamiltonianPath` theorems (`hamiltonian_path_to_sat`, ...) are bare in `LeanHoG`, and this
-   file's names would otherwise clash with them. -/
+/- Namespaced for the same reason `SatEncoding.lean` is: the analogous `HamiltonianPath`
+   theorems (`hamiltonian_path_to_sat`, ...) are bare in `LeanHoG`, and this file's names would
+   otherwise clash with them. The variables themselves are no longer per-property — both
+   encodings now index their `PropPred`s by `Sat.Grid.Var`. -/
 namespace HamiltonianCycle
 
 /-- Every Hamiltonian cycle in `G` gives a satisfying assignment of `hamiltonianCycleConstraints`.
@@ -28,14 +30,14 @@ closed walk has no edges to repeat, so it trivially satisfies `isCycle`). So thi
 simply false at `G.vertexSize = 1`, and every theorem built on it inherits the same
 hypothesis. See `searchForHamiltonianCycleAux` for how `Tactic.lean` avoids this size. -/
 theorem hamiltonian_cycle_to_sat {G : Graph} (h2 : 1 < G.vertexSize) (hc : HamiltonianCycle G) :
-    ∃ (τ : PropAssignment (Var G.vertexSize)),
+    ∃ (τ : PropAssignment (Grid.Var G.vertexSize (G.vertexSize + 1))),
       τ |> hamiltonianCycleConstraints G (by omega) := by
   let ⟨hc0, hu0⟩ := rebase hc ⟨0, Nat.zero_lt_of_lt h2⟩
   let n := G.vertexSize
   let l := hc0.cycle.cycle.vertices
   have l_len : n + 1 = l.length := by
     apply Eq.symm (length_eq_num_vertices h2 hc0)
-  let τ : PropAssignment (Var G.vertexSize) := fun ⟨i, j⟩ =>
+  let τ : PropAssignment (Grid.Var G.vertexSize (G.vertexSize + 1)) := fun ⟨i, j⟩ =>
     if l.get (Fin.cast l_len j) = i then true else false
   have τ_vertex : τ |> vertexConstraints G := by
     constructor
@@ -95,7 +97,7 @@ theorem hamiltonian_cycle_to_sat {G : Graph} (h2 : 1 < G.vertexSize) (hc : Hamil
 
 /-- Contrapositive of `hamiltonian_cycle_to_sat`. -/
 theorem no_assignment_implies_no_hamiltonian_cycle {G : Graph} (h2 : 1 < G.vertexSize) :
-    (¬ ∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianCycleConstraints G (by omega)) →
+    (¬ ∃ (τ : PropAssignment (Grid.Var G.vertexSize (G.vertexSize + 1))), τ |> hamiltonianCycleConstraints G (by omega)) →
     ¬ ∃ (_ : HamiltonianCycle G), True := by
   intro hno hex
   obtain ⟨hc, _⟩ := hex
@@ -116,7 +118,7 @@ reaches for this theorem under `2 < G.vertexSize`, answering the three smaller s
 from `no_hamiltonian_cycle_on_size_0`, `hamiltonian_cycle_on_size_1` and
 `no_hamiltonian_cycle_on_size_2`. -/
 theorem no_assignment_implies_no_hamiltonian_cycle' {G : Graph} (h2 : 1 < G.vertexSize) :
-    (¬ ∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianCycleConstraints G (by omega)) →
+    (¬ ∃ (τ : PropAssignment (Grid.Var G.vertexSize (G.vertexSize + 1))), τ |> hamiltonianCycleConstraints G (by omega)) →
     ¬ G.isHamiltonian := by
   intro hno hham
   obtain ⟨u, c, cond⟩ := hham

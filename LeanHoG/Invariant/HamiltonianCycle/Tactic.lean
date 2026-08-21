@@ -90,7 +90,7 @@ unsafe def searchForHamiltonianCycleAux (graphName : Name) (graph : Q(Graph))
       let mut cycle : Array Nat := Array.replicate (G.vertexSize + 1) 0
       for i in List.fins G.vertexSize do
         for j in List.fins (G.vertexSize + 1) do
-          match assn.findEntry? (s.vMap (HamiltonianCycle.Var.mk i j)) with
+          match assn.findEntry? (s.vMap (Sat.Grid.Var.mk i j)) with
           | none => throwError "invalid index ({i},{j})"
           | some (_, true) => cycle := cycle.set! j i
           | some (_, false) => continue
