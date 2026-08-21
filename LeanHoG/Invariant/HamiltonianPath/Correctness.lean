@@ -9,6 +9,7 @@ import Trestle.Encode.VEncCNF
 namespace LeanHoG
 
 open Trestle Encode Model PropFun
+open Sat
 
 /-- Every Hamiltonian path in `G` gives a satisfying assignment of
 `hamiltonianPathConstraints`: read the path off as "vertex `i` sits at position `j`".
@@ -18,12 +19,12 @@ There is no rotation step, the path encoding fixing no vertex; and the at-most-o
 constraint holds of every position rather than all but the endpoints, so distinctness of the
 whole vertex list settles it where the cycle needs distinctness of the tail. -/
 theorem hamiltonian_path_to_sat {G : Graph} (hp : HamiltonianPath G) :
-    ∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianPathConstraints G := by
+    ∃ (τ : PropAssignment (Grid.Var G.vertexSize G.vertexSize)), τ |> hamiltonianPathConstraints G := by
   let n := G.vertexSize
   let l := hp.path.walk.vertices
   have l_len : n = l.length := by
     apply Eq.symm HamiltonianPath.length_eq_num_vertices
-  let τ : PropAssignment (Var G.vertexSize) := fun ⟨i, j⟩ =>
+  let τ : PropAssignment (Grid.Var G.vertexSize G.vertexSize) := fun ⟨i, j⟩ =>
     if l.get (Fin.cast l_len j) = i then true else false
   have τ_vertex : τ |> vertexConstraints G := by
     constructor
@@ -71,7 +72,7 @@ theorem hamiltonian_path_to_sat {G : Graph} (hp : HamiltonianPath G) :
 
 /-- Contrapositive of `hamiltonian_path_to_sat`. -/
 theorem no_assignment_implies_no_hamiltonian_path {G : Graph} :
-    (¬ ∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianPathConstraints G) →
+    (¬ ∃ (τ : PropAssignment (Grid.Var G.vertexSize G.vertexSize)), τ |> hamiltonianPathConstraints G) →
     ¬ ∃ (_ : HamiltonianPath G), True := by
   intro hno hex
   obtain ⟨hp, _⟩ := hex
@@ -93,7 +94,7 @@ needs `Graph.no_path_not_traceable` in `find_example`'s `simp_all only [...]` se
 in here would change the fact the tactic returns, so it is a behaviour change rather than a
 refactor. -/
 theorem no_assignment_implies_no_hamiltonian_path' {G : Graph} :
-    (¬ ∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianPathConstraints G) →
+    (¬ ∃ (τ : PropAssignment (Grid.Var G.vertexSize G.vertexSize)), τ |> hamiltonianPathConstraints G) →
     ¬ ∃ (u v : G.vertex) (p : Path G u v), p.isHamiltonian := by
   intro hno hham
   obtain ⟨u, v, p, cond⟩ := hham
