@@ -1,6 +1,6 @@
 # Generalizing the SAT-encoding scaffolding
 
-Status: **Stages 0 and 1 done**, Stages 2–6 not started. Mark each stage **Done** as it lands and record
+Status: **Stages 0, 1 and 2 done**, Stages 3–6 not started. Mark each stage **Done** as it lands and record
 what happened under `## Completed`; delete this file when the last one is, and let it live on in
 history — as `PLAN.md` did (`git show 47715c3:PLAN.md`).
 
@@ -584,6 +584,58 @@ importing the library; removing it broke no proof.
 Verified: `lake build LeanHoG Graph6Tests SatEncodingTests SolverTests` all pass, **golden CNF
 fixtures unchanged**, and `Examples` still fails at exactly its first `#download` (line 121) —
 the pre-existing environment blocker — with everything before it elaborating.
+
+### Stage 2 — Pure code motion — **Done**
+
+Six moves plus one tidy, in six commits. No `Prop`, `PropPred` or clause was touched, and the
+golden CNF fixtures were identical at every step.
+
+| Into | What | Was |
+|---|---|---|
+| `Util/Meta.lean` | `mkForallVertexProof` | literal duplicate, both Hamiltonian tactic files |
+| `Util/Meta.lean` | `certificateTerm`, `certificateName` | `private` in `Bipartite/Tactic.lean`, inlined on the path side, wrapped on the cycle side |
+| `Sat/Driver.lean` (new) | `solverConfig`, `SolverConfig.solver` | 5 lines of option-reading, twice |
+| `Certificate.lean` | `walkOfVertexList` | local `fold`, twice |
+| `Util/TrestleStd.lean` | `Encode.VEncCNF.std_unsat_no_assignment` | one copy per encoding |
+| `Util/Meta.lean` | `withUnsatAxiom` | ~35 lines of axiom plumbing, twice |
+
+Also: `imp_neg` deleted in favour of core's `mt`, and `Meta.addInstance`'s priority changed from
+42 to the default 1000 at all six call sites (see the separate note below).
+
+**Two deviations from the plan, both forced.**
+
+- **`solverFromOptions` cannot have the signature the plan gave it.** `CoreM (Solver IO × String)`
+  does not typecheck: `Trestle.Solver` is a `Type 1` and `CoreM` quantifies over `Type`, so a
+  solver cannot be returned from a monadic action. It is a `SolverConfig` structure plus a pure
+  `SolverConfig.solver` instead. The flags `#["--no-binary", "--lrat=true"]` moved with it — they
+  are what make the LRAT read-back work, so they are not a caller's parameter.
+- **`walkOfVertexList` went to `LeanHoG/Certificate.lean`, not `Util/Quote.lean`.** It needs
+  `Walk`, and nothing under `Util/` refers to the library's own types; `Util/Quote.lean` imports
+  only `Qq`. `Certificate.lean` already builds quoted certificate data (`edgeOfData`,
+  `vertexOfData`, `graphOfData`), so it belongs there.
+
+**The `register := false` axiom-naming branch had no test, and the comment claiming to test it
+was wrong.** `SolverTests.lean` said `theorem two_not_traceable` exercised the name-prefix
+restriction, but `#check_traceable Two` runs earlier in the file, so the global axiom already
+exists and `hasReusableDecl` short-circuits to it. The same held for every UNSAT graph in the
+file: a `#check_*` command always came first. So the branch most at risk from `withUnsatAxiom`
+was uncovered, and a regression would have passed the build. Closed by loading two graphs under
+fresh names, never passing them to a `#check_*`, and asserting with `#print axioms` that the
+axiom lands beneath the theorem —
+`…two_unchecked_not_traceable.TwoUnchecked.hamiltonianPathCNFUnsat`.
+
+**Also added to `SolverTests`:** four `#synth` checks that registered certificates are reachable
+by instance synthesis, covering both registration paths (`load_graph` from JSON, and the
+`#check_*` commands). Compilation alone cannot catch a priority regression — synthesis has to
+actually reach the instance.
+
+**On the instance priority.** Every `addInstance` passed 42, which entered with the first meta
+code in `bd6e274` and was copied forward. It is below even `low` (100), where `default` is 1000
+and `getInstances` tries higher first. Nothing depended on it — each instance is keyed on a
+concrete graph and `hasReusableDecl` prevents duplicates, so there is one candidate per goal —
+but `TwoColoring G` extends `VertexColoring (Fin 2) G` and `ConnectedComponentsCertificate G`
+yields a `ConnectedComponents G`, so a future generic instance of either parent would have
+outranked the certificate. Now 1000 everywhere.
 
 **One incidental finding.** `import LeanHoG.Tactic` does *not* bring the bipartite commands
 into scope — it pulls in the two Hamiltonian tactic modules but not

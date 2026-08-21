@@ -126,7 +126,6 @@ unsafe def searchForHamiltonianCycleAux (graphName : Name) (graph : Q(Graph))
       -- The formula is UNSAT, so we assert an axiom saying so — Lean's verified LRAT checker
       -- has already accepted the solver's proof of it — and then turn that into the graph's
       -- non-Hamiltonicity with the correctness theorems from `Correctness.lean`.
-      let globalName : Name := .str graphName "hamiltonianCycleCNFUnsat"
       -- `h`/`h2` are proofs about the concrete, evaluated `G`; the returned type must instead
       -- talk about `graph`, the quoted expression the caller wrote. Reflect the same facts
       -- at that level via `decide`, which is sound here because `h`/`h2` already tell us they
@@ -137,39 +136,21 @@ unsafe def searchForHamiltonianCycleAux (graphName : Name) (graph : Q(Graph))
       let h2Q : Q(1 < Graph.vertexSize $graph) := q(of_decide_eq_true $hTwoDec)
       let type : Q(Prop) := q(((hamiltonianCycleCNF $graph $hQ).val.toICnf.toStd).Unsat)
       let nonHamType : Q(Prop) := q(¬ Graph.isHamiltonian $graph)
-      let declName : Name ←
-        if (← hasReusableDecl globalName type) ∨ register then
-          pure globalName
-        else
-          match ← Term.getDeclName? with
-          | some enclosing => pure (enclosing ++ globalName)
-          | none => pure globalName
       -- The CNF is passed explicitly: the lemma is generic in the encoding, so nothing else
       -- says which one this `Unsat` is about. Note the two halves disagree on which proof of
       -- `0 < G.vertexSize` appears in the assignment-free statement they share (`hQ` here,
       -- `by omega` from `h2` there); that is immaterial, as definitional proof irrelevance
       -- makes any two interchangeable.
-      let derivation ← Meta.withLocalDeclD `hCnfUnsat type fun hUnsat => do
-        let cnfExpr ← Meta.mkAppM
-          ``LeanHoG.HamiltonianCycle.hamiltonianCycleCNF #[graph, hQ]
-        let noAssignment ← Meta.mkAppM
-          ``Trestle.Encode.VEncCNF.std_unsat_no_assignment #[cnfExpr, hUnsat]
-        let noHamCycle ← Meta.mkAppM
-          ``LeanHoG.HamiltonianCycle.no_assignment_implies_no_hamiltonian_cycle'
-          #[h2Q, noAssignment]
-        Meta.mkLambdaFVars #[hUnsat] (← instantiateMVars noHamCycle)
-      unless ← hasReusableDecl declName type do
-        let decl := Declaration.axiomDecl {
-          name        := declName,
-          levelParams := [],
-          type        := type,
-          isUnsafe    := false
-        }
-        trace[Elab.axiom] "{declName} : {type}"
-        Term.ensureNoUnassignedMVars decl
-        addDecl decl
-        logWarning m!"added axiom {declName} : {type}"
-      return (nonHamType, .app derivation (mkConst declName), .unsat)
+      let proof ← withUnsatAxiom graphName "hamiltonianCycleCNFUnsat" register type
+        fun hUnsat => do
+          let cnfExpr ← Meta.mkAppM
+            ``LeanHoG.HamiltonianCycle.hamiltonianCycleCNF #[graph, hQ]
+          let noAssignment ← Meta.mkAppM
+            ``Trestle.Encode.VEncCNF.std_unsat_no_assignment #[cnfExpr, hUnsat]
+          Meta.mkAppM
+            ``LeanHoG.HamiltonianCycle.no_assignment_implies_no_hamiltonian_cycle'
+            #[h2Q, noAssignment]
+      return (nonHamType, proof, .unsat)
 
     | .error => throwError "SAT solver exited with error"
   else if G.vertexSize = 2 then

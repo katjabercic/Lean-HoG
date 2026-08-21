@@ -48,6 +48,45 @@ def certificateTerm (declName : Name) (certType cert : Expr) (register : Bool) :
     return mkConst declName
   return cert
 
+/-- Assert `type` as an axiom named `graphName.suffix`, and return the conclusion `derive`
+draws from it — that is, `derive`'s result with the axiom substituted for its hypothesis.
+
+**`derive` runs before the axiom is committed, and the order matters.** Deriving the
+conclusion is the expensive part, so if it ran after `addDecl` then exhausting the heartbeats
+there would leave the axiom in the environment on a command that reports failure: the user
+sees an error and still has the hole. So `derive` is handed a local hypothesis of `type`
+instead, and the axiom is only added once it has succeeded.
+
+An axiom of exactly this type already under the name is reused rather than re-declared, which
+is what makes a second run on the same graph work; `hasReusableDecl` is what confirms it says
+literally what is needed. Otherwise the name is global under `register`, and beneath the
+enclosing declaration without it — a tactic may not add a name outside its own prefix. -/
+def withUnsatAxiom (graphName : Name) (suffix : String) (register : Bool) (type : Expr)
+    (derive : Expr → Elab.TermElabM Expr) : Elab.TermElabM Expr := do
+  let globalName : Name := .str graphName suffix
+  let declName : Name ←
+    if (← hasReusableDecl globalName type) ∨ register then
+      pure globalName
+    else
+      match ← Elab.Term.getDeclName? with
+      | some enclosing => pure (enclosing ++ globalName)
+      | none => pure globalName
+  let derivation ← Meta.withLocalDeclD `hCnfUnsat type fun h => do
+    Meta.mkLambdaFVars #[h] (← instantiateMVars (← derive h))
+  unless ← hasReusableDecl declName type do
+    let decl := Declaration.axiomDecl {
+      name        := declName,
+      levelParams := [],
+      type        := type,
+      isUnsafe    := false
+    }
+    trace[Elab.axiom] "{declName} : {type}"
+    Elab.Term.ensureNoUnassignedMVars decl
+    -- Past this point nothing but `addDecl` itself can fail.
+    addDecl decl
+    logWarning m!"added axiom {declName} : {type}"
+  return .app derivation (mkConst declName)
+
 /-- Assemble `∀ (v : G.vertex), P v` from one proof per vertex, given in index order, as a
 chain of `Fin.cases` bottoming out at `Fin.elim0`.
 

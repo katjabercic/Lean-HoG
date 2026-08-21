@@ -162,7 +162,7 @@ theorem hamiltonian_path_to_var_assignment {G : Graph} :
 theorem no_assignment_implies_no_hamiltonian_path {G : Graph} :
   (¬ ∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianPathConstraints G) →
   (¬ ∃ (_ : HamiltonianPath G), True) := by
-  apply imp_neg hamiltonian_path_to_var_assignment
+  apply mt hamiltonian_path_to_var_assignment
 
 theorem no_assignment_implies_no_hamiltonian_path' {G : Graph} :
   (¬ ∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianPathConstraints G) →

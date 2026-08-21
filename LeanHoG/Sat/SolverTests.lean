@@ -84,9 +84,9 @@ example : ¬ThreeFour.traceable := by
   check_traceable ThreeFour with h
   exact Graph.no_path_not_traceable (h := h)
 
--- A tactic inside a *named* declaration may only add names beneath its own prefix, so
--- this is the case that `register := false` exists for. It is a separate test from the
--- anonymous `example`s above, and it is the one that used to fail.
+-- A tactic inside a *named* declaration, reusing the axiom `#check_traceable Two` above
+-- already added. For the case where there is nothing to reuse, see the section on axiom
+-- naming at the end of the file.
 theorem two_not_traceable : ¬Two.traceable := by
   check_traceablea Two
 
@@ -172,5 +172,29 @@ reading a certificate out of a graph's JSON, and the `#check_*` commands produci
 #synth HamiltonianPath Cycle7     -- from `#check_traceable`
 #synth HamiltonianCycle Cycle7    -- from `#check_hamiltonian`
 #synth TwoColoring Cube5          -- from `#check_bipartite`
+
+/-! ## Where an unsatisfiability axiom is named
+
+A tactic runs the search with `register := false`, because Lean lets a declaration add only
+names beneath its own prefix: a named theorem cannot introduce `G.hamiltonianPathCNFUnsat`.
+That branch is reached only when no global axiom for the graph exists to reuse, so the two
+graphs below are loaded separately and deliberately never passed to a `#check_*` command —
+every other UNSAT graph in this file has one, and would take the reuse branch instead.
+
+The `#print axioms` lines are the actual check: the axiom each theorem depends on must be
+named beneath *the theorem*, not after the graph. -/
+
+load_graph TwoUnchecked "examples/two.json"
+load_graph ThreeFourUnchecked "examples/cycle3-cycle4.json"
+
+theorem two_unchecked_not_traceable : ¬TwoUnchecked.traceable := by
+  check_traceablea TwoUnchecked
+
+#print axioms two_unchecked_not_traceable
+
+theorem three_four_unchecked_not_hamiltonian : ¬ThreeFourUnchecked.isHamiltonian := by
+  check_hamiltoniana ThreeFourUnchecked
+
+#print axioms three_four_unchecked_not_hamiltonian
 
 end LeanHoG.Sat.SolverTests

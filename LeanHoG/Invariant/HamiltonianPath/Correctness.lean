@@ -362,6 +362,4 @@ theorem hamiltonian_path_to_sat (G : Graph) (hp : HamiltonianPath G) :
 
   exact τ_sat_ham
 
-lemma imp_neg {P Q : Prop} (h : P → Q) : ¬ Q → ¬ P := by exact fun a a_1 => a (h a_1)
-
 end LeanHoG

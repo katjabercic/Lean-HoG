@@ -119,51 +119,19 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph))
     return (existsType, existsHamPath, .sat)
 
   | .unsat =>
-    -- The formula is UNSAT, so we will assert an axiom saying so.
-    --
-    -- Everything that can fail is done *before* `addDecl`. Deriving the
-    -- conclusion from the axiom is the expensive part, and if it is done after
-    -- the axiom is in the environment then running out of heartbeats there
-    -- leaves the axiom behind on a command that reports failure — the user sees
-    -- an error but still has the hole. So the derivation is built against a
-    -- local hypothesis of the axiom's type, and the axiom is only committed
-    -- once that has succeeded.
-    let globalName : Name := .str graphName "hamiltonianPathCNFUnsat"
+    -- The formula is UNSAT, so we assert an axiom saying so — Lean's verified LRAT checker
+    -- has already accepted the solver's proof of it — and turn that into the absence of a
+    -- Hamiltonian path. See `withUnsatAxiom` for where the axiom goes and why the
+    -- derivation is built before it is committed.
     let type : Q(Prop) := q(((hamiltonianPathCNF $graph).val.toICnf.toStd).Unsat)
-    -- Where the axiom goes. One for this graph already in the environment says
-    -- exactly what is needed — literally so, which is what `hasReusableDecl` confirms
-    -- before we lean on it — so reuse it; that is the case a second run on the
-    -- same graph used to die on. Otherwise declare it, globally for the command and
-    -- beneath the enclosing declaration for a tactic, which may not add a name
-    -- outside its own prefix.
-    let declName : Name ←
-      if (← hasReusableDecl globalName type) ∨ register then
-        pure globalName
-      else
-        match ← Term.getDeclName? with
-        | some enclosing => pure (enclosing ++ globalName)
-        | none => pure globalName
     -- The CNF is passed explicitly: the lemma is generic in the encoding, so nothing else
     -- says which one this `Unsat` is about.
-    let derivation ← Meta.withLocalDeclD `hCnfUnsat type fun h => do
+    let proof ← withUnsatAxiom graphName "hamiltonianPathCNFUnsat" register type fun h => do
       let cnfExpr ← Meta.mkAppM ``LeanHoG.hamiltonianPathCNF #[graph]
       let noExistsCert ← Meta.mkAppM
         ``Trestle.Encode.VEncCNF.std_unsat_no_assignment #[cnfExpr, h]
-      let noExistsHamPath ← Meta.mkAppM ``LeanHoG.no_assignment_implies_no_hamiltonian_path' #[noExistsCert]
-      Meta.mkLambdaFVars #[h] (← instantiateMVars noExistsHamPath)
-    unless ← hasReusableDecl declName type do
-      let decl := Declaration.axiomDecl {
-        name        := declName,
-        levelParams := [],
-        type        := type,
-        isUnsafe    := false
-      }
-      trace[Elab.axiom] "{declName} : {type}"
-      Term.ensureNoUnassignedMVars decl
-      -- Past this point nothing but `addDecl` itself can fail.
-      addDecl decl
-      logWarning m!"added axiom {declName} : {type}"
-    return (noExistsType, .app derivation (mkConst declName), .unsat)
+      Meta.mkAppM ``LeanHoG.no_assignment_implies_no_hamiltonian_path' #[noExistsCert]
+    return (noExistsType, proof, .unsat)
 
   | .error => throwError "SAT solver exited with error"
 
