@@ -1,5 +1,6 @@
 import Std.Sat.CNF
 import Trestle.Data.ICnf.Basic
+import Trestle.Encode.VEncCNF
 
 /-!
 Connect Trestle's DIMACS-oriented `ICnf` representation to `Std.Sat.CNF Nat`.
@@ -107,5 +108,18 @@ theorem unsat_toStd_iff (cnf : ICnf) :
     exact h ⟨τ, hτ⟩
 
 end ICnf
+
+namespace Encode.VEncCNF
+
+/-- Unsatisfiability of the CNF an encoding emits, as accepted by the LRAT checker, implies
+that the property the encoding was proved to express has no satisfying assignment. -/
+theorem std_unsat_no_assignment {ν : Type} [IndexType ν] [LawfulIndexType ν] {α : Type _}
+    {P : Model.PropPred ν} (e : VEncCNF ν α P) (h : e.val.toICnf.toStd.Unsat) :
+    ¬ ∃ τ, P τ := by
+  intro hP
+  have hICnf : ¬ Cnf.Sat e.val.toICnf := (ICnf.unsat_toStd_iff _).mp h
+  exact hICnf ((toICnf_equisatisfiable e).mpr hP)
+
+end Encode.VEncCNF
 
 end Trestle

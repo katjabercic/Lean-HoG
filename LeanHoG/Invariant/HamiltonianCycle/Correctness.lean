@@ -10,8 +10,8 @@ namespace LeanHoG
 open Trestle Encode Model PropFun
 
 /- Namespaced for the same reason `Var` and friends are in `SatEncoding.lean`: the analogous
-   `HamiltonianPath` theorems (`std_unsat_implies_no_assignment`, ...) are bare in `LeanHoG`,
-   and this file's names would otherwise clash with them. -/
+   `HamiltonianPath` theorems (`hamiltonian_path_to_sat`, ...) are bare in `LeanHoG`, and this
+   file's names would otherwise clash with them. -/
 namespace HamiltonianCycle
 
 /-- Every Hamiltonian cycle in `G` gives a satisfying assignment of `hamiltonianCycleConstraints`.
@@ -101,24 +101,10 @@ theorem no_assignment_implies_no_hamiltonian_cycle {G : Graph} (h2 : 1 < G.verte
   obtain ⟨hc, _⟩ := hex
   exact hno (hamiltonian_cycle_to_sat h2 hc)
 
-/-- Bridges the raw CNF's `Unsat` (as checked by the LRAT proof) to unsatisfiability of the
-abstract `PropFun` semantics, mirroring `HamiltonianPath.std_unsat_implies_no_assignment`.
-
-No `1 < G.vertexSize` here: this is purely about the encoding, whose clauses provably encode
-`hamiltonianCycleConstraints` (that is what `hamiltonianCycleCNF`'s `VCnf` type carries). All
-this does is compose the three notions of unsatisfiability. -/
-theorem std_unsat_implies_no_assignment {G : Graph} (h : 0 < G.vertexSize) :
-    ((hamiltonianCycleCNF G h).val.toICnf.toStd).Unsat →
-    ¬ ∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianCycleConstraints G h := by
-  intro hStd hConstraints
-  have hICnf : ¬ Cnf.Sat (hamiltonianCycleCNF G h).val.toICnf := (ICnf.unsat_toStd_iff _).mp hStd
-  apply hICnf
-  exact (VEncCNF.toICnf_equisatisfiable (hamiltonianCycleCNF G h)).mpr hConstraints
-
 /-- The version stated in terms of `Graph.isHamiltonian`. This is what
 `HamiltonianCycle.Tactic`'s `.unsat` branch returns: composed with
-`std_unsat_implies_no_assignment`, it carries the LRAT-checked unsatisfiability of the encoding
-all the way to `¬ G.isHamiltonian`.
+`Trestle.Encode.VEncCNF.std_unsat_no_assignment`, it carries the LRAT-checked unsatisfiability
+of the encoding all the way to `¬ G.isHamiltonian`.
 
 `Graph.isHamiltonian` unfolds to `∃ (u : G.vertex) (c : Cycle G u), c.isHamiltonian`, which is
 exactly the fields of the `HamiltonianCycle` class, so this only repackages

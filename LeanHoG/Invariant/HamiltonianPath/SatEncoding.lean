@@ -164,14 +164,6 @@ theorem no_assignment_implies_no_hamiltonian_path {G : Graph} :
   (¬ ∃ (_ : HamiltonianPath G), True) := by
   apply imp_neg hamiltonian_path_to_var_assignment
 
-theorem std_unsat_implies_no_assignment {G : Graph} :
-      ((hamiltonianPathCNF G).val.toICnf.toStd).Unsat →
-      ¬ ∃ τ, τ |> hamiltonianPathConstraints G := by
-  intro hStd hConstraints
-  have hICnf : ¬ Cnf.Sat (hamiltonianPathCNF G).val.toICnf := (ICnf.unsat_toStd_iff _).mp hStd
-  apply hICnf
-  exact (VEncCNF.toICnf_equisatisfiable (hamiltonianPathCNF G)).mpr hConstraints
-
 theorem no_assignment_implies_no_hamiltonian_path' {G : Graph} :
   (¬ ∃ (τ : PropAssignment (Var G.vertexSize)), τ |> hamiltonianPathConstraints G) →
   (¬ ∃ (u v : G.vertex) (p : Path G u v), p.isHamiltonian) := by

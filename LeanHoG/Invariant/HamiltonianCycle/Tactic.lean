@@ -144,14 +144,16 @@ unsafe def searchForHamiltonianCycleAux (graphName : Name) (graph : Q(Graph))
           match ← Term.getDeclName? with
           | some enclosing => pure (enclosing ++ globalName)
           | none => pure globalName
-      -- `fun hUnsat => no_assignment_implies_no_hamiltonian_cycle' h2
-      --                  (std_unsat_implies_no_assignment h hUnsat)`.
-      -- The two theorems disagree on which proof of `0 < G.vertexSize` appears in the
-      -- assignment-free statement they share (`hQ` here, `by omega` from `h2` there); that
-      -- is immaterial, as definitional proof irrelevance makes any two interchangeable.
+      -- The CNF is passed explicitly: the lemma is generic in the encoding, so nothing else
+      -- says which one this `Unsat` is about. Note the two halves disagree on which proof of
+      -- `0 < G.vertexSize` appears in the assignment-free statement they share (`hQ` here,
+      -- `by omega` from `h2` there); that is immaterial, as definitional proof irrelevance
+      -- makes any two interchangeable.
       let derivation ← Meta.withLocalDeclD `hCnfUnsat type fun hUnsat => do
+        let cnfExpr ← Meta.mkAppM
+          ``LeanHoG.HamiltonianCycle.hamiltonianCycleCNF #[graph, hQ]
         let noAssignment ← Meta.mkAppM
-          ``LeanHoG.HamiltonianCycle.std_unsat_implies_no_assignment #[hQ, hUnsat]
+          ``Trestle.Encode.VEncCNF.std_unsat_no_assignment #[cnfExpr, hUnsat]
         let noHamCycle ← Meta.mkAppM
           ``LeanHoG.HamiltonianCycle.no_assignment_implies_no_hamiltonian_cycle'
           #[h2Q, noAssignment]

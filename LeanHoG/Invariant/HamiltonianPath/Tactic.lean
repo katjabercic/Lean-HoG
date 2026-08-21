@@ -143,9 +143,12 @@ unsafe def searchForHamiltonianPathAux (graphName : Name) (graph : Q(Graph))
         match ← Term.getDeclName? with
         | some enclosing => pure (enclosing ++ globalName)
         | none => pure globalName
-    -- `fun h => no_assignment_implies_no_hamiltonian_path' (std_unsat_implies_no_assignment h)`
+    -- The CNF is passed explicitly: the lemma is generic in the encoding, so nothing else
+    -- says which one this `Unsat` is about.
     let derivation ← Meta.withLocalDeclD `hCnfUnsat type fun h => do
-      let noExistsCert ← Meta.mkAppM ``LeanHoG.std_unsat_implies_no_assignment #[h]
+      let cnfExpr ← Meta.mkAppM ``LeanHoG.hamiltonianPathCNF #[graph]
+      let noExistsCert ← Meta.mkAppM
+        ``Trestle.Encode.VEncCNF.std_unsat_no_assignment #[cnfExpr, h]
       let noExistsHamPath ← Meta.mkAppM ``LeanHoG.no_assignment_implies_no_hamiltonian_path' #[noExistsCert]
       Meta.mkLambdaFVars #[h] (← instantiateMVars noExistsHamPath)
     unless ← hasReusableDecl declName type do
